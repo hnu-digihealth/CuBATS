@@ -25,6 +25,7 @@ if hasattr(os, "add_dll_directory"):
         # Third Party
         import openslide
 else:
+    # Third Party
     import openslide
 
 
