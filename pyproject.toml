@@ -1,0 +1,19 @@
+[project]
+name = "CuBATS"
+version = "0.1.0"
+description = "Computer Vision Based Antigen Target Selector"
+authors = [
+    {name = "Daniel Hieber", email = "github@teddowyn.de"},
+]
+dependencies = []
+requires-python = ">=3.12"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
