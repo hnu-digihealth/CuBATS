@@ -9,7 +9,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 import skimage
-import Utils as utils
+import cubats.Utils as utils
 from matplotlib import pyplot as plt
 from openslide.deepzoom import DeepZoomGenerator
 from PIL import Image

@@ -144,8 +144,8 @@ def quantify_single_tile(iterable):
 
 
 def calculate_pixel_intensity(image):
-    """Calculates pixel intensity of each pixel in the input image and separates them into 4 different zones
-        based on their intensity. Intensity of each pixel lies between 0 and 255. Intensities above 235 are
+    """Calculates pixel intensity of each pixel in the input image and separates them into 4 different zones based on their intensity. Intensity of each pixel lies between 0 and 255.
+        Intensities above 235 are
         predominantly fatty tissues but dont contribute to pathological scoring:
         - Zone 1 = High positive (intensity: 0-60)
         - Zone 2 = Positive (intensity: 61-120)
@@ -154,8 +154,7 @@ def calculate_pixel_intensity(image):
         After calculating pixel intensities this function calculates percentage contribution of each of the zones
         as well as the a pathology score
 
-    Credits Varghese et al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated
-        Scoring of Immunihistochemistry Images of Human Tissue Samples"
+        Credits Varghese et al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of Immunihistochemistry Images of Human Tissue Samples"
 
     Args:
         image (_type_): Input image
@@ -163,13 +162,12 @@ def calculate_pixel_intensity(image):
     Returns:
         - Histogram (array): actual histogram of the tile
         - Hist_centers (array): center of bins of histogram
-        - Zones (array): Number of pixels for each zone. During processing pixels in the tile are assigned to one of four
-                    zones based on pixel intensity. For more information see utils.calculate_pixel_intensity
+        - Zones (array): Number of pixels for each zone. During processing pixels in the tile are assigned to one of four zones based on pixel intensity.
+        For more information see utils.calculate_pixel_intensity
         - Percentage (array): Percentage of pixels in each zone
         - Score (array): Score for each of the ties
         - Px_count: Total number of pixels in the tile
         - Image Array (array): Pixelvalues of for positive pixels. Pixels with values ranging from 0 to 121 are considered positive.
-
     """
 
     # Conversion to gray-scale-ubyte image
@@ -272,15 +270,11 @@ def compute_dual_antigen_colocalization(iterable):
     Returns:
         colocal_dict (Dict): returns a dictionary containing the results of the analysis
             - Tilename: Name of the tile
-            - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable;
-                    (-1): all tiles not containing tissue)
-            Additionally: only if Flag = 1:
-            - Coverage: Amount of pixels (in %) that both tiles cover combined in respect to actual tissue in images.
-            - Overlap: Overlap of postitive pixels: Amount of the same pixels (in %) that are covered by both images.
-            - Complement: Amount of positive pixels (in %) that are only covered by one of the 2 images.
-            - Negative: Amount of negative pixels (in %) that are not covered either image.
-
-            TODO Think about passing low positives and negative pixels via quantification as well --> more complex, but low positive overlap calculatable
+            - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable; (-1): all tiles not containing tissue)
+            - Coverage: Amount of pixels (in %) that both tiles cover combined in respect to actual tissue in images. (Only if Flag == 1)
+            - Overlap: Overlap of postitive pixels: Amount of the same pixels (in %) that are covered by both images. (Only if Flag == 1)
+            - Complement: Amount of positive pixels (in %) that are only covered by one of the 2 images. (Only if Flag == 1)
+            - Negative: Amount of negative pixels (in %) that are not covered either image. (Only if Flag == 1)
     """
 
     img1 = iterable[0]
@@ -484,11 +478,10 @@ def compute_triplet_antigen_colocalization(iterable):
          - Tilename: Name of the tile
          - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable;
                 (-1): all tiles not containing tissue)
-         Only of Flag = 1:
-         - Coverage: Amount of pixels (in %) that all 3 tiles cover combined in respect to actual tissue in images.
-         - Overlap: Overlap of postitive pixels: Amount of positive pixels (in %) that are covered by at least 2 or all 3 images combined
-         - Complement: Amount of positive pixels (in %) that are only covered by one of the 3 images
-         - Negative: Amount of negative pixels (in %) that are not covered by any of the 3 images
+         - Coverage: Amount of pixels (in %) that all 3 tiles cover combined in respect to actual tissue in images.  (Only if Flag == 1)
+         - Overlap: Overlap of postitive pixels: Amount of positive pixels (in %) that are covered by at least 2 or all 3 images combined  (Only if Flag == 1)
+         - Complement: Amount of positive pixels (in %) that are only covered by one of the 3 images (Only if Flag == 1)
+         - Negative: Amount of negative pixels (in %) that are not covered by any of the 3 images  (Only if Flag == 1)
 
     """
 

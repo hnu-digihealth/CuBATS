@@ -1,0 +1,4 @@
+﻿cubats
+======
+
+.. automodule:: cubats
