@@ -22,6 +22,9 @@ from skimage.transform import resize
 from torch import float32, from_numpy
 from tqdm import tqdm
 
+# CuBATS
+from cubats import Utils as utils
+
 
 # Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used
 # TODO remove input_size from vars, can be calculated from onnx model via model.graph.input
@@ -154,8 +157,9 @@ def _segment_file(
     segmented_wsi = VipsImage.new_from_array(
         segmented_wsi).cast(BandFormat.INT)
 
+    # utils call due to name cleaning
     wsi_name, file_type = path.splitext(file_path)
-    wsi_name = wsi_name + "_segmented" + file_type
+    wsi_name = utils.get_name(wsi_name) + "_mask" + file_type
 
     segmented_wsi.crop(0, 0, slide.dimensions[0], slide.dimensions[1]). \
         tiffsave(
@@ -210,7 +214,8 @@ def _plot_segmentation_on_tissue(file_path, output_path):
     mask_path = path.join(output_path, path.basename(wsi_name))
     mask = OpenSlide(mask_path)
 
-    slide = slide.get_thumbnail((slide.dimensions[0] / 8, slide.dimensions[1] / 8))
+    slide = slide.get_thumbnail(
+        (slide.dimensions[0] / 8, slide.dimensions[1] / 8))
     mask = mask.get_thumbnail((mask.dimensions[0] / 8, mask.dimensions[1] / 8))
 
     png_name, _ = path.splitext(file_path)

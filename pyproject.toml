@@ -3,8 +3,8 @@ name = "CuBATS"
 version = "0.1.0"
 description = "Computer Vision Based Antigen Target Selector"
 authors = [
-    {name = "Moritz Dinser", email = "moritz.dinser@hnu.de"},
-    {name = "Daniel Hieber", email = "daniel.hieber@hnu.de"},
+    { name = "Moritz Dinser", email = "moritz.dinser@hnu.de" },
+    { name = "Daniel Hieber", email = "daniel.hieber@hnu.de" },
 ]
 dependencies = [
     "openslide-python>=1.3.1",
@@ -17,7 +17,7 @@ dependencies = [
 ]
 requires-python = ">=3.10,<=3.12"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 
 [build-system]
 requires = ["pdm-backend"]
@@ -27,16 +27,8 @@ build-backend = "pdm.backend"
 distribution = true
 
 [tool.pdm.dev-dependencies]
-testing = [
-    "pytest>=8.2.0",
-    "coverage>=7.5.0",
-    "flake8>=7.0.0",
-]
-dev = [
-    "pre-commit>=3.7.0",
-    "notebook>=7.1.3",
-    "isort>=5.13.2",
-]
+testing = ["pytest>=8.2.0", "coverage>=7.5.0", "flake8>=7.0.0"]
+dev = ["pre-commit>=3.7.0", "notebook>=7.1.3", "isort>=5.13.2"]
 
 [tool.pdm.scripts]
 test = "pdm run -v pytest tests"

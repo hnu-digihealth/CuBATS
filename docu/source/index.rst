@@ -3,18 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to CuBATS's documentation!
+CuBATS
+*******
+
+.. include:: README.rst
+
+Welcome to the CuBATS's Documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
 
-   modules
+   installation
+   registration
+   segmentation
+   slide_collection
 
 Indices and tables
 ==================
-
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
