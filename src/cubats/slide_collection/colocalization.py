@@ -1,10 +1,6 @@
-# Standard Library
-
 # Third Party
 import numpy as np
 from PIL import Image
-
-# CuBATS
 
 
 def compute_dual_antigen_colocalization(iterable):

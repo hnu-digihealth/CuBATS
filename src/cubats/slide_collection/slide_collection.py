@@ -8,7 +8,7 @@ from itertools import combinations
 # Third Party
 import numpy as np
 import pandas as pd
-import skimage
+import skimage.io
 from matplotlib import pyplot as plt
 from PIL import Image
 from pyvips import BandFormat
@@ -16,10 +16,11 @@ from pyvips import Image as VipsImage
 from tqdm import tqdm
 
 # CuBATS
-import cubats.Utils as utils
 import cubats.slide_collection.colocalization as colocalization
+import cubats.Utils as utils
 from cubats.slide_collection.slide import Slide
 
+# Constants
 # Destination directories
 RESULT_DATA_DIR = "data"
 TILES_DIR = "tiles"
@@ -34,7 +35,6 @@ SLIDE_COLLECTION_COLUMN_NAMES = ['Name', 'Reference', 'Mask',
                                  'Openslide Object', 'Tiles', 'Level Count', 'Level Dimensions', 'Tile Count']
 QUANTIFICATION_RESULTS_COLUMN_NAMES = [
     'Name', 'High Positive (%)', 'Positive (%)', 'Low Positive (%)', 'Negative (%)', 'Background (%)', 'Score']
-
 
 DEFAULT_TILE_SIZE = 1024
 

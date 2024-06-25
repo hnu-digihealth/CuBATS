@@ -1,20 +1,20 @@
 # Standard Library
-import os
 import concurrent.futures
+import os
 import pickle
 
 # Third Party
 import numpy as np
 import openslide
 from openslide.deepzoom import DeepZoomGenerator
-from tqdm import tqdm
 from PIL import Image
 from pyvips import BandFormat
 from pyvips import Image as VipsImage
+from tqdm import tqdm
 
 # CuBATS
-from cubats.slide_collection import tile_processing
 from cubats import Utils as utils
+from cubats.slide_collection import tile_processing
 
 
 class Slide(object):
