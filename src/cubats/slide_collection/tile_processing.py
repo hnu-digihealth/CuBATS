@@ -17,27 +17,28 @@ def ihc_stain_separation(
     eosin=False,
 ):
     """
-    Function receives IHC image, separates individual stains (Hematoxylin
-    Eosin, DAB) from image and returns an image for each of the individual
-    stains.
-    Credits:
-    Credits for this function are owed to A. C. Ruifrok and D. A. Johnston
-    with there paper “Quantification of histochemical staining by color
-    deconvolution,” Analytical and quantitative cytology and histology / the
-    International Academy of Cytology [and] American Society of Cytology, vol.
-    23, no. 4, pp. 291-9, Aug. 2001. PMID: 11531144: https://scikit-image.org
-    docs/stable/auto_examples/color_exposure/plot_ihc_color_separation
-    html#sphx-glr-auto-examples-color-exposure-plot-ihc-color-separation-py
+    Function receives IHC image, separates individual stains (Hematoxylin, Eosin, DAB) from image and returns an image
+    for each of the individual stains.
+    Credits: Credits for this function are owed to A. C. Ruifrok and D. A. Johnston with there paper “Quantification of
+    histochemical staining by color deconvolution,” Analytical and quantitative cytology and histology / the
+    International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug. 2001. PMID:
+    11531144: https://scikit-image.orgdocs/stable/auto_examples/color_exposure/plot_ihc_color_separationhtml#sphx-glr-auto-examples-color-exposure-plot-ihc-color-separation-py
 
     Args:
-        ihc_rgb : IHC image in RGB
-        hematoxylin : Boolean, if True returns Hematoxylin image
-        eosin : Boolean, if True returns Eosin image
+        ihc_rgb (Image): IHC image in RGB
+
+        hematoxylin(bool): Boolean, if True returns Hematoxylin image
+
+        eosin (bool): Boolean, if True returns Eosin image
 
     Returns:
-        ihc_h   : Hematoxylin staining of image
-        ihc_e   : Eosin staining of image
-        ihc_d   : DAB (3',3'-Diaminobenzidine)
+        Tuple:
+
+        - ihc_h (Image): Hematoxylin staining of image if hematoxylin=True
+
+        - ihc_e (Image): Eosin staining of image if eosin=True
+
+        - ihc_d (Image): DAB (3',3'-Diaminobenzidine)
 
     """
     # convert RGB image to HED using prebuild skimage method
@@ -67,36 +68,34 @@ def ihc_stain_separation(
 def quantify_tile(iterable):
     """
     This function processes a single input tile and returns a dictionary.
-        - If the tile is mostly white and thus shows no- or only little tissue, the tile will not be processed further The returned dict will contain the Tilename and a Flag = -1
-        - Else the tile will be processed, including stain_separation and
-            pixel_intensity calculations. The DAB Image will then be saved in
-            passed directory and results of pixel intensity will be returned
-            inside the dictionary.
+        - If the tile is mostly white and thus shows no- or only little tissue, the tile will not be processed further
+          The returned dict will contain the Tilename and a Flag = -1
+
+        - Else the tile will be processed, including stain_separation and pixel_intensity calculations. The DAB Image
+          will then be saved in passed directory and results of pixel intensity will be returned inside the dictionary.
 
     Args:
-        input (Iterable): Iterable containing Information on passed tile for
-        further processing:
-            index 0: Column, necessary for naming
-            index 1: Row, necessary for naming
-            index 2: Tile itself, necessary since processes cannot access
-                shared memory
-            DAB_TILE_DIR: Directory, for saving Image, since single processes
-                cannot access shared memory
+        iterable (iterable): Iterable containing the following Information on passed tile:
+
+         - index 0: Column, necessary for naming
+         - index 1: Row, necessary for naming
+         - index 2: Tile itself, necessary since processes cannot access shared memory
+         - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory
+
 
     Returns:
-        Dictionary: Returns dictionary for input tile containing results of
-        calculation of pixel intensity:
-            Tilename
-            Histogram
-            Hist_centers
-            Zones
-            Percentage
-            Score
-            Px_count
-            Flag
-            Image Array
+        dict: Dictionary containing tile results:
+            - Tilename
+            - Histogram
+            - Hist_centers
+            - Zones
+            - Percentage
+            - Score
+            - Px_count
+            - Flag
+            - Image Array
 
-            TODO Add modes for optional histogram etc save
+        TODO Add modes for optional histogram etc save
 
     """
     # Assign local variables for better readability
@@ -161,37 +160,36 @@ def quantify_tile(iterable):
 
 def calculate_pixel_intensity(image):
     """
-    Calculates pixel intensity of each pixel in the input image and separates
-    them into 4 different zones based on their intensity. Intensity of each
-    pixel lies between 0 and 255. Intensities above 235 are predominantly
-    fatty tissues but dont contribute to pathological scoring:
+    Calculates pixel intensity of each pixel in the input image and separates them into 4 different zones based on
+    their intensity. Intensity of each pixel lies between 0 and 255. Intensities above 235 are predominantly fatty
+    tissues but dont contribute to pathological scoring:
+
         - Zone 1 = High positive (intensity: 0-60)
         - Zone 2 = Positive (intensity: 61-120)
         - Zone 3 = Low positive (intensity: 121-180)
         - Zone 4 = negative (intensity: 181-235)
-    After calculating pixel intensities this function calculates percentage
-    contribution of each of the zones
-    as well as the a pathology score
 
-    Credits Varghese et al. (2014) "IHC Profiler: An Open Source Plugin for
-    the Quantitative Evaluation and Automated Scoring of Immunihistochemistry
-    Images of Human Tissue Samples"
+    After calculating pixel intensities this function calculates percentage contribution of each of the zones as well
+    as the a pathology score.
+
+    Credits Varghese et al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated
+    Scoring of Immunihistochemistry Images of Human Tissue Samples"
 
     Args:
-        image (_type_): Input image
+        image (Image): Input image
 
     Returns:
-        Histogram (ndarray): actual histogram of the tile
-        Hist_centers (ndarray): center of bins of histogram
-        Zones (ndarray): Number of pixels for each zone. During processing
-            pixels in the tile are assigned to one of four zones based on pixel
-            intensity. For more information see 'tile
-            calculate_pixel_intensity'
-        Percentage (ndarray): Percentage of pixels in each zone
-        Score (ndarray): Score for each of the ties
-        Px_count: Total number of pixels in the tile
-        Image Array (ndarray): Pixelvalues of for positive pixels. Pixels with
-        values ranging from 0 to 121 are considered positive.
+        Tuple:
+        - hist (ndarray): histogram of the tile.
+        - hist_centers(ndarray): center of bins of histogram
+        - zones (ndarray): Number of pixels for each zone. During processing pixels in the tile are assigned to one of
+          four zones based on pixel intensity. For more information see 'tile calculate_pixel_intensity'
+        - percentage (ndarray): Percentage of pixels in each zone
+        - score (ndarray): Score for each of the ties
+        - pixel_count (int): Total number of pixels in the tile
+        - image_analysis (ndarray): Pixelvalues of for positive pixels. Pixels with values ranging from 0 to 121 are
+          considered positive.
+
     """
 
     # Conversion to gray-scale-ubyte image
@@ -248,14 +246,14 @@ def calculate_score(zones, count):
 
     Args:
         zones (ndarray): Array containing amount of pixels from each zone
+
         pixelcount (int): total pixelcount
 
     Returns:
-        percentage (ndarray): Array containing percentage of pixels in each
-            zone
-        score (ndarray): Array containing calculation of score for each zone
+        Tuple:
+        - percentage (ndarray): Array containing percentage of pixels in each zone.
+        - score (ndarray): Array containing calculation of score for each zone
 
-        TODO add scorename
     """
     percentage = np.zeros(zones.size)
     score = np.zeros(zones.size)

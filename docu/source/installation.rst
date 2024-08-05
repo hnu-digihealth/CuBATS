@@ -20,7 +20,8 @@ Or install CuBATS directly from GitHub:
     $ pip install git+https://github.com/hnu-digihealth/CuBATS.git
 
 .. _Prerequisites:
+
 Prerequisites
-==============
+=============
 
 CuBATS relies on a few system level packages that need to be installed beforehand `VALIS <https://valis.readthedocs.io/en/latest/>`_, `OpenSlide <https://openslide.org>`_ and `pyvips <https://libvips.github.io/libvips/>`_ are required.

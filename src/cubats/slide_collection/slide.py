@@ -18,6 +18,53 @@ from cubats.slide_collection import tile_processing
 
 
 class Slide(object):
+    """ Slide Class.
+
+    'Slide' class instatiates a slide object containing all relevant information and results for a single slide. All
+     slide specific operations that can be performed on a single slide rather than on a slide collection are
+     implemented in this class. This includes quantification of staining intensities and reconstruction of a slide. The
+     class is initialized with the name of the slide, the path to the slide file, as well as information on whether the
+     slide is a mask or reference slide. The class contains a dictionary of detailed quantification results for each
+     tile, as well as a dictionary of summarized quantification results for the entire slide. The slide object also
+     contains information on the openslide object, the tiles, the level count, the level dimensions, as well as the
+     tile count. The slide object also contains a directory to save the tiles after color deconvolution, which is
+     necessary for reconstruction of the slide later on.
+
+    Attributes:
+        name (str): The name of the slide.
+
+        openslide_object (openslide.OpenSlide): The openslide object of the slide.
+
+        tiles (openslide.deepzoom.DeepZoomGenerator): DeepZoom Generator containing the tiles of the slide.
+
+        level_count (int): The number of DeepZoom levels of the slide.
+
+        level_dimensions (list):  List of tuples (pixels_x, pixels_y) for each Deep Zoom level.
+
+        tile_count (int): The number of tiles in the slide.
+
+        dab_tile_dir (str): Directory to save the tiles after color deconvolution is applied. Necessary for
+            reconstruction of the slide. If save_img is False no tiles are saved and this attribute is None.
+
+        is_mask (bool): Whether the slide is the slide_collections mask slide.
+
+        is_reference (bool): Whether the slide is the slide_collections reference slide.
+
+        detailed_quantification_results (dict): Dictionary containing detailed quantification results for each tile of
+            the slide. The dictionary is structured as follows:
+
+            - key (int): Index of the tile.
+            - value (dict): Dictionary containing the following:
+
+                - Flag (int): Flag indicating whether the tile was processed (1) or not (0).
+                - Histogram (array): Array containing the histogram of the tile.
+                - Hist_centers (array): Array containing the centers of the histogram bins.
+                - Zones (array): Array containing the number of pixels in each zone sorted by index according to the
+                  following attribution High Positive, Positive, Low Positive, Negative, Background).
+                - Score (str): Score of the tile based on the zones.
+
+    """
+
     def __init__(self, name, path, is_mask=False, is_reference=False):
         """
         Initialize a Slide object.
@@ -63,11 +110,13 @@ class Slide(object):
         each tile is save in img_dir after color deconvolution allowing for reconstruction of the slide later on. After
         color deconvolution, each tile is processed as a grayscale image and each pixels staining intensity (0-255) is
         quantified and attributed to one of four zones according to the IHC Profilers algorithm:
+
             - Zone1: High Positive (0-60)
             - Zone2: Positive (61-120)
             - Zone3: Low Positive (121-180)
             - Zone4: Negative (181-235)
-            (Zone5: White Space or Fatty Tissues (236-255), irrelevant for quantification)
+            - (Zone5: White Space or Fatty Tissues (236-255), irrelevant for quantification)
+
         The results for each tile are stored within a dictionary and all dictionaries are accumulated in the nested
         dictionary self.detailed_quantification_results. Ultimately, the results are summarized and stored in self.
         quantification_summary. Both the detailed and summarized results are stored as PICKLE in the save_dir.
@@ -134,20 +183,25 @@ class Slide(object):
 
     def summarize_quantification_results(self):
         """
-            Summarizes quantification results for a given slide and appends them to self.quantification_results. This includes the sums of number
+            Summarizes quantification results for a given slide and appends them to self.quantification_summary. This includes the sums of number
             if pixels in for zone, percentage of pixels in each zone, as well as a score for each zone. The score is calculated as follows:
 
-            _dict:
-                - Slide (str): Name of the slide
-                - High Positive (float): Percentage of pixels in the high positive zone
-                - Positive (float): Percentage of pixels in the positive zone
-                - Low Positive (float): Percentage of pixels in the low positive zone
-                - Negative (float): Percentage of pixels in the negative zone
-                - White Space or Fatty Tissues (float): Percentage of pixels in the white space or fatty tissues zone
-                - Unit (str): Unit of the percentages (%)
-                - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide may be misleading since
-                    much negative tissue may lead to a negative score even though the slide may contain a lot of positive tissue as well.
-                    Therefore, the score for the entire slide should be interpreted with caution.
+            self.quantification_summary contains the following keys:
+                - Slide (str): Name of the slide.
+                - High Positive (float): Percentage of pixels in the high positive zone.
+                - Positive (float): Percentage of pixels in the positive zone.
+                - Low Positive (float): Percentage of pixels in the low positive zone.
+                - Negative (float): Percentage of pixels in the negative zone.
+                - Background (float): Percentage of pixels in the white space background or fatty tissues.
+                - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide
+                  may be misleading since much negative tissue may lead to a negative score even though the slide may
+                  contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
+                  interpreted with caution.
+
+        Raises:
+            ValueError: If the slide is a mask slide or a reference slide.
+
+
         """
         if self.is_mask:
             raise ValueError(

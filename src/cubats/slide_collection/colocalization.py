@@ -11,7 +11,8 @@ def compute_dual_antigen_colocalization(iterable):
     and returned. Additionally an image containing the results can be saved in the passed directory.
 
     Args:
-        iterable (iterable): Contains the 2 Tiles(iterable[0:2]) that are to be compared and analyzed for antigen coverage as well as the output directory
+        iterable (iterable): Contains the 2 Tiles(iterable[0:2]) that are to be compared and analyzed for antigen
+        coverage as well as the output directory
             - iterable[0]: img1
             - iterable[1]: img2
             - iterable[2]: output path

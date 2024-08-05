@@ -8,8 +8,6 @@ from itertools import combinations
 # Third Party
 import numpy as np
 import pandas as pd
-import skimage.io
-from matplotlib import pyplot as plt
 from PIL import Image
 from pyvips import BandFormat
 from pyvips import Image as VipsImage
@@ -40,155 +38,124 @@ DEFAULT_TILE_SIZE = 1024
 
 
 class SlideCollection(object):
-    """Initializes a slide collection, stores slide info and performs slide
-    processing.
+    """Initializes a slide collection, stores slide info and performs slide processing.
 
-    'Slide' is a class that initializes a slide collection and stores all
-    relevant information so that processed information can be reloaded at a
-    later time.
+    'Slide' is a class that initializes a slide collection and stores all relevant information so that processed
+    information can be reloaded at a later time.
 
     Attributes:
-        name (str): name of parent directory (should be name of tumorset )
+        name (str): Name of parent directory (i.e. name of tumorset).
 
-        src_dir (str): Path to source directory containing the WSIs
+        src_dir (str): Path to source directory containing the WSIs.
 
-        dest_dir (str): Path to destination directory for results
+        dest_dir (str): Path to destination directory for results.
 
-        data_dir (str): Path to data directory. Inside the data directory
-            quantification summary, dual overlap summary and triplet overlap
-            summary are stored. In addition it contains the pickle subdirectory
+        data_dir (str): Path to data directory, a subdirectory of dest_dir. The directory will be initiaded upon class
+            creation inside the dest_dir. Inside the data directory summaries of quantification results, dual overlap
+            results and triplet overlap results are stored as .CSV file. The data_dir also contains the pickle_dir.
 
-        pickle_dir (str): Path to pickle directory. Inside the pickle directory
-            pickled copies are stored which can later be reloaded for future
-            re-/processing.
+        pickle_dir (str): Path to pickle directory, a subdirectory of data_dir. Inside the pickle directory pickled
+            copies of the slide_collection, quantification results and antigen analysis are stored which will be
+            automatically reloaded if a slide collection is (re-)initialized with the same output_dir.
 
-        tiles_dir (str): Path to tiles directory. Inside the tiles directory
-            the tile directories for each slide are stored.
+        tiles_dir (str): Path to tiles directory, a subdirectory of dest_dir. Inside the tiles directory the tile
+            directories for each slide are stored.
 
-        colocalization_dir (str): Path to colocalization directory. Inside the
-            colocalization directory results of dual and triplet overlap
-            analyses are stored.
+        colocalization_dir (str): Path to colocalization directory, a subdirectory of dest_dir. Inside the
+            colocalization directory results of dual and triplet overlap analyses are stored.
 
-        reconstruct_dir (str): Path to reconstruct directory. Inside the
-            reconstruct directory reconstructed slides are stored.
+        reconstruct_dir (str): Path to reconstruct directory, a subdirectory of dest_dir. Inside the reconstruct
+            directory reconstructed slides are stored.
 
-        tile_dir_list (list): list containing the paths to the tile directories
-            for each slide. Inside these directories tile images of the
-            respective slide are stored.
+        collection_list (list of Slide): list containing all slide objects.
 
-        dab_tile_dir_list (list): List containing the paths to the DAB tile
-            directories for each slide. Inside these directories DAB tile
-            images of the respective slide are stored.
+        collection_info_df (Dataframe): Dataframe containing relevant information on all the slides. The colums are:
 
-        quantification_results_list (list): List containing the results of the
-            quantification for each slide. The list is nested and contains a
-            dictionary for each slide. This dictionary contains another
-            dictionary containing the results for each tile of the slide.
+            - Name (str): Name of slide.
+            - Reference (bool): True if slide is reference slide.
+            - Mask (bool): True if slide is mask slide.
+            - OpenSlide Object (OpenSlide): OpenSlide object of the slide.
+            - Tiles (DeepZoomGenerator): DeepZoom tiles of the slide.
+            - Level Count (int): Number of Deep Zoom levels in the image.
+            - Level Dimensions (list): List of tuples (pixels_x, pixels_y) for each Deep Zoom level.
+            - Tile Count (int): Number of total tiles in the image.
 
-        orig_img_list (list): List containing the original file names of the
-            WSIs
+        mask (Slide): Mask slide of the collection. Is set during initialization.
 
-        img_names (list): List containing the clear names of the WSIs
+        mask_coordinates (list): List containing the tile coordinates for tiles that are covered by the mask
+            Coordinates are tuples (column, row). TODO eliminate by using internal methods for applying mask to Image.
 
-        mask_coordinates (list): List containing the tile coordinates for tiles
-            that are covered by the mask. Coordinates are tuples (column, row).
+        quant_res_df (Dataframe): Dataframe containing the quantification results for all processed slides. The columns
+            are:
 
-        quantification_summary (list): List containing a summary of the
-            quantification results pf all slides:
-            Slide (str): Name of the slide
+            - Name (str): Name of the slide.
 
-            High Positive (float): Percentage of pixels in the high positive
-                zone
+            - High Positive (float): Percentage of pixels in the high positive zone.
 
-            Positive (float): Percentage of pixels in the positive zone
+            - Positive (float): Percentage of pixels in the positive zone.
 
-            Low Positive (float): Percentage of pixels in the low positive zone
+            - Low Positive (float): Percentage of pixels in the low positive zone.
 
-            Negative (float): Percentage of pixels in the negative zone
+            - Negative (float): Percentage of pixels in the negative zone.
 
-            White Space or Fatty Tissues (float): Percentage of pixels in
-                the white space or fatty tissues zone
+            - Background (float): Percentage of pixels in the white space or fatty tissues zone.
 
-            Unit (str): Unit of the percentages (%)
+            - Score (str): Overall score of the slide calculated from the average of scores for all tiles. However,
+              this score may be misleading, as it is an average over the entire slide. TODO necessary?
 
-            Score (str): Overall score of the slide based on the zones.
-                However, the score for the entire slide may be misleading since
+        dual_overlap_summary (list): List containing a summary of the dual overlap results for all processed slides:
 
-        dual_overlap_summary (list): List containing a summary of the dual
-            overlap results for all processed analyses:
-            Slide 1 (str): Name of the first slide
+            - Slide 1 (str): Name of the first slide.
 
-            Slide 2 (str): Name of the second slide
+            - Slide 2 (str): Name of the second slide.
 
-            Total Coverage (float): Combined coverage of the two slides
+            - Total Coverage (float): Combined coverage of the two slides.
 
-            Total Overlap (float): Overlap of antigen expression in the two
-                slides
+            - Total Overlap (float): Overlap of antigen expression in the two slides.
 
-            Total Complement (float): Complementary antigen expressions in
-                the two slides
+            - Total Complement (float): Complementary antigen expressions in the two slides.
 
-            Total Negative (float): Total of Negative in the two slides
+            - Total Negative (float): Total of Negative in the two slides.
 
-            Error (float): Percentage of tiles that were not processed due
-                to insufficient tissue coverage
+            - Error (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
 
-            Unit (str): Unit of the percentages (%)
+            - Unit (str): Unit of the percentages (%).
 
-        triplet_overlap_summary (list): List containing a summary of the
-            triplet overlap results for all processed analyses.
-            Slide 1 (str): Name of the first slide
+        triplet_overlap_summary (list): List containing a summary of the triplet overlap results for all processed
+            analyses.
 
-            Slide 2 (str): Name of the second slide
+            - Slide 1 (str): Name of the first slide.
 
-            Slide 3 (str): Name of the third slide
+            - Slide 2 (str): Name of the second slide.
 
-            Total Coverage (float): Combined coverage of the three slides
+            - Slide 3 (str): Name of the third slide.
 
-            Total Overlap (float): Overlap of antigen expression in the
-                three slides
+            - Total Coverage (float): Combined coverage of the three slides.
 
-            Total Complement (float): Complementary antigen expressions in
-                the three slides
+            - Total Overlap (float): Overlap of antigen expression in the three slides.
 
-            Total Negative (float): Total of Negative in the three slides
+            - Total Complement (float): Complementary antigen expressions in the three slides.
 
-            Error (float): Percentage of tiles that were not processed due
-                to insufficient tissue coverage
+            - Total Negative (float): Total of Negative in the three slides.
 
-            Unit (str): Unit of the percentages (%)
+            - Error (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
 
-        slide_info_dict (Dict): Dictionary containing information on all slides
-            name (str): Name of the slide
+            - Unit (str): Unit of the percentages (%).
 
-            openslide_object (OpenSlide Object): OpenSlide Object of the slide
-
-            tiles (DeepZoomGenerator): DeepZoomGenerator wrapping the OpenSlide
-                Object
-
-            tiles_count (int): Total number of tiles
-
-            level_dimensions (list): Dimensions of each DeepZoom level
-
-            total_count_tiles (int): Total number of tiles
-
-        ref_slide (Dict): Dictionary containing information on the reference
-            slide
-
-        mask (Dict): Dictionary containing information on the mask slide
     """
 
     def __init__(self, collection_name, src_dir, dest_dir, ref_slide=None):
-        """Initializes the class. The class contains
+        """Initializes the class. The class contains information on the slide collection.
 
         Args:
-            src_dir (str): Path to src directory containing the WSIs
+            collection_name (str): Name of the collection (i.e. Name of tumor set or patient ID)
 
-            dest_dir (str): Path to destination directory for results
+            src_dir (str): Path to src directory containing the WSIs.
 
-            ref_slide (str, optional): Path to reference slide. If 'ref_slide'
-                is None it will be automatically set to the HE slide based on
-                the filename of input files. Defaults to None.
+            dest_dir (str): Path to destination directory for results.
+
+            ref_slide (str, optional): Path to reference slide. If 'ref_slide' is None it will be automatically set to
+                the HE slide based on the filename of input files. Defaults to None.
 
         """
         # Name of the tumorset
@@ -212,7 +179,7 @@ class SlideCollection(object):
 
         # Mask Variables
         self.mask = None
-        self.mask_coordinates = []
+        self.mask_coordinates = []  # TODO remove and replace
 
         # Reference Slide
         self.reference_slide = ref_slide
@@ -226,7 +193,7 @@ class SlideCollection(object):
         self.triplet_overlap_summary = []
 
         # Initialize the slide collection
-        self.set_slide_collection()
+        self.init_slide_collection()
 
         # Set destination directories
         self.set_dst_dir()
@@ -254,8 +221,7 @@ class SlideCollection(object):
         self.reconstruct_dir = os.path.join(self.dest_dir, RECONSTRUCT_DIR)
         os.makedirs(self.reconstruct_dir, exist_ok=True)
 
-        # Create subdirectories in tiles_dir for each slide except for the
-        # reference slide and the mask
+        # Create subdirectories in tiles_dir for each slide except for the reference slide and the mask
         for slide in self.collection_list:
             if slide.is_mask:
                 pass
@@ -263,26 +229,13 @@ class SlideCollection(object):
                 pass
             else:
                 slide_dir = os.path.join(self.tiles_dir, slide.name)
-                # self.tile_dir_list.append(slide_dir)
                 os.makedirs(slide_dir, exist_ok=True)
-                # self.dab_tile_dir_list.append(dab_dir)
 
-            # fname = utils.get_name(f)
-            # if re.search("HE", fname) or re.search("mask", fname):
-            #     slide_dir = os.path.join(self.tiles_dir, fname)
-            #     self.tile_dir_list.append(slide_dir)
-            # else:
-            #     slide_dir = os.path.join(self.tiles_dir, fname)
-            #     self.tile_dir_list.append(slide_dir)
-            #     os.makedirs(slide_dir, exist_ok=True)
-            #     dab_dir = os.path.join(slide_dir, DAB_TILE_DIR)
-            #     self.dab_tile_dir_list.append(dab_dir)
-
-    def set_slide_collection(self):
+    def init_slide_collection(self):
         """
-        Sets the slide collection by iterating over the files in the source directory.
-        Only files with the extensions '.tiff' or '.tif' are considered.
-        For each valid file, a Slide object is created and added to the slide collection DataFrame.
+        Initializes the slide collection by iterating over the files in the source directory. Only files with the
+        extensions '.tiff' or '.tif' are considered. For each valid file, a 'Slide' object is created. Each Slide's
+        information is added to the 'collection_info_df'.
 
         Returns:
             None
@@ -314,25 +267,24 @@ class SlideCollection(object):
     def load_previous_results(self, path=None):
         """Loads results from previous processing if they exist.
 
-        Tries to load results from previous processing. If no path is passed,
-        the objects pickle directory is used. OpenSlide objects cannot be
-        saved as pickle as they are C-types. Therefore, they are initiatited
-        separately in the set_all_slides_dict function.
-        The following files are tried to be loaded if they exist in the given
-        directory:
-            mask_coordinates.pickle: Load mask coordinates from previous mask
-                generation
-            quantification_results.pickle: Load quantification results from
-                previous processing
-            dual_overlap_results.pickle: Load dual antigen overlap results
-                from previous processing
-            triplet_overlap_results.pickle: Load triplet antigen overlap
-                results from previous processing
-            processing_info.pickle: Load processing information for each slide
-                from previous processing
+        Tries to load results from previous processing. If no path is passed, the slide_collections pickle_dir is used.
+        Slide objects are based on OpenSlide which are C-type objects and cannot be stored as pickle. Therefore, each
+        Slide is re-initialized in the init_slide_collection function. The function will try to load the following
+        files:
+
+            - mask_coordinates.pickle: Load mask coordinates from previous mask processing.
+
+            - quantification_results.pickle: Load quantification results from previous processing.
+
+            - dual_overlap_results.pickle: Load dual antigen overlap results from previous processing.
+
+            - triplet_overlap_results.pickle: Load triplet antigen overlap results from previous processing.
+
+            - slidename_processing_info.pickle: Load processing information for each slide in the collection from
+              previous processing.
 
         Args:
-            path (str): Path to directory containing pickle files.
+            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir.
 
         """
         print("\n==== Searching for previous results\n")
@@ -389,11 +341,15 @@ class SlideCollection(object):
                     pass
 
     def generate_mask(self, save_img=False):
-        """Generates mask coordinates.
+        """Generates mask coordinates based on the mask slide.
 
-        Generates a list containing of tiles coordinates that are part of the
-        mask. This allows to only process tiles that are part of the mask and
-        thus are relevant for analysis. Previous mask coordinates are cleared.
+        Generates a list containing of tiles coordinates that are part of the mask. This allows to only process tiles
+        that are part of the mask and thus contain tumor tissue. Previous mask coordinates will be overwritten and the
+        results will be stored as pickle in pickle_dir.
+
+        Args:
+            save_img (bool): Boolean to determine if mask tiles shall be saved as image. Necessary if mask shall be
+                reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.
 
         """
         mask_tiles = self.mask.tiles
@@ -426,19 +382,17 @@ class SlideCollection(object):
         out = os.path.join(self.pickle_dir, "mask_coordinates.pickle")
         pickle.dump(self.mask_coordinates, open(out, "wb"))
 
-    def quantify_all_slides(self, save_images=False):
+    def quantify_all_slides(self, save_imgs=False):
         """Quantifies all registered slides sequentially and stores results.
 
-        Quantifies all slides that were instantiated sequentially with the
-        exception of the reference slide and the mask. Results are stored as
-        .CSV into the DATADIR.
-        Previous quantification results stored in the slide collection will be
-        reset and and the .CSV file overwritten.
+        Quantifies all slides that were instantiated sequentially with the exception of the reference_slide and the
+        mask_slide. Results are stored as .CSV into the data_dir. All previous quantification results in the
+        'quant_res_df' will be reset and the .CSV file overwritten.
 
         Args:
-            save_images (bool): Boolean determining if tiles shall be saved as image during processing. This is
-            necessary if slides shall be reconstructed after processing. However, storing tiles may require additional
-            storage.
+            save_imgs (bool): Boolean determining if tiles shall be saved as image during processing. This is necessary
+                if slides shall be reconstructed after processing. Note: storing tiles will require additional
+                storage. Defaults to False.
 
         """
         if self.quant_res_df.__len__() != 0:
@@ -456,7 +410,7 @@ class SlideCollection(object):
                     + str(len(self.collection_list) - 2)
                     + ")\n"
                 )
-                self.quantify_single_slide(slide.name, save_images)
+                self.quantify_single_slide(slide.name, save_imgs)
                 c += 1
 
     def quantify_single_slide(self, slide_name, save_img=False):
@@ -469,17 +423,16 @@ class SlideCollection(object):
         For more information on quantification checkout Slide.quantify_slide() function of the slide.py.
 
         Args:
-            - slide_name (str): Name of the slide to be processed.
-            - save_img (bool): Boolean determining if tiles shall be saved during processing.
+            slide_name (str): Name of the slide to be processed.
+
+            save_img (bool): Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
+                reconstructed later on. However, storing images will require addition storage. Defaults to False.
+
         """
         slide = [
             slide for slide in self.collection_list if slide.name == slide_name][0]
 
-        # if slide.is_mask:
-        #     raise ValueError("Cannot quantify mask slide.")
-        # elif slide.is_reference:
-        #     raise ValueError("Cannot quantify reference slide.")
-
+        # Create directorie for images if they are to be saved.
         if save_img:
             dab_tile_dir = os.path.join(
                 self.tiles_dir, slide_name, DAB_TILE_DIR)
@@ -494,8 +447,7 @@ class SlideCollection(object):
         self.save_quantification_results()
 
     def save_quantification_results(self):
-        """ Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in self.data_dir and self.pickle_dir,
-        respectively.
+        """ Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
         """
         if self.quant_res_df.__len__() != 0:
             self.quant_res_df.to_csv(
@@ -509,9 +461,11 @@ class SlideCollection(object):
             pickle.dump(self.quant_res_df, open(out, "wb"))
 
     def get_dual_antigen_combinations(self):
-        """
-        Creates all possible combinations of pairs amongst all quantified slides and analyzes antigen expressions for each pair, including antigen overlap.
-        Results are stored in self.dual_overlap_results.
+        """ Creates antigen pairs and calls compute_antigen_combinations for each pair.
+
+        Creates all possible combinations of pairs amongst all quantified slides and analyzes antigen expressions for
+        each pair, including antigen overlap. Results are stored in self.dual_overlap_results.
+
         """
         self.dual_overlap_summary.clear()
         antigen_combinations = list(combinations(
@@ -520,9 +474,11 @@ class SlideCollection(object):
             self.compute_dual_antigen_combinations(ele[0], ele[1])
 
     def get_triplet_antigen_combinations(self):
-        """
-        Creates all possible combinations of triplets amongst all quantified slides and analyzes antigen expressions for each triplet, including antigen overlap.
-        Results are stored in self.triplet_overlap_results.
+        """ Creates antigen triplets and calls compute_antigen_combinations for each triplet.
+
+        Creates all possible combinations of triplets amongst all quantified slides and analyzes antigen expressions
+        for each triplet, including antigen overlap. Results are stored in self.triplet_overlap_results.
+
         """
         self.triplet_overlap_summary.clear()
         antigen_combinations = list(combinations(
@@ -560,8 +516,9 @@ class SlideCollection(object):
 
     def compute_dual_antigen_combinations(self, slide1, slide2, save_img=False):
         """
-        Analyzes antigenexpressions for each of tiles of the given pair of slides using Multiprocesing. Results from each of the tiles are summarized,
-        stored in self.dual_overlap_results and saved as CSV in self.data_dir as well as PICKLE in self.pickle_dir.
+        Analyzes antigenexpressions for each of tiles of the given pair of slides using Multiprocesing. Results from
+        each of the tiles are summarized, stored in self.dual_overlap_results and saved as CSV in self.data_dir as well
+        as PICKLE in self.pickle_dir.
 
         Args:
             slide1 (dict): Quantification results for slide 1
@@ -714,8 +671,9 @@ class SlideCollection(object):
         self, slide1, slide2, slide3, save_img=False
     ):
         """
-        Analyzes antigenexpressions for each of tiles of the given triplet of slides using Multiprocesing. Results from each of the tiles are summarized,
-        stored in self.triplet_overlap_results and saved as CSV in self.data_dir as well as PICKLE in self.pickle_dir.
+        Analyzes antigenexpressions for each of tiles of the given triplet of slides using Multiprocesing. Results from
+        each of the tiles are summarized,stored in self.triplet_overlap_results and saved as CSV in self.data_dir as
+        well as PICKLE in self.pickle_dir.
 
         Args:
             slide1 (dict): Quantification results for slide 1
@@ -880,7 +838,8 @@ class SlideCollection(object):
         pickle.dump(self.triplet_overlap_summary, open(out, "wb"))
 
     def reconstruct_slide(self, slide_name, input_path):
-        """
+        """ Reconstructs a given slide into a WSI.
+
         Reconstructs a slide into a WSI based on saved tiles. This is only possible if tiles have been saved during processing. The WSI is then stored in the self.reconstruct_dir.
 
         Args:
@@ -931,159 +890,3 @@ class SlideCollection(object):
             tile_width=256,
             tile_height=256,
         )
-
-    def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True):
-        """This function plots quantification results of a given tilename. It plots the DAB-image, the histogram of the intensity distribution,
-            a bar plot containing the amount of pixels attributed to each zone and numeric results. Display of the image and numeric results are
-            optional, default is set to True. Images can only be display if they have been saved during quantification in functions:
-            - quantify_all_slides
-            - quantify_single_slide
-
-        Args:
-            tilename (_type_): _description_
-            img_true (bool, optional): _description_. Defaults to True.
-            numeric (bool, optional): _description_. Defaults to True.
-        """
-        names = []
-        images = []
-        hists = []
-        hist_centers = []
-        zones = []
-        percentages = []
-        scores = []
-        px_count = []
-        img_idx = 0
-        hist_idx = 1
-        bar_idx = 2
-        numeric_idx = 3
-
-        if img_true and numeric:
-            for dir in self.dab_tile_dir_list:
-                file = os.path.join(dir, (tilename + "_DAB.tif"))
-                if os.path.exists(file):
-                    img = skimage.io.imread(file)
-                    images.append(img)
-            fig, ax = plt.subplots(
-                4,
-                self.quantification_results_list.__len__(),
-                figsize=(self.quantification_results_list.__len__() * 5, 18),
-            )
-        elif img_true and not numeric:
-            for dir in self.dab_tile_dir_list:
-                file = os.path.join(dir, (tilename + "_DAB.tif"))
-                if os.path.exists(file):
-                    img = skimage.io.imread(file)
-                    images.append(img)
-            fig, ax = plt.subplots(
-                3,
-                self.quantification_results_list.__len__(),
-                figsize=(self.quantification_results_list.__len__() * 5, 13),
-            )
-        elif not img_true and numeric:
-            fig, ax = plt.subplots(
-                3,
-                self.quantification_results_list.__len__(),
-                figsize=(self.quantification_results_list.__len__() * 5, 13),
-            )
-            hist_idx = 0
-            bar_idx = 1
-            numeric_idx = 2
-
-        else:
-            fig, ax = plt.subplots(
-                2,
-                self.quantification_results_list.__len__(),
-                figsize=(self.quantification_results_list.__len__() * 5, 9),
-            )
-            hist_idx = 0
-            bar_idx = 1
-
-        tile_exists = False
-
-        for i in range(self.quantification_results_list.__len__()):
-            for j in range(self.quantification_results_list[i][1].__len__()):
-                if self.quantification_results_list[i][1][j]["Tilename"] == tilename:
-                    names.append(self.quantification_results_list[i][0])
-                    hists.append(
-                        self.quantification_results_list[i][1][j]["Histogram"])
-                    hist_centers.append(
-                        self.quantification_results_list[i][1][j]["Hist_centers"]
-                    )
-                    zones.append(
-                        self.quantification_results_list[i][1][j]["Zones"])
-                    percentages.append(
-                        self.quantification_results_list[i][1][j]["Percentage"]
-                    )
-                    scores.append(
-                        utils.get_score_name(
-                            self.quantification_results_list[i][1][j]["Score"].tolist(
-                            )
-                        )
-                    )
-                    px_count.append(
-                        self.quantification_results_list[i][1][j]["Px_count"]
-                    )
-                    tile_exists = True
-                    break
-
-        assert (
-            tile_exists
-        ), "The given tilename does not exist for one or more of the slides. Please make sure to select an existing tilename."
-
-        max_y_hist = round(max([max(hist) for hist in hists]), -4) + 10000
-        max_y_zone = round(max([max(zone) for zone in zones[:4]]), -4) + 20000
-
-        for i in range(self.quantification_results_list.__len__()):
-            if img_true:
-                ax[img_idx, i].imshow(images[i])
-                ax[img_idx, i].set_title("Slide: " + names[i])
-                ax[img_idx, i].axis("off")
-            # Histogram
-            ax[hist_idx, i].plot(hist_centers[i], hists[i], lw=2)
-            ax[hist_idx, i].set_title("Quantification: " + names[i])
-            ax[hist_idx, i].set_xlabel("Pixel Intensity")
-            ax[hist_idx, i].set_ylabel("Number of Pixels")
-            ax[hist_idx, i].set_xlim([0, 255])
-            ax[hist_idx, i].set_ylim([0, max_y_hist])
-            ax[hist_idx, i].axvline(x=60, color="r", linestyle="--")
-            ax[hist_idx, i].axvline(x=120, color="r", linestyle="--")
-            ax[hist_idx, i].axvline(x=180, color="r", linestyle="--")
-            ax[hist_idx, i].axvline(x=235, color="r", linestyle="--")
-            # Bar Plot
-            ax[bar_idx, i].bar(
-                ["High Positive", "Positive", "Low Positive", "Negative"], zones[i][:4]
-            )
-            ax[bar_idx, i].set_title("Scoring: " + names[i])
-            ax[bar_idx, i].set_ylim([0, max_y_zone])
-            ax[bar_idx, i].set_ylabel("Number of Pixels")
-            # Numeric Results
-            if numeric:
-                rows = [
-                    "High Positive",
-                    "Positive",
-                    "Low Positive",
-                    "Negative",
-                    "Total Pixel Count",
-                    "Score",
-                ]
-                cell_text = [
-                    [str(round(percentages[i][0], 2)) + "%"],
-                    [str(round(percentages[i][1], 2)) + "%"],
-                    [str(round(percentages[i][2], 2)) + "%"],
-                    [str(round(percentages[i][3], 2)) + "%"],
-                    [px_count[i]],
-                    [scores[i]],
-                ]
-                ax[numeric_idx, i].axis("off")
-                ax[numeric_idx, i].table(
-                    cellText=cell_text,
-                    colWidths=[0.5] * 3,
-                    rowLabels=rows,
-                    loc="best",
-                )
-                ax[numeric_idx, i].set_title("Numeric Results: " + names[i])
-
-        fig.suptitle(
-            f"Quantification Results for Tile: {tilename}\n", fontsize=16)
-        fig.tight_layout()
-        plt.show()

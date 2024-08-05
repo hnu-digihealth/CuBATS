@@ -9,7 +9,7 @@ CuBATS
 .. include:: README.rst
 
 Welcome to the CuBATS's Documentation!
-==================================
+======================================
 
 .. toctree::
    :maxdepth: 3
