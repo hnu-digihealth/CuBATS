@@ -5,20 +5,22 @@ from PIL import Image
 
 def compute_dual_antigen_colocalization(iterable):
     """
-    This function processes the information for the same tile from 2 different WSIs, analyzes these images for antigen coverage
-    and calculates how much tissue is covered by these different antigen combinations, as well as how much of the tissue is covered
-    by more than one image and how much tissure is only covered by one of the 2 images. The results are then saved in a dictionary
-    and returned. Additionally an image containing the results can be saved in the passed directory.
+    This function processes the information for the same tile from 2 different WSIs, analyzes these images for antigen
+    coverage and calculates how much tissue is covered by these different antigen combinations, as well as how much of
+    the tissue is covered by more than one image and how much tissure is only covered by one of the 2 images. The
+    results are then saved in a dictionary and returned. Additionally an image containing the results can be saved in
+    the passed directory.
 
     Args:
+
         iterable (iterable): Contains the 2 Tiles(iterable[0:2]) that are to be compared and analyzed for antigen
-        coverage as well as the output directory
-            - iterable[0]: img1
-            - iterable[1]: img2
-            - iterable[2]: output path
+            coverage as well as the output directory:
+                - iterable[0]: img1
+                - iterable[1]: img2
+                - iterable[2]: output path
 
     Returns:
-        colocal_dict (Dict): returns a dictionary containing the results of the analysis
+        dict: returns a dictionary containing the results of the analysis:
             - Tilename: Name of the tile
             - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable; (-1): all tiles not containing tissue)
             - Coverage: Amount of pixels (in %) that both tiles cover combined in respect to actual tissue in images. (Only if Flag == 1)

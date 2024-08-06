@@ -1,19 +1,20 @@
 # Standard Library
 import concurrent.futures
+import logging
 import os
 import pickle
 import re
 from itertools import combinations
+from time import time
 
 # Third Party
 import numpy as np
 import pandas as pd
 from PIL import Image
-from pyvips import BandFormat
-from pyvips import Image as VipsImage
 from tqdm import tqdm
 
 # CuBATS
+import cubats.logging_config as log_config
 import cubats.slide_collection.colocalization as colocalization
 import cubats.Utils as utils
 from cubats.slide_collection.slide import Slide
@@ -158,6 +159,10 @@ class SlideCollection(object):
                 the HE slide based on the filename of input files. Defaults to None.
 
         """
+        # Logging
+        logging.config.dictConfig(log_config.LOGGING)
+        self.logger = logging.getLogger(__name__)
+
         # Name of the tumorset
         self.collection_name = collection_name
 
@@ -231,6 +236,8 @@ class SlideCollection(object):
                 slide_dir = os.path.join(self.tiles_dir, slide.name)
                 os.makedirs(slide_dir, exist_ok=True)
 
+        self.logger.debug("Destination directories set or already exist")
+
     def init_slide_collection(self):
         """
         Initializes the slide collection by iterating over the files in the source directory. Only files with the
@@ -242,6 +249,8 @@ class SlideCollection(object):
 
             TODO: Check indexing of collection_info_df
         """
+        self.logger.info("Initializing Slide Collection")
+        init_start_time = time()
         for file in os.listdir(self.src_dir):
             if os.path.isfile(os.path.join(self.src_dir, file)):
                 if not file.startswith(".") and (file.endswith(".tiff") or file.endswith(".tif")):
@@ -263,6 +272,9 @@ class SlideCollection(object):
                         self.reference_slide = slide
                     elif mask:
                         self.mask = slide
+        init_end_time = time()
+        self.logger.debug(
+            f"Slide collection initialized in {round((init_end_time - init_start_time),2)} seconds")
 
     def load_previous_results(self, path=None):
         """Loads results from previous processing if they exist.
@@ -287,7 +299,8 @@ class SlideCollection(object):
             path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir.
 
         """
-        print("\n==== Searching for previous results\n")
+        prev_res_start_time = time()
+        self.logger.info("Searching for previous results")
         if self.quant_res_df.__len__() == 0:
             if path is None:
                 path = self.pickle_dir
@@ -301,44 +314,70 @@ class SlideCollection(object):
 
             # load mask coordinates
             if os.path.exists(path_mask_coord):
-                print("\n==== Loading mask coordinates\n")
                 self.mask_coordinates = pickle.load(
                     open(path_mask_coord, "rb"))
+                self.logger.debug(
+                    f"Successfully loaded mask for {self.collection_name}")
+            else:
+                self.logger.debug(
+                    f"No mask coordinates found for {self.collection_name}")
 
             # load quantification results
             if os.path.exists(path_quant_res):
-                print("\n==== Loading quantification results\n")
                 self.quant_res_df = pickle.load(
                     open(path_quant_res, "rb"))
+                self.logger.debug(
+                    f"Sucessfully loaded quantification results for {self.collection_name}")
+            else:
+                self.logger.debug(
+                    f"No previous quantification results found for {self.collection_name}")
 
             # load dual overlap results
             if os.path.exists(path_dual_overlap_res):
-                print("\n==== Loading dual overlap results\n")
                 self.dual_overlap_summary = pickle.load(
                     open(path_dual_overlap_res, "rb"))
+                self.logger.debug(
+                    f"Successfully loaded dual overlap results for {self.collection_name}")
+            else:
+                self.logger.debug(
+                    f"No previous dual overlap results found for {self.collection_name}")
 
             # load triplet overlap results
             if os.path.exists(path_triplet_overlap_res):
-                print("\n==== Loading triplet overlap results\n")
                 self.triplet_overlap_summary = pickle.load(
-                    open(path_triplet_overlap_res, "rb")
-                )
+                    open(path_triplet_overlap_res, "rb"))
+                self.logger.debug(
+                    f"Successfully loaded triplet overlap results for {self.collection_name}")
+            else:
+                self.logger.debug(
+                    f"No previous triplet overlap results found for {self.collection_name}")
 
             # Load processing info for each slide TODO load into slide object
             for slide in self.collection_list:
                 path_slide = os.path.join(
                     path, f"{slide.name}_processing_info.pickle")
                 if os.path.exists(path_slide):
-                    print("\n==== Loading processing info for slide", slide.name)
                     slide.detailed_quantification_results = pickle.load(
-                        open(path_slide, "rb")
-                    )
+                        open(path_slide, "rb"))
+                    self.logger.debug(
+                        f"Successfully loaded processing info for slide {slide.name}")
+
                     # If quantification results for loaded slide exist, load them into the slide object
                     if not self.quant_res_df[self.quant_res_df['Name'] == slide.name].empty:
                         slide.quantification_summary = self.quant_res_df.loc[
                             self.quant_res_df['Name'] == slide.name]
+                        self.logger.debug(
+                            f"Successfully loaded detailed quantification results for slide {slide.name}")
+                    else:
+                        self.logger.debug(
+                            f"No quantification results found for slide {slide.name}")
                 else:
+                    self.logger.debug(
+                        f"No previous processing info found for slide {slide.name}")
                     pass
+        prev_res_end_time = time()
+        self.logger.info(
+            f"Finished loading previous results for {self.collection_name} in {round((prev_res_end_time - prev_res_start_time), 2 )} seconds")
 
     def generate_mask(self, save_img=False):
         """Generates mask coordinates based on the mask slide.
@@ -352,6 +391,8 @@ class SlideCollection(object):
                 reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.
 
         """
+        mask_start_time = time()
+        self.logger.debug("Generating mask coordinates")
         mask_tiles = self.mask.tiles
         self.mask_coordinates.clear()
         cols, rows = mask_tiles.level_tiles[mask_tiles.level_count - 1]
@@ -377,10 +418,15 @@ class SlideCollection(object):
                         img.save(out_path)
                 else:
                     pass
+        mask_end_time = time()
+        self.logger.debug(
+            f"Mask coordinates generated in {round((mask_end_time - mask_start_time)/60,2)} minutes")
 
         # Save mask coordinates as pickle
         out = os.path.join(self.pickle_dir, "mask_coordinates.pickle")
         pickle.dump(self.mask_coordinates, open(out, "wb"))
+        self.logger.debug(f"Successfully saved mask coordinates to {out}")
+        self.logger.info("Finished Mask Generation")
 
     def quantify_all_slides(self, save_imgs=False):
         """Quantifies all registered slides sequentially and stores results.
@@ -401,15 +447,8 @@ class SlideCollection(object):
         c = 1
         for slide in self.collection_list:
             if not slide.is_mask and not slide.is_reference:
-                print(
-                    "Analyzing Slide: "
-                    + slide.name
-                    + "("
-                    + str(c)
-                    + "/"
-                    + str(len(self.collection_list) - 2)
-                    + ")\n"
-                )
+                self.logger.info(
+                    f"Analyzing Slide: {slide.name}({c}/{len(self.collection_list) - 2})")
                 self.quantify_single_slide(slide.name, save_imgs)
                 c += 1
 
@@ -450,6 +489,7 @@ class SlideCollection(object):
         """ Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
         """
         if self.quant_res_df.__len__() != 0:
+            save_start_time = time()
             self.quant_res_df.to_csv(
                 self.data_dir + "/quantification_results.csv",
                 sep=",",
@@ -459,6 +499,12 @@ class SlideCollection(object):
             out = os.path.join(
                 self.pickle_dir, "quantification_results.pickle")
             pickle.dump(self.quant_res_df, open(out, "wb"))
+            save_end_time = time()
+            self.logger.debug(
+                f"Successfully saved quantification results to {out} in {round((save_end_time - save_start_time),2)} seconds")
+        else:
+            self.logger.warning(
+                "No quantification results were found. Please call quantify_all_slides() to quantify all slides in this slide collection or call quantify_single_slide() to quantify a single slide.")
 
     def get_dual_antigen_combinations(self):
         """ Creates antigen pairs and calls compute_antigen_combinations for each pair.
@@ -836,57 +882,3 @@ class SlideCollection(object):
         )
         out = os.path.join(self.pickle_dir, "triplet_overlap_results.pickle")
         pickle.dump(self.triplet_overlap_summary, open(out, "wb"))
-
-    def reconstruct_slide(self, slide_name, input_path):
-        """ Reconstructs a given slide into a WSI.
-
-        Reconstructs a slide into a WSI based on saved tiles. This is only possible if tiles have been saved during processing. The WSI is then stored in the self.reconstruct_dir.
-
-        Args:
-            slide_name (str): Name of slide
-            input_path (str): Path to saved tiles
-
-        """
-
-        slide = None
-        tiles = None
-
-        slide = self.ref_slide["openslide_object"]
-        tiles = self.ref_slide["tiles"]
-
-        # Init variables
-        counter = 0
-        cols, rows = tiles.level_tiles[tiles.level_count - 1]
-        row_array = []
-
-        # Iterate through tiles and append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
-        for row in tqdm(range(rows), desc="Reconstructing image: " + slide_name):
-            column_array = []
-            for col in range(cols):
-                tile_name = str(col) + "_" + str(row)
-                file = os.path.join(input_path, tile_name + ".tif")
-                if os.path.exists(file):
-                    img = Image.open(file)
-                    counter += 1
-                else:
-                    img = Image.new("RGB", (1024, 1024), (255, 255, 255))
-
-                column_array.append(img)
-
-            segmented_row = np.concatenate(column_array, axis=1)
-            row_array.append(segmented_row)
-
-        # Create WSI and save as pyramidal TIF in self.reconstruct_dir
-        segmented_wsi = np.concatenate(row_array, axis=0)
-        segmented_wsi = VipsImage.new_from_array(
-            segmented_wsi).cast(BandFormat.INT)
-        out = os.path.join(self.reconstruct_dir, slide_name + "_reconst.tif")
-        segmented_wsi.crop(0, 0, slide.dimensions[0], slide.dimensions[1]).tiffsave(
-            out,
-            tile=True,
-            compression="jpeg",
-            bigtiff=True,
-            pyramid=True,
-            tile_width=256,
-            tile_height=256,
-        )

@@ -1,7 +1,9 @@
 # Standard Library
 import concurrent.futures
+import logging
 import os
 import pickle
+from time import time
 
 # Third Party
 import numpy as np
@@ -13,6 +15,7 @@ from pyvips import Image as VipsImage
 from tqdm import tqdm
 
 # CuBATS
+import cubats.logging_config as log_config
 from cubats import Utils as utils
 from cubats.slide_collection import tile_processing
 
@@ -75,6 +78,10 @@ class Slide(object):
             is_mask (bool, optional): Whether the slide is a mask. Defaults to False.
             is_reference (bool, optional): Whether the slide is a reference slide. Defaults to False.
         """
+        # Initialize logger
+        logging.config.dictConfig(log_config.LOGGING)
+        self.logger = logging.getLogger(__name__)
+
         self.name = name
         self.openslide_object = openslide.OpenSlide(path)
         self.tiles = DeepZoomGenerator(
@@ -101,6 +108,7 @@ class Slide(object):
             "level_dimensions": self.level_dimensions,
             "tile_count": self.tile_count,
         }
+        self.logger.debug(f"Slide {self.name} initialized.")
 
     def quantify_slide(self, mask_coordinates, save_dir, save_img=False, img_dir=None):
         """ Quantifies staining intensities for all tiles of this slide.
@@ -130,14 +138,21 @@ class Slide(object):
                 None.
 
         """
+        start_time = time()
+        self.logger.debug(
+            f"Quantifying slide: {self.name}, save_img: {save_img}")
         if self.is_mask:
+            self.logger.error("Cannot quantify mask slide.")
             raise ValueError("Cannot quantify mask slide.")
         elif self.is_reference:
+            self.logger.error("Cannot quantify reference slide.")
             raise ValueError("Cannot quantify reference slide.")
 
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
+                self.logger.error(
+                    "img_dir must be provided if save_img is True.")
                 raise ValueError(
                     "img_dir must be provided if save_img is True.")
             self.dab_tile_dir = img_dir
@@ -169,17 +184,23 @@ class Slide(object):
             for idx, res in enumerate(results):
                 # if result is not None:
                 self.detailed_quantification_results[idx] = res
+        end_time = time()
+        self.logger.info(
+            f"Finished quantifying slide: {self.name} in {round((end_time - start_time)/60,2)} minutes.")
 
         # Retrieve Quantification results and save to disk
-        print("\n==== Saving results\n")
-
         self.summarize_quantification_results()
-
+        self.logger.info(
+            f"Saving quantification results for {self.name} to {save_dir}")
         # Save dictionary as pickle
+        start_time_save = time()
         f_out = os.path.join(
             save_dir, f"{self.name}_processing_info.pickle")
         pickle.dump(self.detailed_quantification_results, open(f_out, "wb"))
-        print("\n==== Finished processing image: " + self.name + "\n")
+        end_time_save = time()
+        self.logger.debug(
+            f"Saved quantification results for {self.name} to {f_out} in {round((end_time_save - start_time_save)/60,2)} minutes.")
+        self.logger.info(f"Finished processing slide: {self.name}")
 
     def summarize_quantification_results(self):
         """
@@ -203,10 +224,17 @@ class Slide(object):
 
 
         """
+        start_time_summarize = time()
+        self.logger.info(
+            f"Summarizing quantification results for slide: {self.name}")
         if self.is_mask:
+            self.logger.error(
+                "Cannot summarize quantification results for mask slide.")
             raise ValueError(
                 "Cannot summarize quantification results for mask slide.")
         elif self.is_reference:
+            self.logger.error(
+                "Cannot summarize quantification results for reference slide.")
             raise ValueError(
                 "Cannot summarize quantification results for reference slide.")
 
@@ -256,6 +284,9 @@ class Slide(object):
             percentages[4], 2)
         self.quantification_summary["Score"] = utils.get_score_name(
             scores)  # TODO necessary?
+        end_time_summarize = time()
+        self.logger.debug(
+            f"Finished summarizing quantification results for slide: {self.name} in {round((end_time_summarize - start_time_summarize)/60,2)} minutes.")
 
     def reconstruct_slide(self, in_path, out_path):
         """
@@ -266,12 +297,13 @@ class Slide(object):
             out_path (str): Path where to save the reconstructed slide.
 
         """
+        start_time = time()
         # Init variables
         counter = 0
         cols, rows = self.tiles.level_tiles[self.level_count - 1]
         row_array = []
         # Iterate through tiles and append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
-        for row in tqdm(range(rows), desc="Reconstructing image: " + self.name):
+        for row in tqdm(range(rows), desc="Reconstructing slide: " + self.name):
             column_array = []
             for col in range(cols):
                 tile_name = str(col) + "_" + str(row)
@@ -291,7 +323,13 @@ class Slide(object):
         segmented_wsi = np.concatenate(row_array, axis=0)
         segmented_wsi = VipsImage.new_from_array(
             segmented_wsi).cast(BandFormat.INT)
+        end_time = time()
+        self.logger.info(
+            f"Finished reconstructing slide: {self.name} in {round((end_time - start_time)/60,2)} minutes.")
+
+        start_time_save = time()
         out = os.path.join(out_path, self.name + "_reconst.tif")
+        self.logger.info(f"Saving reconstructed slide to {out}")
         segmented_wsi.crop(0, 0, self.openslide_object.dimensions[0], self.openslide_object.dimensions[1]).tiffsave(
             out,
             tile=True,
@@ -301,3 +339,6 @@ class Slide(object):
             tile_width=256,
             tile_height=256,
         )
+        end_time_save = time()
+        self.logger.debug(
+            f"Saved reconstructed slide to {out} in {round((end_time_save - start_time_save)/60,2)} minutes.")
