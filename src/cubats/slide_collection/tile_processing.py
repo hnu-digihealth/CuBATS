@@ -2,6 +2,7 @@
 import os
 
 # Third Party
+import cv2
 import numpy as np
 import tifffile as tiff
 from PIL import Image
@@ -263,6 +264,37 @@ def calculate_score(zones, count):
         score[i] = (zones[i] * (zones.size - i)) / count
 
     return percentage, score
+
+
+def mask_tile(tile, mask):
+    """
+    This function takes a tile and a mask and masks the tile with the mask. The mask is a binary image with the same
+    dimensions as the tile. The function returns the masked tile as Image, containing the tile where the mask is positive and white where it is negative.
+
+    Args:
+        tile (Image): Tile to be masked
+        mask (Image): Mask to be applied to the tile
+
+    Returns:
+        Image: Masked tile
+
+    """
+    # Convert tile to numpy array
+    tile_np = np.array(tile)
+    mask_np = np.array(mask)
+
+    if len(mask_np.shape) == 3:
+        mask_np = cv2.cvtColor(mask_np, cv2.COLOR_RGB2GRAY)
+    _, binary_mask = cv2.threshold(mask_np, 127, 255, cv2.THRESH_BINARY)
+    binary_mask_inv = cv2.bitwise_not(binary_mask)
+    binary_mask_inv_3ch = cv2.merge(
+        (binary_mask_inv, binary_mask_inv, binary_mask_inv))
+
+    masked_tile = cv2.bitwise_and(tile_np, binary_mask_inv_3ch)
+    white_bg = np.ones_like(tile_np) * 255
+    masked_tile = np.where(binary_mask_inv_3ch == 0, white_bg, masked_tile)
+
+    return Image.fromarray(masked_tile.astype(np.uint8))
 
 
 def separate_stains_and_save__tiles_as_tif(

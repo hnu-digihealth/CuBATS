@@ -197,11 +197,11 @@ class SlideCollection(object):
         self.dual_overlap_summary = []
         self.triplet_overlap_summary = []
 
-        # Initialize the slide collection
-        self.init_slide_collection()
-
         # Set destination directories
         self.set_dst_dir()
+
+        # Initialize the slide collection
+        self.init_slide_collection()
 
         # Load previous results if exist
         self.load_previous_results()
@@ -272,6 +272,14 @@ class SlideCollection(object):
                         self.reference_slide = slide
                     elif mask:
                         self.mask = slide
+
+        self.collection_info_df.to_csv(
+            os.path.join(self.data_dir, "collection_info.csv"),
+            sep=",",
+            index=False,
+            header=True,
+            encoding="utf-8",
+        )
         init_end_time = time()
         self.logger.debug(
             f"Slide collection initialized in {round((init_end_time - init_start_time),2)} seconds")
@@ -296,7 +304,7 @@ class SlideCollection(object):
               previous processing.
 
         Args:
-            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir.
+            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir of the slide collection.
 
         """
         prev_res_start_time = time()
@@ -428,7 +436,7 @@ class SlideCollection(object):
         self.logger.debug(f"Successfully saved mask coordinates to {out}")
         self.logger.info("Finished Mask Generation")
 
-    def quantify_all_slides(self, save_imgs=False):
+    def quantify_all_slides(self, save_imgs=False, detailed_mode=False):
         """Quantifies all registered slides sequentially and stores results.
 
         Quantifies all slides that were instantiated sequentially with the exception of the reference_slide and the
@@ -440,6 +448,9 @@ class SlideCollection(object):
                 if slides shall be reconstructed after processing. Note: storing tiles will require additional
                 storage. Defaults to False.
 
+            detailed_mode (bool): Boolean determining if detailed mask shall be used for quantification. Defaults to
+                False.
+
         """
         if self.quant_res_df.__len__() != 0:
             self.quant_res_df.iloc[0:0]
@@ -449,23 +460,27 @@ class SlideCollection(object):
             if not slide.is_mask and not slide.is_reference:
                 self.logger.info(
                     f"Analyzing Slide: {slide.name}({c}/{len(self.collection_list) - 2})")
-                self.quantify_single_slide(slide.name, save_imgs)
+                self.quantify_single_slide(
+                    slide.name, save_imgs, detailed_mode)
                 c += 1
 
-    def quantify_single_slide(self, slide_name, save_img=False):
+    def quantify_single_slide(self, slide_name, save_img=False, detailed_mode=False):
         """ Calls quantify_slide for given slide_name and appends results to self.quant_res_df.
 
         This function quantifies staining intensities for all tiles of the given slide using multiprocessing. The slide
         matching the passed slide_name is retrieved from the collection_list and quantified using the quantify_slide
         function of the Slide class. Results are appended to self.quant_res_df, which is then stored as .CSV in self.
         data_dir and as .PICKLE in self.pickle_dir. Existing .CSV/.PICKLE files are overwritten.
-        For more information on quantification checkout Slide.quantify_slide() function of the slide.py.
+        For more information on quantification checkout Slide.quantify_slide() function in the slide.py.
 
         Args:
             slide_name (str): Name of the slide to be processed.
 
             save_img (bool): Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
                 reconstructed later on. However, storing images will require addition storage. Defaults to False.
+
+            detailed_mode (bool): Boolean determining if detailed mask shall be used for quantification. Defaults to
+                False.
 
         """
         slide = [
@@ -475,10 +490,18 @@ class SlideCollection(object):
         if save_img:
             dab_tile_dir = os.path.join(
                 self.tiles_dir, slide_name, DAB_TILE_DIR)
-            slide.quantify_slide(self.mask_coordinates,
-                                 self.pickle_dir, save_img, dab_tile_dir)
+            if detailed_mode:
+                slide.quantify_slide(self.mask_coordinates,
+                                     self.pickle_dir, save_img, dab_tile_dir, detailed_mask=self.mask.tiles)
+            else:
+                slide.quantify_slide(self.mask_coordinates,
+                                     self.pickle_dir, save_img, dab_tile_dir)
         else:
-            slide.quantify_slide(self.mask_coordinates, self.pickle_dir)
+            if detailed_mode:
+                slide.quantify_slide(
+                    self.mask_coordinates, self.pickle_dir, detailed_mask=self.mask.tiles)
+            else:
+                slide.quantify_slide(self.mask_coordinates, self.pickle_dir)
 
         self.quant_res_df.loc[len(self.quant_res_df)
                               ] = slide.quantification_summary
@@ -486,7 +509,8 @@ class SlideCollection(object):
         self.save_quantification_results()
 
     def save_quantification_results(self):
-        """ Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
+        """
+        Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
         """
         if self.quant_res_df.__len__() != 0:
             save_start_time = time()
@@ -704,7 +728,7 @@ class SlideCollection(object):
         # Save results as CSV and PICKLE
         overlap_df = pd.DataFrame.from_dict(self.dual_overlap_summary)
         overlap_df.to_csv(
-            self.data_dir + "/dual_overlap_results.csv",
+            self.data_dir + "/dual_overlap_results.csv",  # TODO better naming
             sep=",",
             index=False,
             header=True,
@@ -874,7 +898,7 @@ class SlideCollection(object):
         # Save results as CSV and PICKLE
         overlap_df = pd.DataFrame.from_dict(self.triplet_overlap_summary)
         overlap_df.to_csv(
-            self.data_dir + "/triplet_overlap_results.csv",
+            self.data_dir + "/triplet_overlap_results.csv",  # TODO better naming
             sep=",",
             index=False,
             header=True,

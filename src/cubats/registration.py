@@ -8,6 +8,7 @@ SLIDE_SRC_DIR = ""
 RESULTS_DST_DIR = ""
 REGISTERED_SLIDE_DEST_DIR = ""
 REFERENCE_SLIDE = ""
+# TODO test and change to lower maybe --> max picture size when using micro registration
 DEFAULT_MAX_NON_RIGID_REG_SIZE = 3000
 CROP = "overlap"
 
@@ -31,7 +32,8 @@ def register_with_ref(
     """
     SLIDE_SRC_DIR = slide_src_dir
     RESULTS_DST_DIR = results_dst_dir
-    REGISTERED_SLIDE_DEST_DIR = os.path.join(RESULTS_DST_DIR, "/registered_slides")
+    REGISTERED_SLIDE_DEST_DIR = os.path.join(
+        RESULTS_DST_DIR, "/registered_slides")
     REFERENCE_SLIDE = referenceSlide
     DEFAULT_MAX_NON_RIGID_REG_SIZE = max_non_rigid_registartion_dim_px
 
@@ -66,7 +68,8 @@ def register(
     """
     SLIDE_SRC_DIR = slide_src_dir
     RESULTS_DST_DIR = results_dst_dir
-    REGISTERED_SLIDE_DEST_DIR = os.path.join(RESULTS_DST_DIR, "registered_slides")
+    REGISTERED_SLIDE_DEST_DIR = os.path.join(
+        RESULTS_DST_DIR, "registered_slides")
     DEFAULT_MAX_NON_RIGID_REG_SIZE = max_non_rigid_registartion_dim_px
 
     registrar = registration.Valis(SLIDE_SRC_DIR, RESULTS_DST_DIR)
@@ -74,7 +77,8 @@ def register(
     rigid_registrar, non_rigid_registrar, error_df = registrar.register()
 
     if microregistration:
-        registrar.register_micro(max_non_rigid_registartion_dim_px=DEFAULT_MAX_NON_RIGID_REG_SIZE)
+        registrar.register_micro(
+            max_non_rigid_registartion_dim_px=DEFAULT_MAX_NON_RIGID_REG_SIZE)
 
     registrar.warp_and_save_slides(REGISTERED_SLIDE_DEST_DIR, crop=CROP)
     registration.kill_jvm()

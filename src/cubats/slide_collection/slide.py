@@ -89,6 +89,7 @@ class Slide(object):
         self.level_count = self.tiles.level_count
         self.level_dimensions = self.tiles.level_dimensions
         self.tile_count = self.tiles.tile_count
+        self.masked_tiles = None
 
         self.dab_tile_dir = None
 
@@ -110,7 +111,7 @@ class Slide(object):
         }
         self.logger.debug(f"Slide {self.name} initialized.")
 
-    def quantify_slide(self, mask_coordinates, save_dir, save_img=False, img_dir=None):
+    def quantify_slide(self, mask_coordinates, save_dir, save_img=False, img_dir=None, detailed_mask=None):
         """ Quantifies staining intensities for all tiles of this slide.
 
         This function uses multiprocessing to quantify staining intensities of all tiles for the slide. First Each tile
@@ -136,11 +137,13 @@ class Slide(object):
                 Necessary for reconstruction of the slide.
             img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
                 None.
+            detailed_mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
+                mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however, might result in larger inaccuracies for WSI with low congruence.
 
         """
         start_time = time()
         self.logger.debug(
-            f"Quantifying slide: {self.name}, save_img: {save_img}")
+            f"Quantifying slide: {self.name}, save_img: {save_img}, detailed_mode: {detailed_mask is not None}")
         if self.is_mask:
             self.logger.error("Cannot quantify mask slide.")
             raise ValueError("Cannot quantify mask slide.")
@@ -163,6 +166,10 @@ class Slide(object):
             (
                 x,
                 y,
+                tile_processing.mask_tile(self.tiles.get_tile(
+                    self.level_count - 1, (x, y)), detailed_mask.get_tile(self.level_count - 1, (x, y)))
+                if detailed_mask is not None
+                else
                 self.tiles.get_tile(self.level_count - 1, (x, y)),
                 self.dab_tile_dir,
                 save_img,
