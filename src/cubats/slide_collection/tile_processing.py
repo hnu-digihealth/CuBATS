@@ -12,60 +12,6 @@ from skimage.exposure import histogram
 from tqdm import tqdm
 
 
-def ihc_stain_separation(
-    ihc_rgb,
-    hematoxylin=False,
-    eosin=False,
-):
-    """
-    Function receives IHC image, separates individual stains (Hematoxylin, Eosin, DAB) from image and returns an image
-    for each of the individual stains.
-    Credits: Credits for this function are owed to A. C. Ruifrok and D. A. Johnston with there paper “Quantification of
-    histochemical staining by color deconvolution,” Analytical and quantitative cytology and histology / the
-    International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug. 2001. PMID:
-    11531144: https://scikit-image.orgdocs/stable/auto_examples/color_exposure/plot_ihc_color_separationhtml#sphx-glr-auto-examples-color-exposure-plot-ihc-color-separation-py
-
-    Args:
-        ihc_rgb (Image): IHC image in RGB
-
-        hematoxylin(bool): Boolean, if True returns Hematoxylin image
-
-        eosin (bool): Boolean, if True returns Eosin image
-
-    Returns:
-        Tuple:
-
-        - ihc_h (Image): Hematoxylin staining of image if hematoxylin=True
-
-        - ihc_e (Image): Eosin staining of image if eosin=True
-
-        - ihc_d (Image): DAB (3',3'-Diaminobenzidine)
-
-    """
-    # convert RGB image to HED using prebuild skimage method
-    ihc_hed = rgb2hed(ihc_rgb)
-
-    # Create RGB image for each seperate stain
-    # Convert to ubyte for easier saving to drive as image
-    null = np.zeros_like(ihc_hed[:, :, 0])
-    if hematoxylin:
-        ihc_h = img_as_ubyte(
-            hed2rgb(np.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
-    else:
-        ihc_h = None
-
-    if eosin:
-        ihc_e = img_as_ubyte(
-            hed2rgb(np.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
-    else:
-        ihc_e = None
-
-    ihc_d = img_as_ubyte(
-        hed2rgb(np.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
-
-    return (ihc_d, ihc_h, ihc_e)
-
-
 def quantify_tile(iterable):
     """
     This function processes a single input tile and returns a dictionary.
@@ -137,6 +83,9 @@ def quantify_tile(iterable):
 
         # Save image as tif in passed directory if wanted.
         if save_img:
+            if not DAB_TILE_DIR:
+                raise ValueError(
+                    "Target directory must be specified if save_img is True")
             img = Image.fromarray(DAB)
             DAB_TILE_DIR = f"{DAB_TILE_DIR}/{tile_name}.tif"
             # print(DAB_TILE_DIR)
@@ -157,6 +106,60 @@ def quantify_tile(iterable):
         single_tile_dict["Flag"] = 0  # Flag = 0 : Tile not processed
 
     return single_tile_dict
+
+
+def ihc_stain_separation(
+    ihc_rgb,
+    hematoxylin=False,
+    eosin=False,
+):
+    """
+    Function receives IHC image, separates individual stains (Hematoxylin, Eosin, DAB) from image and returns an image
+    for each of the individual stains.
+    Credits: Credits for this function are owed to A. C. Ruifrok and D. A. Johnston with there paper “Quantification of
+    histochemical staining by color deconvolution,” Analytical and quantitative cytology and histology / the
+    International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug. 2001. PMID:
+    11531144: https://scikit-image.orgdocs/stable/auto_examples/color_exposure/plot_ihc_color_separationhtml#sphx-glr-auto-examples-color-exposure-plot-ihc-color-separation-py
+
+    Args:
+        ihc_rgb (Image): IHC image in RGB
+
+        hematoxylin(bool): Boolean, if True returns Hematoxylin image
+
+        eosin (bool): Boolean, if True returns Eosin image
+
+    Returns:
+        Tuple:
+
+        - ihc_h (Image): Hematoxylin staining of image if hematoxylin=True
+
+        - ihc_e (Image): Eosin staining of image if eosin=True
+
+        - ihc_d (Image): DAB (3',3'-Diaminobenzidine)
+
+    """
+    # convert RGB image to HED using prebuild skimage method
+    ihc_hed = rgb2hed(ihc_rgb)
+
+    # Create RGB image for each seperate stain
+    # Convert to ubyte for easier saving to drive as image
+    null = np.zeros_like(ihc_hed[:, :, 0])
+    if hematoxylin:
+        ihc_h = img_as_ubyte(
+            hed2rgb(np.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
+    else:
+        ihc_h = None
+
+    if eosin:
+        ihc_e = img_as_ubyte(
+            hed2rgb(np.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
+    else:
+        ihc_e = None
+
+    ihc_d = img_as_ubyte(
+        hed2rgb(np.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
+
+    return (ihc_d, ihc_h, ihc_e)
 
 
 def calculate_pixel_intensity(image):
@@ -201,7 +204,7 @@ def calculate_pixel_intensity(image):
 
     w, h = gray_scale_ubyte.shape
 
-    # array containg only high-/ & positive pixels
+    # array containg only high-, positive & low positive pixels
     img_analysis = np.full((w, h), 255, dtype="uint8")
 
     # Array for Zones of pixel intensity
@@ -256,12 +259,13 @@ def calculate_score(zones, count):
         - score (ndarray): Array containing calculation of score for each zone
 
     """
+    if count == 0:
+        raise ZeroDivisionError("Count cannot be zero")
     percentage = np.zeros(zones.size)
     score = np.zeros(zones.size)
-
     for i in range(zones.size):
         percentage[i] = (zones[i] / count) * 100
-        score[i] = (zones[i] * (zones.size - i)) / count
+        score[i] = (zones[i] * (zones.size - (i + 1))) / count
 
     return percentage, score
 
