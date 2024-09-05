@@ -58,6 +58,9 @@ def get_score_name(score):
     if not all(isinstance(s, (int, float)) for s in score):
         raise ValueError("All elements in the score list must be numeric.")
 
+    if any(s < 0 for s in score):
+        raise ValueError("All elements in the score list must be positive.")
+
     zone_names = ["High Positive", "Positive", "Low Positive", "Negative"]
     if len(score) < 4:
         raise ValueError(

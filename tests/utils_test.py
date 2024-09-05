@@ -47,6 +47,12 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             Utils.get_score_name([1, 2, 3])
 
+        with self.assertRaises(ValueError):
+            Utils.get_score_name([1, -2, 3, 4])
+
+        with self.assertRaises(ValueError):
+            Utils.get_score_name([-1, -2, -3, -4, -5])
+
     def test_downsample_Openslide_to_PIL(self):
         # Mock the Openslide object
         mock_openslide = MagicMock()
