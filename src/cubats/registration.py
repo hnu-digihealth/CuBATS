@@ -30,10 +30,23 @@ def register_with_ref(
         microregistration (bool, optional): _description_. Defaults to False.
         max_non_rigid_registartion_dim_px (_type_, optional): _description_. Defaults to DEFAULT_MAX_NON_RIGID_REG_SIZE.
     """
+    # Input validation
+    if not isinstance(slide_src_dir, str) or not os.path.exists(slide_src_dir):
+        raise ValueError("Invalid or non-existent source directory")
+    if not isinstance(results_dst_dir, str):
+        raise ValueError("Invalid destination directory")
+    if not isinstance(referenceSlide, str) or not os.path.exists(referenceSlide):
+        raise ValueError("Invalid or non-existent reference slide")
+    if not isinstance(microregistration, bool):
+        raise ValueError("microregistration must be a boolean")
+    if not isinstance(max_non_rigid_registartion_dim_px, int):
+        raise ValueError(
+            "max_non_rigid_registartion_dim_px must be an integer")
+
     SLIDE_SRC_DIR = slide_src_dir
     RESULTS_DST_DIR = results_dst_dir
     REGISTERED_SLIDE_DEST_DIR = os.path.join(
-        RESULTS_DST_DIR, "/registered_slides")
+        RESULTS_DST_DIR, "registered_slides")
     REFERENCE_SLIDE = referenceSlide
     DEFAULT_MAX_NON_RIGID_REG_SIZE = max_non_rigid_registartion_dim_px
 
@@ -47,7 +60,7 @@ def register_with_ref(
             max_non_rigid_registartion_dim_px=DEFAULT_MAX_NON_RIGID_REG_SIZE, align_to_reference=True
         )
 
-    registrar.warp_and_save_slides(REGISTERED_SLIDE_DEST_DIR, CROP)
+    registrar.warp_and_save_slides(REGISTERED_SLIDE_DEST_DIR, crop=CROP)
     registration.kill_jvm()
 
 
