@@ -200,7 +200,7 @@ def calculate_pixel_intensity(image):
     gray_scale_image = rgb2gray(image)
     gray_scale_ubyte = img_as_ubyte(gray_scale_image)
     # Calculates a histogram of the input image
-    hist, hist_centers = histogram(image)
+    hist, hist_centers = histogram(gray_scale_image)
 
     w, h = gray_scale_ubyte.shape
 
@@ -347,7 +347,7 @@ def separate_stains_and_save__tiles_as_tif(
             # save runtime and space
             if temp_np.mean() < 230 and temp_np.std() > 15:
                 # print("Separating color for tile: ", tile_name)
-                H, E, DAB = ihc_stain_separation(temp_np)
+                DAB, H, E = ihc_stain_separation(temp_np, True, True)
 
                 # saving DAB,H,E in subdirectories
                 tiff.imsave(DAB_TILE_DIR + "/" + tile_name + "_DAB.tif", DAB)

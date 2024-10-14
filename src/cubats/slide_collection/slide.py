@@ -319,7 +319,7 @@ class Slide(object):
                     img = Image.open(file)
                     counter += 1
                 else:
-                    img = Image.new("RGB", (1024, 1024), (255, 255, 255))
+                    img = Image.new("RGB", (1024, 1024), (192, 192, 192))
 
                 column_array.append(img)
 
@@ -327,6 +327,7 @@ class Slide(object):
             row_array.append(segmented_row)
 
         # Create WSI and save as pyramidal TIF in self.reconstruct_dir
+        logging.getLogger('pyvips').setLevel(logging.WARNING)
         segmented_wsi = np.concatenate(row_array, axis=0)
         segmented_wsi = VipsImage.new_from_array(
             segmented_wsi).cast(BandFormat.INT)

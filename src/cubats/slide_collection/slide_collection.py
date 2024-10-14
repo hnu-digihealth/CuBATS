@@ -32,9 +32,16 @@ PICKLE_DIR = "pickle"
 RECONSTRUCT_DIR = "reconstructed_slides"
 SLIDE_COLLECTION_COLUMN_NAMES = ['Name', 'Reference', 'Mask',
                                  'Openslide Object', 'Tiles', 'Level Count', 'Level Dimensions', 'Tile Count']
-QUANTIFICATION_RESULTS_COLUMN_NAMES = [
-    'Name', 'High Positive (%)', 'Positive (%)', 'Low Positive (%)', 'Negative (%)', 'Background (%)', 'Score']
-
+# Define column names and data types
+QUANTIFICATION_RESULTS_COLUMN_NAMES = {
+    'Name': str,
+    'High Positive (%)': float,
+    'Positive (%)': float,
+    'Low Positive (%)': float,
+    'Negative (%)': float,
+    'Background (%)': float,
+    'Score': str
+}
 DEFAULT_TILE_SIZE = 1024
 
 
@@ -465,7 +472,7 @@ class SlideCollection(object):
 
         """
         if self.quant_res_df.__len__() != 0:
-            self.quant_res_df.iloc[0:0]
+            self.quant_res_df = self.quant_res_df.iloc[0:0]
         # Counter variable for progress tracking
         c = 1
         for slide in self.collection_list:
@@ -515,8 +522,22 @@ class SlideCollection(object):
             else:
                 slide.quantify_slide(self.mask_coordinates, self.pickle_dir)
 
-        self.quant_res_df.loc[len(self.quant_res_df)
-                              ] = slide.quantification_summary
+        # Check if a row with the same 'Name' exists
+        existing_row_index = self.quant_res_df[self.quant_res_df['Name']
+                                               == slide.quantification_summary['Name']].index
+
+        if not existing_row_index.empty:
+            # Overwrite the existing row
+            self.quant_res_df.loc[existing_row_index[0]
+                                  ] = slide.quantification_summary
+        else:
+            # Append the new row
+            self.quant_res_df = self.quant_res_df.append(
+                slide.quantification_summary, ignore_index=True)
+
+        # Sort the DataFrame by the 'Name' column
+        self.quant_res_df = self.quant_res_df.sort_values(
+            by='Name').reset_index(drop=True)
 
         self.save_quantification_results()
 
@@ -550,10 +571,16 @@ class SlideCollection(object):
 
         """
         self.dual_overlap_summary.clear()
-        antigen_combinations = list(combinations(
-            self.quantification_results_list, 2))
-        for ele in antigen_combinations:
-            self.compute_dual_antigen_combinations(ele[0], ele[1])
+        # Filter out mask and reference slides
+        filtered_slides = [
+            slide for slide in self.collection_list if not slide.is_mask and not slide.is_reference]
+
+        # Generate all possible pairs of the filtered slides
+        slide_combinations = list(combinations(filtered_slides, 2))
+
+        # Pass each combination to the compute_dual_antigen_combination method
+        for combo in slide_combinations:
+            self.compute_dual_antigen_combination(combo[0], combo[1])
 
     def get_triplet_antigen_combinations(self):
         """ Creates antigen triplets and calls compute_antigen_combinations for each triplet.
@@ -596,7 +623,7 @@ class SlideCollection(object):
     #         iterable.append((tiles, dir, save_img))
     # TODO Work in pogress for optimizating antigen computation
 
-    def compute_dual_antigen_combinations(self, slide1, slide2, save_img=False):
+    def compute_dual_antigen_combination(self, slide1, slide2, save_img=False):
         """
         Analyzes antigenexpressions for each of tiles of the given pair of slides using Multiprocesing. Results from
         each of the tiles are summarized, stored in self.dual_overlap_results and saved as CSV in self.data_dir as well

@@ -1,4 +1,14 @@
-# import logging.config
+import os
+
+# Define the log directory outside the src directory
+log_dir = os.path.join(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))), 'logs')
+print(f"Log directory: {log_dir}")  # Debugging statement
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'cubats.log')
+print(f"Log file: {log_file}")  # Debugging statement
+
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -28,7 +38,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "detailed",
-            "filename": "logs/cubats.log",
+            "filename": log_file,
             "maxBytes": 10485760,
             "backupCount": 3,
         }

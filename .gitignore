@@ -163,3 +163,6 @@ cython_debug/
 
 # Mac Stuff
 .DS_Store
+src/logs/cubats.log.1
+src/logs/cubats.log.2
+src/logs/cubats.log.3
