@@ -1,8 +1,5 @@
-# TODO add docstrings
 # TODO add type hints
 # TODO add unit tests
-# TODO add logging
-# TODO add error (handling) throwing where ever needed
 # TODO add multi processing
 
 # Standard Library
@@ -12,8 +9,12 @@ from time import time
 from typing import List, Tuple, Union
 
 # Third Party
+import numpy as np
 import onnx
-from numpy import asarray, concatenate, ubyte, uint8
+import torch
+import torchstain
+import torchvision
+from numpy import concatenate
 from onnx2torch import convert
 from openslide import OpenSlide
 from openslide.deepzoom import DeepZoomGenerator
@@ -21,21 +22,38 @@ from PIL import Image
 from pyvips import BandFormat
 from pyvips import Image as VipsImage
 from skimage.transform import resize
-from torch import float32, from_numpy
 from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
 from cubats import Utils as utils
 
+# Initialize logging
 logging.config.dictConfig(log_config.LOGGING)
 logger = logging.getLogger(__name__)
+# Suppress pyvips logs
+logging.getLogger("pyvips").setLevel(logging.WARNING)
+
 # Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used
 # TODO remove input_size from vars, can be calculated from onnx model via model.graph.input
 # TODO add support for a heatmap output (optional or alternative)
 # TODO fix tile_size logic -> deepzoom gnerator only takes quadratic tiles, maybe change to int overall?
 
-# model_input_size = [int] before
+
+def init_normalizer(path_to_src_img):
+    """Initializes a Reinhard normalizer for image normalization.
+
+    Args:
+         path_to_src_img (str): Path to the source image file.
+
+    Returns:
+        torchstain.normalizers.ReinhardNormalizer: An instance of the Reinhard normalizer fitted to the source image.
+    """
+    normalizer = torchstain.normalizers.ReinhardNormalizer(
+        method='modified', backend='torch')
+    src_img = torchvision.io.read_image(path_to_src_img)
+    normalizer.fit(src_img)
+    return normalizer
 
 
 def run_segmentation_pipeline(
@@ -46,8 +64,29 @@ def run_segmentation_pipeline(
     output_path: Union[str, None] = None,
     plot_results=False
 ):
-    """
+    """ Run the segmentation pipeline on the given input path using the
+    specified model.
 
+    Performs segmentation on a single HE stained WSI or all HE stained WSIs in
+    a directory using the specified model. The segmentation results are saved
+    in the output directory. If no output directory is provided, the results
+    are saved in the same directory as the input. Optionally, a thumbnail of
+    the segmentation results can be plotted on the original image.
+
+    Args:
+        input_path (str): The path to the input file or directory.
+        model_path (str): The path to the ONNX model file.
+        tile_size (Tuple[int, int]): The size of each tile for segmentation.
+        model_input_size ([int]): The input size of the model. For example, [1, 3, 1024, 1024].
+        output_path (Union[str, None], optional): The path to the output directory. If not provided, the output will be saved in the same directory as the input. Defaults to None.
+        plot_results (bool, optional): Whether to plot the segmentation results. Defaults to False.
+
+    Raises:
+        FileNotFoundError: If the input path or output path does not exist.
+        ValueError: If the output path is not a directory or the model path is invalid.
+
+    Returns:
+        None
     """
     logger.info(
         f'Starting segmentation of {path.splitext(path.basename(input_path))[0]} using model {path.splitext(path.basename(model_path))[0]}')
@@ -86,7 +125,7 @@ def run_segmentation_pipeline(
 
     model = convert(model)
 
-    # suppress Pillow warning because of the large WSI
+    # Suppress Pillow warning because of the large WSI
     Image.MAX_IMAGE_PIXELS = None
 
     # run segmentation pipeline
@@ -107,10 +146,9 @@ def run_segmentation_pipeline(
     logger.info(
         f'Segmentation of {input_path} completed in {end_time_segmentation - start_time_segmentation:.2f} seconds.')
 
+
 # TODO add better names for the padding logic
 # TODO refactor mask-WSI creation logic
-
-
 def _segment_file(
     file_path,
     model,
@@ -119,17 +157,44 @@ def _segment_file(
     output_path,
     plot_results
 ):
-    """
+    """ Performs tumor detection and segmentation on a single WSI file.
 
+    Segments a (WSI) file into tiles, performs tumor detection on each tile and
+    save the reconstructed image.
+
+    Args:
+        file_path (str): The path to the WSI file.
+        model: The segmentation model.
+        tile_size (tuple): The size of each tile in pixels.
+        model_input_size (tuple): The input size of the model.
+        output_path (str): The path to save the segmented image.
+        plot_results (bool): Whether to plot the segmentation results on the
+        original image.
+
+    Returns:
+        None
     """
-    slide = OpenSlide(file_path)
-    slide_generator = DeepZoomGenerator(
-        slide, tile_size=tile_size[0], overlap=0, limit_bounds=False)
+    logger.info(f"Starting segmentation for file: {file_path}")
+    normalizer = init_normalizer(r"C:\Users\mlnot\Desktop\model\21585.png")
+    try:
+        slide = OpenSlide(file_path)
+        logger.debug(f"Opened slide file: {file_path}")
+    except Exception as e:
+        logger.error(f"Error opening slide file {file_path}: {e}")
+        return
+
+    try:
+        slide_generator = DeepZoomGenerator(
+            slide, tile_size=tile_size[0], overlap=0, limit_bounds=False)
+        logger.debug("Created DeepZoomGenerator")
+    except Exception as e:
+        logger.error(f"Error creating DeepZoomGenerator: {e}")
+        return
 
     # calculate if there is an overhang for the final tile at the right and bottom edge
-    needs_right_padding = (
+    needs_padding_right = (
         slide_generator.level_tiles[-1][0] * tile_size[0] - slide.dimensions[0]) > 0
-    needs_bottom_padding = (
+    needs_padding_bottom = (
         slide_generator.level_tiles[-1][1] * tile_size[1] - slide.dimensions[1]) > 0
 
     # array to save the segmented WSI rows as single numpy arrays
@@ -140,18 +205,19 @@ def _segment_file(
         range(0, slide_generator.level_tiles[-1][1]),
         desc=f'Segmenting Rows for {path.splitext(path.basename(file_path))[0]}',
     ):
+        logger.debug(f"Processing row {row}")
         # initially no padding is required
         requires_padding_right = False
         # array to save the segmented tiles of all columns of a row
         column_array = []
 
-        if row == slide_generator.level_tiles[-1][1] - 1 and needs_right_padding:
+        if row == slide_generator.level_tiles[-1][1] - 1 and needs_padding_right:
             requires_padding_right = True
 
         for column in range(0, slide_generator.level_tiles[-1][0]):
             requires_padding_bottom = False
 
-            if column == slide_generator.level_tiles[-1][0] - 1 and needs_bottom_padding:
+            if column == slide_generator.level_tiles[-1][0] - 1 and needs_padding_bottom:
                 requires_padding_bottom = True
 
             if requires_padding_right or requires_padding_bottom:
@@ -159,88 +225,213 @@ def _segment_file(
                     slide_generator.level_count - 1, (column, row))
                 tile = Image.new("RGB", (1024, 1024), (255, 255, 255))
                 tile.paste(raw_tile, (0, 0))
+                logger.debug(
+                    f"Tile at row {row}, column {column} required padding")
             else:
                 tile = slide_generator.get_tile(
                     slide_generator.level_count - 1, (column, row))
+                logger.debug(f"Retrieved tile at row {row}, column {column}")
 
-            column_array.append(_segment_tile(tile, model, model_input_size))
+            # If tile is mostly empty, skip segmentation, fill with white tile
+            if np.array(tile).mean() > 240:
+                column_array.append(Image.new("L", tile.size, 255))
+            else:
+                # Convert the tile to a tensor
+                transform = torchvision.transforms.ToTensor()
+                tile_tensor = transform(tile).float() * 255
+
+                # Normalize the tensor using the normalizer
+                normalized_tile = normalizer.normalize(tile_tensor)
+
+                # recreate tensor with correct shape
+                normalized_tile = normalized_tile.cpu().permute(2, 0, 1).unsqueeze(0).float()
+
+                # Segment the tile
+                segmented_tile = _segment_tile(
+                    normalized_tile, model, model_input_size)
+
+                column_array.append(segmented_tile)
 
         segmented_row = concatenate(column_array, axis=1)
         row_array.append(segmented_row)
 
-    # recombine image rows to single wsi amd save to file
-    # TODO check tiffsave parameters
     logger.debug("Constructing segmented WSI")
     segmented_wsi = concatenate(row_array, axis=0)
     segmented_wsi = VipsImage.new_from_array(
         segmented_wsi).cast(BandFormat.INT)
 
-    # utils call due to name cleaning
-    wsi_name, file_type = path.splitext(file_path)
-    wsi_name = utils.get_name(wsi_name) + "_mask" + file_type
+    # Extract the base name and file type
+    base_name, file_type = path.splitext(file_path)
+    wsi_name = utils.get_name(base_name)
 
-    logger.debug(f"Saving segmented WSI to {path.join(output_path, wsi_name)}")
-    segmented_wsi.crop(0, 0, slide.dimensions[0], slide.dimensions[1]). \
-        tiffsave(
-            path.join(output_path, wsi_name),
-            tile=True, compression='jpeg', bigtiff=True,
-            pyramid=True, tile_width=256, tile_height=256
-    )
-    logger.debug(f"Segmented WSI saved to {path.join(output_path, wsi_name)}")
+    # Construct output paths for the mask and thumbnail
+    mask_out = path.join(output_path, f"{wsi_name}_mask{file_type}")
+    thumb_out = path.join(output_path, f"{wsi_name}_mask_thumbnail.png")
 
-    # if plot_results: save cropped segmentation result on top op original image
+    # Save the segmented WSI using pyvips
+    save_segmented_wsi(segmented_wsi, mask_out)
+
+    # Create and save PNG thumbnail
+    save_thumbnail(segmented_wsi, thumb_out)
+
+    # if plot_results: save cropped segmentation result on top of original image
     if plot_results:
-        _plot_segmentation_on_tissue(file_path, output_path)
+        try:
+            _plot_segmentation_on_tissue(file_path, output_path)
+            logger.debug("Plotted segmentation on tissue")
+        except Exception as e:
+            logger.error(f"Error plotting segmentation on tissue: {e}")
+
+    logger.info(f"Finished segmentation for file: {file_path}")
 
 
-def _segment_tile(tile: Image, model, model_input_size) -> Image:
+def _segment_tile(tile: torch.Tensor, model, model_input_size) -> Image:
     """
+    Segments a given tile using a pre-trained model and returns the segmented tile as a PIL Image.
 
+    Args:
+        tile (torch.Tensor): The input tile to be segmented. Expected shape is (1, C, H, W).
+        model: The pre-trained segmentation model.
+        model_input_size (tuple): The expected input size for the model in the format (1, C, H, W).
+
+    Returns:
+        Image: The segmented tile as a binary mask in PIL Image format.
     """
-    # only pytorch due to hardcoded input shape logic
-    resclaed_tile = resize(
-        asarray(tile), (model_input_size[2], model_input_size[3]))
-    # parse to pytroch format (C, H, W)
-    resclaed_tile = from_numpy(resclaed_tile).type(float32).permute(2, 0, 1)
-    segmentation = model(resclaed_tile)
+    # Start segmentation
+    with torch.no_grad():
+        # run model
+        segmentation = model(tile)
+
     # output to binary mask
     segmentation = segmentation.sigmoid()
-    segmentation = segmentation.squeeze(0).squeeze(
-        0)  # Removes Batch and single color dimension
-    # parse to numpy
-    segmentation = segmentation.detach().numpy()
-    # rescale to original size
-    tile = resize(segmentation, (tile.size[0], tile.size[1]))
-    tile = Image.fromarray((tile * 255).astype(uint8))
 
-    # move this in the numpy are and do it on the 0.5 threshold instead
-    # remove "heatmap" effect and make binary mask
-    tile.point(lambda x: 1 if x > 120 else 0, mode='1')
+    # Removes Batch and single color dimension
+    segmentation = segmentation.squeeze(0).cpu().numpy()
 
-    return tile
+    # Rescale to original size if necessary
+    if tile.shape[2:] != (model_input_size[2], model_input_size[3]):
+        original_size = tile.shape[1:]  # (H, W)
+        segmented_tile = resize(
+            segmentation, original_size, anti_aliasing=True)
+    else:
+        segmented_tile = segmentation
+
+    # Threshold to binary mask
+    segmented_tile = (segmented_tile > 0.5).astype(np.uint8)
+
+    # Invert mask so that tissue is 1 and background is 0
+    segmented_tile = 1 - segmented_tile
+
+    # Ensure the segmented tile has the correct shape for conversion to PIL
+    if segmented_tile.ndim == 3 and segmented_tile.shape[0] == 1:
+        segmented_tile = segmented_tile.squeeze(0)
+    elif segmented_tile.ndim == 2:
+        segmented_tile = segmented_tile[:, :, None]
+
+    # Convert to PIL image
+    segmented_tile_pil = Image.fromarray(segmented_tile.squeeze() * 255)
+
+    return segmented_tile_pil
 
 
-# TODO fix maxk overlay logic
-# - only apply mask with alpha and remove white form mask
-# - don't use alpha on slide itself
+def save_segmented_wsi(segmented_wsi, mask_out):
+    """ Save the segmented WSI to file.
+
+    Args:
+        segmented_wsi (pyvips.Image): The segmented WSI.
+        mask_out (str): The path to save the segmented WSI.
+    """
+    try:
+        logger.debug(f"Saving segmented WSI to {mask_out}")
+        segmented_wsi.crop(0, 0, segmented_wsi.width, segmented_wsi.height). \
+            tiffsave(
+                mask_out,
+                tile=True, compression='jpeg', bigtiff=True,
+                pyramid=True, tile_width=1024, tile_height=1024,
+                Q=100,  # Set JPEG quality to 100%
+                predictor="horizontal",  # Use horizontal predictor for better compression
+                strip=True  # Strip metadata to reduce file size
+
+        )
+        logger.debug(f"Segmented WSI saved to {mask_out}")
+    except Exception as e:
+        logger.error(f"Error saving segmented WSI: {e}")
+
+
+def save_thumbnail(segmented_wsi, thumb_out):
+    """ Create and save PNG thumbnail.
+
+    Args:
+        segmented_wsi (pyvips.Image): The segmented WSI.
+        thumb_out (str): The path to save the PNG thumbnail.
+    """
+    try:
+        thumbnail_size = 10000  # Define the size of the thumbnail
+        thumbnail = segmented_wsi.thumbnail_image(thumbnail_size)
+        thumbnail.write_to_file(thumb_out)
+        logger.debug(f"PNG thumbnail saved to {thumb_out}")
+    except Exception as e:
+        logger.error(f"Error saving PNG thumbnail: {e}")
+
+
 def _plot_segmentation_on_tissue(file_path, output_path):
     """
+    Plots the segmentation results on the original image and saves the result as a thumbnail.
 
+    Args:
+        file_path (str): The path to the original WSI file.
+        output_path (str): The path to save the thumbnail.
+
+    Returns:
+        None
     """
-    logger.debug("Plotting thumbnail for segmented WSI")
+    start_time = time()
+    logger.info("Plotting thumbnail for segmented WSI")
+
     slide = OpenSlide(file_path)
 
     wsi_name, file_type = path.splitext(file_path)
-    wsi_name = wsi_name + "_segmented" + file_type
+    wsi_name = path.splitext(wsi_name)[0] + "_mask" + file_type
     mask_path = path.join(output_path, path.basename(wsi_name))
     mask = OpenSlide(mask_path)
 
-    slide = slide.get_thumbnail(
-        (slide.dimensions[0] / 8, slide.dimensions[1] / 8))
-    mask = mask.get_thumbnail((mask.dimensions[0] / 8, mask.dimensions[1] / 8))
+    logger.info("Retrieving thumbnail for slide")
+    slide_thumbnail = slide.get_thumbnail(
+        (slide.dimensions[0] / 256, slide.dimensions[1] / 256))
+    logger.info("Retrieving thumbnail for mask")
+    mask_thumbnail = mask.get_thumbnail(
+        (mask.dimensions[0] / 256, mask.dimensions[1] / 256))
 
-    logger.debug(f"Saving thumbnail to {path.join(output_path, wsi_name)}")
+    # Convert mask to RGBA
+    logger.info("Converting mask to RGBA")
+    mask_thumbnail = mask_thumbnail.convert("RGBA")
+
+    # Split the mask into its components
+    logger.info("Splitting mask into components")
+    r, g, b, a = mask_thumbnail.split()
+
+    # Create a new alpha channel where white areas are fully transparent
+    logger.info("Creating new alpha channel")
+    alpha = Image.eval(a, lambda px: 0 if px == 255 else 255)
+
+    # Combine the mask with the new alpha channel
+    logger.info("Combining mask with new alpha channel")
+    mask_thumbnail = Image.merge("RGBA", (r, g, b, alpha))
+
+    # Ensure the slide is in RGB mode (no alpha)
+    logger.info("Converting slide to RGB")
+    slide_thumbnail = slide_thumbnail.convert("RGB")
+
+    # Composite the slide and mask
+    logger.info("Compositing slide and mask")
+    combined = Image.alpha_composite(
+        slide_thumbnail.convert("RGBA"), mask_thumbnail)
+
     png_name, _ = path.splitext(file_path)
-    png_name = png_name + '_segmentation' + '.png'
-    img = ubyte(0.5 * asarray(slide) + 0.5 * asarray(mask))
-    img = Image.fromarray(img).save(path.join(output_path, png_name))
+    png_name = path.splitext(png_name)[0] + '_mask' + '.png'
+    logger.info(f"Saving thumbnail to {path.join(output_path, png_name)}")
+    combined.save(path.join(output_path, png_name))
+
+    end_time = time()
+    logger.debug(
+        f"Thumbnail creation took {end_time - start_time:.2f} seconds.")

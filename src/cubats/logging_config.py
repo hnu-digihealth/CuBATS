@@ -1,4 +1,7 @@
 # import logging.config
+# Standard Library
+import os
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -28,7 +31,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "detailed",
-            "filename": "logs/cubats.log",
+            "filename": os.path.join(os.path.dirname(__file__), '../logs/cubats.log'),
             "maxBytes": 10485760,
             "backupCount": 3,
         }
