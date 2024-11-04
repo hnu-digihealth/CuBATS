@@ -1,4 +1,9 @@
-# import logging.config
+# Standard Library
+import os
+
+# Ensure the logs directory exists
+logs_dir = '/Users/moritz.lokal/Desktop/CuBATS/logs'
+os.makedirs(logs_dir, exist_ok=True)
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -28,7 +33,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "detailed",
-            "filename": "logs/cubats.log",
+            "filename": os.path.join(logs_dir, "cubats.log"),
             "maxBytes": 10485760,
             "backupCount": 3,
         }
