@@ -1,5 +1,4 @@
 # Standard Library
-import math
 import os
 import re
 
@@ -21,6 +20,12 @@ def get_name(f):
     Returns:
         String: Image Filename without extension
     """
+    if not isinstance(f, str):
+        raise ValueError("Input must be a string representing the file path.")
+
+    if not f:
+        raise ValueError("Input string is empty.")
+
     if re.search(r"\.", f) is None:
         return f
     f = os.path.split(f)[-1]
@@ -44,9 +49,25 @@ def get_score_name(score):
     Returns:
         String: Name of highest zone with highest score
     """
-    list = ["High Positive", "Positive", "Low Positive", "Negative"]
+    if not isinstance(score, list):
+        raise ValueError("Input must be a list of scores.")
+
+    if not score:
+        raise ValueError("Input list is empty.")
+
+    if not all(isinstance(s, (int, float)) for s in score):
+        raise ValueError("All elements in the score list must be numeric.")
+
+    if any(s < 0 for s in score):
+        raise ValueError("All elements in the score list must be positive.")
+
+    zone_names = ["High Positive", "Positive", "Low Positive", "Negative"]
+    if len(score) < 4:
+        raise ValueError(
+            f"Score list must contain exactly {len(zone_names)} elements.")
+
     max = np.max(score[:4])
-    score = list[score.index(max)]
+    score = zone_names[score.index(max)]
 
     return score
 
@@ -67,11 +88,19 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
         new_w (int): width of output Image
         new_h (int): height of output Image
     """
-    # current width and height od Openslide Oject
+    if not hasattr(Openslide_object, 'dimensions') or not hasattr(Openslide_object, 'read_region'):
+        raise ValueError("Invalid Openslide object.")
+
+    if not isinstance(SCALEFACTOR, int) or SCALEFACTOR <= 0:
+        raise ValueError("SCALEFACTOR must be a positive integer.")
+
     old_w, old_h = Openslide_object.dimensions
     # rescaled width and height of Image
-    new_w = math.floor(old_w / SCALEFACTOR)
-    new_h = math.floor(old_h / SCALEFACTOR)
+    new_w, new_h = old_w // SCALEFACTOR, old_h // SCALEFACTOR
+
+    if new_w < 1 or new_h < 1:
+        new_w, new_h = 1, 1
+
     # Find optimal level for downsampling
     level = Openslide_object.get_best_level_for_downsample(SCALEFACTOR)
     # Conversion to PIL image
@@ -79,7 +108,7 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
         (0, 0), level, Openslide_object.level_dimensions[level]
     )
     wsi = wsi.convert("RGB")
-    img = wsi.resize((new_w, new_h), Image.BILINEAR)
+    img = wsi.resize((new_w, new_h), Image.ANTIALIAS)
 
     return img, old_w, old_h, new_w, new_h
 
@@ -113,8 +142,12 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
         for dir in self.dab_tile_dir_list:
             file = os.path.join(dir, (tilename + "_DAB.tif"))
             if os.path.exists(file):
-                img = skimage.io.imread(file)
-                images.append(img)
+                try:
+                    img = skimage.io.imread(file)
+                    images.append(img)
+                except Exception as e:
+                    print(
+                        f"Error reading image {file}: {e}")
         fig, ax = plt.subplots(
             4,
             self.quantification_results_list.__len__(),

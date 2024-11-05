@@ -1,6 +1,6 @@
 # Standard Library
 import concurrent.futures
-import logging
+import logging.config
 import os
 import pickle
 import re
@@ -165,6 +165,14 @@ class SlideCollection(object):
 
         # Name of the tumorset
         self.collection_name = collection_name
+
+        # Validate directories
+        if not os.path.isdir(src_dir):
+            raise ValueError(
+                f"Source directory {src_dir} does not exist or is not accessible.")
+        if not os.path.isdir(dest_dir):
+            raise ValueError(
+                f"Destination directory {dest_dir} does not exist or is not accessible.")
 
         # Directories
         self.src_dir = src_dir
@@ -399,6 +407,10 @@ class SlideCollection(object):
                 reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.
 
         """
+        if self.mask is None:
+            raise ValueError(
+                "Slide Collection does not have a mask slide. Please check if src_dir contains a mask slide. If not,please run 'run_segmentation_pipeline' to generate a mask slide.")
+
         mask_start_time = time()
         self.logger.debug("Generating mask coordinates")
         mask_tiles = self.mask.tiles
