@@ -71,6 +71,7 @@ def compute_dual_antigen_colocalization(iterable):
             If save_img is True, in addition to the numerical analysis an image containing the results of the analysis will be created and saved in passed directory.
             Else only numerical analysis will be performed.
             """
+            # Init color image in grey displaying background
             img = np.full((h, w, 3), 192, dtype="uint8")
             for y in range(h):
                 for x in range(w):
@@ -85,13 +86,11 @@ def compute_dual_antigen_colocalization(iterable):
                             img[x, y] = [255, 0, 0]
                         elif pixel1 < 121 and pixel2 < 121:
                             pos_overlap += 1
-                            # Color bright red where both are positive
-                            # img[x, y] = [255, 102, 102]
+                            # Color strong red where both are positive
                             img[x, y] = [255, 0, 0]
                         else:
                             low_overlap += 1
                             # Color light red where both are low positive
-                            # img[x, y] = [255, 153, 153]
                             img[x, y] = [255, 0, 0]
                     # Check if pixel1 is positive and pixel2 is not
                     elif pixel1 < 181 and pixel2 > 180:
@@ -126,82 +125,8 @@ def compute_dual_antigen_colocalization(iterable):
                         # Color white where both are negative
                         img[x, y] = [255, 255, 255]
                     else:
+                        # Background Pixels stay gray
                         background += 1
-                    # if (
-                    #     img1["Image Array"][x, y] < 61
-                    #     and img2["Image Array"][x, y] < 61
-                    # ):
-                    #     high_overlap += 1
-                    #     # Color strong red where both img Positive
-                    #     img[x, y] = [255, 0, 0]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 61
-                    #     and not img2["Image Array"][x, y] < 61
-                    # ):
-                    #     high_complement += 1
-                    #     img[x, y] = [
-                    #         0,
-                    #         255,
-                    #         0,
-                    #     ]  # Color strong green where only img1 positive
-                    # elif (
-                    #     not img1["Image Array"][x, y] < 61
-                    #     and img2["Image Array"][x, y] < 61
-                    # ):
-                    #     high_complement += 1
-                    #     # color strong blue where only img2 positive
-                    #     img[x, y] = [0, 0, 204]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 121
-                    #     and img2["Image Array"][x, y] < 121
-                    # ):
-                    #     pos_overlap += 1
-                    #     # Color bright red where both positive
-                    #     img[x, y] = [255, 102, 102]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 121
-                    #     and not img2["Image Array"][x, y] < 121
-                    # ):
-                    #     pos_complement += 1
-                    #     # Color bright green where only img1 positive
-                    #     img[x, y] = [153, 238, 153]
-                    # elif (
-                    #     not img1["Image Array"][x, y] < 121
-                    #     and img2["Image Array"][x, y] < 121
-                    # ):
-                    #     pos_complement += 1
-                    #     # Color bright  blue where only img2 positive
-                    #     img[x, y] = [102, 204, 255]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 181
-                    #     and img2["Image Array"][x, y] < 181
-                    # ):
-                    #     low_overlap += 1
-                    #     # Color light red where low positive overlap
-                    #     img[x, y] = [255, 153, 153]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 181
-                    #     and not img2["Image Array"][x, y] < 181
-                    # ):
-                    #     low_complement += 1
-                    #     # color light green where only img1 low positive
-                    #     img[x, y] = [204, 255, 204]
-                    # elif (
-                    #     not img1["Image Array"][x, y] < 181
-                    #     and img2["Image Array"][x, y] < 181
-                    # ):
-                    #     low_complement += 1
-                    #     # Color light blue where only img2 low positive
-                    #     img[x, y] = [153, 204, 255]
-                    # elif (
-                    #     img1["Image Array"][x, y] < 235
-                    #     or img2["Image Array"][x, y] < 235
-                    # ):
-                    #     negative += 1
-                    #     # color white where both negative
-                    #     img[x, y] = [255, 255, 255]
-                    # else:
-                    #     background += 1
 
             img = Image.fromarray(img.astype("uint8"))
             out = f"{dir}/{tilename}.tif"
@@ -359,10 +284,12 @@ def compute_triplet_antigen_colocalization(iterable):
 
                     if sum_high >= 2:
                         high_overlap += 1
+                        # Color strong red where all are highly positive
                         img[x, y] = [255, 0, 0]
                     elif sum_high == 1:
                         idx = pixel_values.index(min(pixel_values))
                         high_complement += 1
+                        # Color
                         img[x, y] = [[0, 255, 0], [
                             0, 0, 255], [255, 165, 0]][idx]
                     elif sum_pos >= 2:

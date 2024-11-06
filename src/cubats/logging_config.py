@@ -1,13 +1,12 @@
 # Standard Library
 import os
 
-# Define the log directory outside the src directory
-log_dir = os.path.join(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))), 'logs')
-print(f"Log directory: {log_dir}")  # Debugging statement
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, 'cubats.log')
-print(f"Log file: {log_file}")  # Debugging statement
+# Determine the project root directory
+project_root = os.path.dirname(os.path.abspath(__file__))
+
+# Ensure the logs directory exists
+logs_dir = os.path.join(project_root, 'logs')
+os.makedirs(logs_dir, exist_ok=True)
 
 
 LOGGING = {
@@ -39,7 +38,7 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "detailed",
-            "filename": log_file,
+            "filename": os.path.join(logs_dir, "cubats.log"),
             "maxBytes": 10485760,
             "backupCount": 3,
         }
