@@ -6,7 +6,8 @@
 # TODO add multi processing
 
 # Standard Library
-import logging
+import logging.config
+import sys
 from os import listdir, path
 from time import time
 from typing import List, Tuple, Union
@@ -28,7 +29,17 @@ from tqdm import tqdm
 import cubats.logging_config as log_config
 from cubats import Utils as utils
 
-logging.config.dictConfig(log_config.LOGGING)
+
+def is_sphinx_build():
+    return 'sphinx' in sys.modules
+
+
+if is_sphinx_build():
+    # Use a different logging configuration for Sphinx
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.config.dictConfig(log_config.LOGGING)
+
 logger = logging.getLogger(__name__)
 # Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used
 # TODO remove input_size from vars, can be calculated from onnx model via model.graph.input

@@ -15,6 +15,7 @@ Welcome to the CuBATS's Documentation!
    :maxdepth: 3
 
    installation
+   examples
    registration
    segmentation
    slide_collection
