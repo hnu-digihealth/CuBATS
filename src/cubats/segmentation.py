@@ -4,6 +4,7 @@
 
 # Standard Library
 import logging
+import os
 from os import listdir, path
 from time import time
 from typing import Tuple, Union
@@ -84,8 +85,22 @@ def run_tumor_segmentation(
 
     start_time_segmentation = time()
     # Check if the input path is valid and if it is a file or a directory
-    if not path.exists(input_path):
-        raise FileNotFoundError(f"Input path {input_path} does not exist.")
+    try:
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"Input path {input_path} does not exist.")
+        if os.path.isfile(input_path):
+            segment_single_file = True
+            input_folder = os.path.dirname(input_path)
+        else:
+            segment_single_file = False
+            input_folder = input_path
+    except FileNotFoundError as e:
+        logger.error(e)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error checking input path: {e}")
+        raise
+
     if path.isfile(input_path):
         segment_single_file = True
         input_folder = path.dirname(input_path)
