@@ -108,7 +108,7 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
         (0, 0), level, Openslide_object.level_dimensions[level]
     )
     wsi = wsi.convert("RGB")
-    img = wsi.resize((new_w, new_h), Image.ANTIALIAS)
+    img = wsi.resize((new_w, new_h), Image.LANCZOS)
 
     return img, old_w, old_h, new_w, new_h
 
