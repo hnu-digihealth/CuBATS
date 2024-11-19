@@ -134,25 +134,26 @@ def compute_dual_antigen_colocalization(iterable):
         else:
             for y in range(h):
                 for x in range(w):
-                    pixel_values = [img1["Image Array"]
-                                    [x, y], img2["Image Array"][x, y]]
-                    sum_high = sum(1 for value in pixel_values if value < 61)
-                    sum_pos = sum(1 for value in pixel_values if value < 121)
-                    sum_low = sum(1 for value in pixel_values if value < 181)
+                    pixel1 = img1["Image Array"][x, y]
+                    pixel2 = img2["Image Array"][x, y]
 
-                    if sum_high >= 2:
-                        high_overlap += 1
-                    elif sum_pos >= 2:
-                        pos_overlap += 1
-                    elif sum_low >= 2:
-                        low_overlap += 1
-                    elif sum_high == 1:
-                        high_complement += 1
-                    elif sum_pos == 1:
-                        pos_complement += 1
-                    elif sum_low == 1:
-                        low_complement += 1
-                    elif any(value < 235 for value in pixel_values):
+                    # Check if both pixels are positive
+                    if pixel1 < 181 and pixel2 < 181:
+                        if pixel1 < 61 and pixel2 < 61:
+                            high_overlap += 1
+                        elif pixel1 < 121 and pixel2 < 121:
+                            pos_overlap += 1
+                        else:
+                            low_overlap += 1
+                    # Check if one pixel is positive and the other is not
+                    elif (pixel1 < 181 and pixel2 > 180) or (pixel1 > 180 and pixel2 < 181):
+                        if (pixel1 < 61 and pixel2 > 180) or (pixel2 < 61 and pixel1 > 180):
+                            high_complement += 1
+                        elif (pixel1 < 121 and pixel2 > 180) or (pixel2 < 121 and pixel1 > 180):
+                            pos_complement += 1
+                        else:
+                            low_complement += 1
+                    elif pixel1 < 235 or pixel2 < 235:
                         negative += 1
                     else:
                         background += 1
@@ -169,7 +170,7 @@ def compute_dual_antigen_colocalization(iterable):
         total_complement = high_complement + pos_complement + low_complement
         tissue_count = coverage + negative
 
-        # Vals in % for overlap, complement, negative in respect to entire image
+        # Vals in % for overlap, complement, negative in respect to entire image. Except background with respect to total pixel count
         coverage = round((coverage / tissue_count) * 100, 4)
         total_overlap = round((total_overlap / tissue_count) * 100, 4)
         total_complement = round((total_complement / tissue_count) * 100, 4)
@@ -180,9 +181,9 @@ def compute_dual_antigen_colocalization(iterable):
         low_overlap = round((low_overlap / tissue_count) * 100, 4)
         low_complement = round((low_complement / tissue_count) * 100, 4)
         negative = round((negative / tissue_count) * 100, 4)
-        background = round((background / tissue_count) * 100, 4)
+        background = round((background / (h * w)) * 100, 4)
 
-        # set dict
+        # set dict TODO: Add tissue count for clarity
         colocal_dict["Total Coverage"] = coverage
         colocal_dict["Total Overlap"] = total_overlap
         colocal_dict["Total Complement"] = total_complement
