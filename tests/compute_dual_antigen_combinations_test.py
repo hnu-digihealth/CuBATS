@@ -40,7 +40,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertIn("Low Positive Overlap", result)
         self.assertIn("Low Positive Complement", result)
         self.assertIn("Negative", result)
-        self.assertIn("Background/No Tissue", result)
+        self.assertIn("Background / No Tissue", result)
 
     def test_one_image_does_not_contain_tissue(self):
         img1 = {"Tilename": "tile1", "Flag": 0,
@@ -108,7 +108,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 100.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_high_positive_overlap(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -130,7 +131,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_positive_overlap(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -152,7 +154,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_low_positive_overlap_1(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -174,7 +177,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 100.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_low_positive_overlap_2(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -196,7 +200,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 100.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_high_positive_complement_1(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -218,7 +223,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_high_positive_complement_2(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -240,7 +246,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_positive_complement_1(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -262,7 +269,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_positive_complement_2(self):
         img1 = {"Tilename": "tile1", "Flag": 1,
@@ -284,7 +292,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 0.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_equal_distribution(self):
         img1_array = np.full((1024, 1024), 255)
@@ -336,7 +345,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 25.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 25.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test_skewed_distribution(self):
         img1_array = np.zeros((1024, 1024))
@@ -372,7 +382,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Low Positive Overlap"], 25.0)
         self.assertAlmostEqual(result["Low Positive Complement"], 12.5)
         self.assertAlmostEqual(result["Negative"], 12.5)
-        self.assertAlmostEqual(result["Background/No Tissue"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
 
     def test__equal_distribution_save_img_true_vs_false(self):
         img1_array = np.full((1024, 1024), 255)
@@ -503,7 +514,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
             result["Low Positive Overlap"], 33.3333, places=2)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 25.0)
+        self.assertAlmostEqual(result["Tissue"], 75.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 25.0)
 
     def test_skewed_distribution_with_background(self):
         img1_array = np.zeros((1024, 1024))
@@ -540,7 +552,8 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
             result["Low Positive Overlap"], 66.6667, places=2)
         self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
         self.assertAlmostEqual(result["Negative"], 0.0)
-        self.assertAlmostEqual(result["Background/No Tissue"], 25.0)
+        self.assertAlmostEqual(result["Tissue"], 75.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 25.0)
 
 
 if __name__ == '__main__':
