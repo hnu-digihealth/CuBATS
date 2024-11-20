@@ -196,7 +196,7 @@ def compute_dual_antigen_colocalization(iterable):
         colocal_dict["Low Positive Complement"] = low_complement
         colocal_dict["Negative"] = negative
         colocal_dict["Tissue"] = tissue_count
-        colocal_dict["Background/No Tissue"] = background
+        colocal_dict["Background / No Tissue"] = background
 
     return colocal_dict
 
