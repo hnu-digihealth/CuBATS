@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12']
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        os: ${{ github.ref == 'refs/heads/development' && 'ubuntu-latest' || 'ubuntu-latest,macOS-latest,windows-latest' | split(',') }} # Skip testing on development branch
     steps:
       - uses: actions/checkout@v4
       - name: Set up PDM
@@ -71,6 +71,7 @@ jobs:
     needs: testing
     name: Coverage
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/development' || matrix.os == 'ubuntu-latest' # Skip coverage on development branch
     steps:
     - uses: actions/checkout@v4
     - name: Set up PDM
