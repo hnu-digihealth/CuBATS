@@ -43,54 +43,15 @@ jobs:
         run: |
           pdm lint
 
-  testing:
-    name: Test
+  # Job for testing - Main branch (all OS platforms)
+  testing-main:
+    name: Test on Main
     needs: [flake8-lint, isort]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12']
-        # os: [ubuntu-latest, macOS-latest, windows-latest]
-        include:
-          # Development branch only runs on Ubuntu
-          - os: ubuntu-latest
-            branch: development
-            python-version: 3.10
-          - os: ubuntu-latest
-            branch: development
-            python-version: 3.11
-          - os: ubuntu-latest
-            branch: development
-            python-version: 3.12
-
-          # Main branch runs on all OSs
-          - os: ubuntu-latest
-            branch: main
-            python-version: 3.10
-          - os: ubuntu-latest
-            branch: main
-            python-version: 3.11
-          - os: ubuntu-latest
-            branch: main
-            python-version: 3.12
-          - os: macos-latest
-            branch: main
-            python-version: 3.10
-          - os: macos-latest
-            branch: main
-            python-version: 3.11
-          - os: macos-latest
-            branch: main
-            python-version: 3.12
-          - os: windows-latest
-            branch: main
-            python-version: 3.10
-          - os: windows-latest
-            branch: main
-            python-version: 3.11
-          - os: windows-latest
-            branch: main
-            python-version: 3.12
+        os: [ubuntu-latest, macos-latest, windows-latest]  # All platforms
     steps:
       - uses: actions/checkout@v4
       - name: Set up PDM
@@ -105,13 +66,35 @@ jobs:
       - name: Run Tests
         run: |
           pdm test
-        continue-on-error: true # Temporary during deploy
-    if: github.ref_name == matrix.branch # Ensure correct branch filtering
+        continue-on-error: true  # Temporary during deploy
 
+  # Job for testing - Development branch (Only Ubuntu)
+  testing-dev:
+    name: Test on Development
+    needs: [flake8-lint, isort]
+    runs-on: ubuntu-latest  # Only Ubuntu for dev
+    if: github.ref_name == 'development'  # Runs only on the development branch
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']  # Same python versions as main
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install system dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips42 libopenslide0
+      - name: Run Tests
+        run: |
+          pdm test
+        continue-on-error: true  # Temporary during deploy
 
   coverage:
-    needs: testing
-    name: Coverage
+    needs: testing-main
+    name: Coverage (Main Branch Only)
     runs-on: ubuntu-latest
     if: github.ref_name == 'main'
     steps:
