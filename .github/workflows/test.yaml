@@ -50,7 +50,47 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12']
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        # os: [ubuntu-latest, macOS-latest, windows-latest]
+        include:
+          # Development branch only runs on Ubuntu
+          - os: ubuntu-latest
+            branch: development
+            python-version: 3.10
+          - os: ubuntu-latest
+            branch: development
+            python-version: 3.11
+          - os: ubuntu-latest
+            branch: development
+            python-version: 3.12
+
+          # Main branch runs on all OSs
+          - os: ubuntu-latest
+            branch: main
+            python-version: 3.10
+          - os: ubuntu-latest
+            branch: main
+            python-version: 3.11
+          - os: ubuntu-latest
+            branch: main
+            python-version: 3.12
+          - os: macos-latest
+            branch: main
+            python-version: 3.10
+          - os: macos-latest
+            branch: main
+            python-version: 3.11
+          - os: macos-latest
+            branch: main
+            python-version: 3.12
+          - os: windows-latest
+            branch: main
+            python-version: 3.10
+          - os: windows-latest
+            branch: main
+            python-version: 3.11
+          - os: windows-latest
+            branch: main
+            python-version: 3.12
     steps:
       - uses: actions/checkout@v4
       - name: Set up PDM
@@ -66,9 +106,8 @@ jobs:
         run: |
           pdm test
         continue-on-error: true # Temporary during deploy
-    if: >
-      github.ref_name == 'main' ||
-      (github.ref_name == 'development' && matrix.os == 'ubuntu-latest')
+    if: github.ref_name == matrix.branch # Ensure correct branch filtering
+
 
   coverage:
     needs: testing
