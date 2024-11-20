@@ -699,6 +699,7 @@ class SlideCollection(object):
         sum_low_overlap = 0.00
         sum_low_complement = 0.00
         sum_negative = 0.00
+        sum_tissue = 0.00
         sum_background = 0.00
         error1 = 0
         error2 = 0
@@ -717,6 +718,7 @@ class SlideCollection(object):
                 sum_low_overlap += comparison_dict[i]["Low Positive Overlap"]
                 sum_low_complement += comparison_dict[i]["Low Positive Complement"]
                 sum_negative += comparison_dict[i]["Negative"]
+                sum_tissue += comparison_dict[i]["Tissue"]
                 sum_background += comparison_dict[i]["Background/No Tissue"]
             elif comparison_dict[i].get("Flag") == 0:
                 error1 += 1
@@ -735,6 +737,7 @@ class SlideCollection(object):
         sum_low_overlap = sum_low_overlap / counter
         sum_low_complement = sum_low_complement / counter
         sum_negative = sum_negative / counter
+        sum_tissue = sum_tissue / counter
         sum_background = sum_background / counter
         total_error = error1 + error2 + error3
 
@@ -751,6 +754,7 @@ class SlideCollection(object):
         overlap_dict["Low Positive Overlap"] = round(sum_low_overlap, 2)
         overlap_dict["Low Positive Complement"] = round(sum_low_complement, 2)
         overlap_dict["Negative Tissue"] = round(sum_negative, 2)
+        overlap_dict["Tissue"] = round(sum_tissue, 2)
         overlap_dict["Background / No Tissue"] = round(sum_background, 2)
         overlap_dict["Total Error"] = round(
             (total_error / comparison_dict.__len__()) * 100, 2
@@ -869,6 +873,7 @@ class SlideCollection(object):
         sum_low_overlap = 0.00
         sum_low_complement = 0.00
         sum_negative = 0.00
+        sum_tissue = 0.00
         sum_background = 0.00
         error1 = 0
         error2 = 0
@@ -887,6 +892,7 @@ class SlideCollection(object):
                 sum_low_overlap += comparison_dict[i]["Low Positive Overlap"]
                 sum_low_complement += comparison_dict[i]["Low Positive Complement"]
                 sum_negative += comparison_dict[i]["Negative"]
+                sum_tissue += comparison_dict[i]["Tissue"]
                 sum_background += comparison_dict[i]["Background/No Tissue"]
             elif comparison_dict[i].get("Flag") == 0:
                 error1 += 1
@@ -905,6 +911,7 @@ class SlideCollection(object):
         sum_low_overlap = sum_low_overlap / counter
         sum_low_complement = sum_low_complement / counter
         sum_negative = sum_negative / counter
+        sum_tissue = sum_tissue / counter
         sum_background = sum_background / counter
         total_error = error1 + error2 + error3
 
@@ -922,6 +929,7 @@ class SlideCollection(object):
         overlap_dict["Low Positive Overlap"] = round(sum_low_overlap, 2)
         overlap_dict["Low Positive Complement"] = round(sum_low_complement, 2)
         overlap_dict["Negative Tissue"] = round(sum_negative, 2)
+        overlap_dict["Tissue"] = round(sum_tissue, 2)
         overlap_dict["Background / No Tissue"] = round(sum_background, 2)
         overlap_dict["Total Error"] = round(
             (total_error / comparison_dict.__len__()) * 100, 2

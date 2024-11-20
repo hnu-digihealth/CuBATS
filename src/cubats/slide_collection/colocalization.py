@@ -122,7 +122,7 @@ def compute_dual_antigen_colocalization(iterable):
                             img[x, y] = [153, 204, 255]
                     elif pixel1 < 235 or pixel2 < 235:
                         negative += 1
-                        # Color white where both are negative
+                        # Color white where either are negative
                         img[x, y] = [255, 255, 255]
                     else:
                         # Background Pixels stay gray
@@ -181,6 +181,7 @@ def compute_dual_antigen_colocalization(iterable):
         low_overlap = round((low_overlap / tissue_count) * 100, 4)
         low_complement = round((low_complement / tissue_count) * 100, 4)
         negative = round((negative / tissue_count) * 100, 4)
+        tissue_count = round((tissue_count / (h * w)) * 100, 4)
         background = round((background / (h * w)) * 100, 4)
 
         # set dict TODO: Add tissue count for clarity
@@ -194,6 +195,7 @@ def compute_dual_antigen_colocalization(iterable):
         colocal_dict["Low Positive Overlap"] = low_overlap
         colocal_dict["Low Positive Complement"] = low_complement
         colocal_dict["Negative"] = negative
+        colocal_dict["Tissue"] = tissue_count
         colocal_dict["Background/No Tissue"] = background
 
     return colocal_dict
@@ -274,7 +276,7 @@ def compute_triplet_antigen_colocalization(iterable):
             If save_img is True, in addition to the numerical analysis an image containing the results of the analysis will be created and saved in passed directory.
             Else only numerical analysis will be performed.
             """
-            img = np.full((h, w, 3), 255, dtype="uint8")
+            img = np.full((h, w, 3), 192, dtype="uint8")
             for y in range(h):
                 for x in range(w):
                     pixel_values = [img["Image Array"][x, y]
@@ -282,64 +284,97 @@ def compute_triplet_antigen_colocalization(iterable):
                     sum_high = sum(1 for val in pixel_values if val < 61)
                     sum_pos = sum(1 for val in pixel_values if val < 121)
                     sum_low = sum(1 for val in pixel_values if val < 181)
+                    sum_neg = sum(1 for val in pixel_values if val < 235)
 
-                    if sum_high >= 2:
-                        high_overlap += 1
-                        # Color strong red where all are highly positive
-                        img[x, y] = [255, 0, 0]
-                    elif sum_high == 1:
-                        idx = pixel_values.index(min(pixel_values))
-                        high_complement += 1
-                        # Color
-                        img[x, y] = [[0, 255, 0], [
-                            0, 0, 255], [255, 165, 0]][idx]
-                    elif sum_pos >= 2:
-                        pos_overlap += 1
-                        img[x, y] = [255, 102, 102]
-                    elif sum_pos == 1:
-                        idx = pixel_values.index(min(pixel_values))
-                        pos_complement += 1
-                        img[x, y] = [[102, 255, 102], [
-                            102, 102, 255], [255, 200, 102]][idx]
-                    elif sum_low >= 2:
-                        low_overlap += 1
-                        img[x, y] = [255, 153, 153]
+                    # Check if 2 or all 3 pixels are positive
+                    if sum_low >= 2:
+                        # Check if 2 or all 3 pixels are highly positive
+                        if sum_high >= 2:
+                            high_overlap += 1
+                            # Color strong red where all are highly positive
+                            img[x, y] = [255, 0, 0]
+                        # Check if 2 or all 3 pixels are positive
+                        elif sum_pos >= 2:
+                            pos_overlap += 1
+                            # Color strong red where all are positive
+                            img[x, y] = [255, 0, 0]
+                        # Else 2 or all 3 pixels are low positive
+                        else:
+                            low_overlap += 1
+                            # Color light red where all are low positive
+                            img[x, y] = [255, 0, 0]
+                    # Check if 1 pixel is positive while the other 2 are not
                     elif sum_low == 1:
-                        idx = pixel_values.index(min(pixel_values))
-                        low_complement += 1
-                        img[x, y] = [[153, 255, 153],
-                                     [153, 153, 255], [255, 225, 153]][idx]
-                    elif any(val < 235 for val in pixel_values):
+                        # Check if the pixel is highly positive
+                        if sum_high == 1:
+                            idx = pixel_values.index(min(pixel_values))
+                            high_complement += 1
+                            # Colors: img1: Strong Green, img2: Strong Blue, img3: Strong Orange
+                            img[x, y] = [[0, 255, 0], [
+                                0, 0, 255], [255, 165, 0]][idx]
+                        # Check if the pixel is positive
+                        elif sum_pos == 1:
+                            idx = pixel_values.index(min(pixel_values))
+                            pos_complement += 1
+                            # Colors: img1: Bright Green, img2: Bright Blue, img3: Bright Orange
+                            img[x, y] = [[102, 255, 102], [
+                                102, 102, 255], [255, 200, 102]][idx]
+                        # Else the pixel is low positive
+                        else:
+                            idx = pixel_values.index(min(pixel_values))
+                            low_complement += 1
+                            # Colors: img1: Light Green, img2: Light Blue, img3: Light Orange
+                            img[x, y] = [[153, 255, 153], [
+                                153, 153, 255], [255, 225, 153]][idx]
+                    # Check if any of the pixels are negative
+                    elif sum_neg > 0:
                         negative += 1
+                        # Color white where either are negative
                         img[x, y] = [255, 255, 255]
                     else:
+                        # Else pixel is background: stay gray
                         background += 1
 
             img = Image.fromarray(img.astype("uint8"))
             out = f"{dir}/{tilename}.tif"
             img.save(out)
         else:
-            # TODO simplify. However simpler version before somehow didn't return correct results
             for y in range(h):
                 for x in range(w):
                     pixel_values = [img["Image Array"][x, y]
                                     for img in [img1, img2, img3]]
+                    sum_high = sum(1 for val in pixel_values if val < 61)
+                    sum_pos = sum(1 for val in pixel_values if val < 121)
+                    sum_low = sum(1 for val in pixel_values if val < 181)
+                    sum_neg = sum(1 for val in pixel_values if val < 235)
 
-                    if sum(1 for val in pixel_values if val < 61) >= 2:
-                        high_overlap += 1
-                    elif any(val < 61 for val in pixel_values):
-                        high_complement += 1
-                    elif sum(1 for val in pixel_values if val < 121) >= 2:
-                        pos_overlap += 1
-                    elif any(val < 121 for val in pixel_values):
-                        pos_complement += 1
-                    elif sum(1 for val in pixel_values if val < 181) >= 2:
-                        low_overlap += 1
-                    elif any(val < 181 for val in pixel_values):
-                        low_complement += 1
-                    elif any(val < 235 for val in pixel_values):
+                    # Check if 2 or all 3 pixels are positive
+                    if sum_low >= 2:
+                        # Check if 2 or all 3 pixels are highly positive
+                        if sum_high >= 2:
+                            high_overlap += 1
+                        # Check if 2 or all 3 pixels are positive
+                        elif sum_pos >= 2:
+                            pos_overlap += 1
+                        # Else 2 or all 3 pixels are low positive
+                        else:
+                            low_overlap += 1
+                    # Check if 1 pixel is positive while the other 2 are not
+                    elif sum_low == 1:
+                        # Check if the pixel is highly positive
+                        if sum_high == 1:
+                            high_complement += 1
+                        # Check if the pixel is positive
+                        elif sum_pos == 1:
+                            pos_complement += 1
+                        # Else the pixel is low positive
+                        else:
+                            low_complement += 1
+                    # Check if any of the pixels are negative
+                    elif sum_neg > 0:
                         negative += 1
                     else:
+                        # Else pixel is background
                         background += 1
 
         coverage = (
@@ -354,7 +389,7 @@ def compute_triplet_antigen_colocalization(iterable):
         total_complement = high_complement + pos_complement + low_complement
         tissue_count = coverage + negative
 
-        # Vals in % for overlap, complement, negative in respect to entire image
+        # Vals in % for overlap, complement, negative in respect to entire image. Except background with respect to total pixel count
         coverage = round((coverage / tissue_count) * 100, 4)
         total_overlap = round((total_overlap / tissue_count) * 100, 4)
         total_complement = round((total_complement / tissue_count) * 100, 4)
@@ -365,9 +400,10 @@ def compute_triplet_antigen_colocalization(iterable):
         low_overlap = round((low_overlap / tissue_count) * 100, 4)
         low_complement = round((low_complement / tissue_count) * 100, 4)
         negative = round((negative / tissue_count) * 100, 4)
-        background = round((background / tissue_count) * 100, 4)
+        tissue_count = round((tissue_count / (h * w)) * 100, 4)
+        background = round((background / (h * w)) * 100, 4)
 
-        # set dict
+        # set dict TODO add tissue Count for clarity
         colocal_dict["Total Coverage"] = coverage
         colocal_dict["Total Overlap"] = total_overlap
         colocal_dict["Total Complement"] = total_complement
@@ -378,6 +414,7 @@ def compute_triplet_antigen_colocalization(iterable):
         colocal_dict["Low Positive Overlap"] = low_overlap
         colocal_dict["Low Positive Complement"] = low_complement
         colocal_dict["Negative"] = negative
-        colocal_dict["Background/No Tissue"] = background
+        colocal_dict["Tissue"] = tissue_count
+        colocal_dict["Background / No Tissue"] = background
 
     return colocal_dict
