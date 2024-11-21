@@ -48,7 +48,7 @@ cov_report = { shell = "pdm run -v coverage run -m pytest tests && pdm run cover
 check_pre_commit = "pdm run pre-commit run --all-files"
 # run prior to tests
 pre_test = "pdm install"
-build-docs = { shell = "cd docu && make html && make html && open build/html/index.html" }
+build-docs = { shell = "cd docs && make clean && make html && open build/html/index.html" }
 
 [tool.isort]
 src_paths = ["src", "tests"]
