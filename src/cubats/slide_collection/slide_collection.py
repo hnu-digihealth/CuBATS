@@ -679,7 +679,7 @@ class SlideCollection(object):
         with concurrent.futures.ProcessPoolExecutor() as exe:
             results = tqdm(
                 exe.map(
-                    colocalization.compute_dual_antigen_colocalization, iterable),
+                    colocalization.analyze_dual_antigen_colocalization, iterable),
                 total=len(iterable),
                 desc="Calculating Coverage of Slide " + slide1.name + " & " + slide2.name,
             )
@@ -848,7 +848,7 @@ class SlideCollection(object):
         with concurrent.futures.ProcessPoolExecutor() as exe:
             results = tqdm(
                 exe.map(
-                    colocalization.compute_triplet_antigen_colocalization, iterable),
+                    colocalization.analyze_triplet_antigen_colocalization, iterable),
                 total=len(iterable),
                 desc="Calculating Coverage of Slides "
                 + slide1.name

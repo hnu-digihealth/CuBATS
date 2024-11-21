@@ -8,7 +8,7 @@ import numpy as np
 
 # CuBATS
 from cubats.slide_collection.colocalization import \
-    compute_dual_antigen_colocalization
+    analyze_dual_antigen_colocalization
 
 
 class TestComputeDualAntigenColocalization(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.ones((1024, 1024))}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertIn("Total Coverage", result)
@@ -49,7 +49,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.ones((1024, 1024))}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], -1)
 
@@ -60,7 +60,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.ones((512, 512))}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], -2)
 
@@ -72,7 +72,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.ones((1024, 1024))}
         output_path = self.test_dir.name
         save_img = True
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         _ = result
         mock_save.assert_called_once()
@@ -83,7 +83,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.ones((1024, 1024))}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -111,7 +111,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         img2 = {"Tilename": "tile2", "Flag": 0}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -134,7 +134,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 200)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 0.0)
@@ -157,7 +157,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 0)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -180,7 +180,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 120)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -203,7 +203,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 180)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -226,7 +226,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 70)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -249,7 +249,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 200)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -272,7 +272,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 255)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -295,7 +295,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 181)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -318,7 +318,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
                 "Image Array": np.full((1024, 1024), 235)}
         output_path = self.test_dir.name
         save_img = False
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -371,7 +371,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
 
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 75.0)
@@ -408,7 +408,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
 
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -460,11 +460,11 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
 
         # Run with save_img = True
-        save_img_true_result = compute_dual_antigen_colocalization(
+        save_img_true_result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, True])
 
         # Run with save_img = False
-        save_img_false_result = compute_dual_antigen_colocalization(
+        save_img_false_result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, False])
 
         # Check if the results are the same
@@ -491,11 +491,11 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
 
         # Run with save_img = True
-        save_img_true_result = compute_dual_antigen_colocalization(
+        save_img_true_result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, True])
 
         # Run with save_img = False
-        save_img_false_result = compute_dual_antigen_colocalization(
+        save_img_false_result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, False])
 
         # Check if the results are the same
@@ -538,7 +538,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
 
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -577,7 +577,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
 
-        result = compute_dual_antigen_colocalization(
+        result = analyze_dual_antigen_colocalization(
             [img1, img2, output_path, save_img])
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
