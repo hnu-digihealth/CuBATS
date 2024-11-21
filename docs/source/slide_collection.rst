@@ -35,14 +35,14 @@ Antigen Analysis
 
 Primary Functions
 -----------------
-.. autofunction:: cubats.slide_collection.colocalization.compute_dual_antigen_colocalization
-.. autofunction:: cubats.slide_collection.colocalization.compute_triplet_antigen_colocalization
+.. autofunction:: cubats.slide_collection.colocalization.analyze_dual_antigen_colocalization
+.. autofunction:: cubats.slide_collection.colocalization.analyze_triplet_antigen_colocalization
 
 Internal Functions
 ------------------
 .. automodule:: cubats.slide_collection.colocalization
     :members:
-    :exclude-members: compute_dual_antigen_colocalization, compute_triplet_antigen_colocalization
+    :exclude-members: analyze_dual_antigen_colocalization, analyze_triplet_antigen_colocalization
     :undoc-members:
     :private-members:
     :show-inheritance:

@@ -24,12 +24,10 @@ def analyze_dual_antigen_colocalization(iterable):
     an image containing the colored results can be saved in the specified directory.
 
     Args:
-        iterable (iterable): Contains the two tiles to be compared and analyzed for antigen coverage, as well as the output
-            directory:
-                - iterable[0]: tile1
-                - iterable[1]: tile2
-                - iterable[2]: output path
-                - iterable[3]: save_img
+        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and analyzed for
+            antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; output path, the directory where
+            the output image should be saved; and save_img, a flag indicating whether to save the output image.
+
 
     Returns:
         dict: A dictionary containing the results of the analysis:
@@ -173,13 +171,9 @@ def analyze_triplet_antigen_colocalization(iterable):
     an image containing the colored results can be saved in the specified directory.
 
     Args:
-        iterable (iterable): Contains the three tiles to be compared and analyzed for antigen coverage as well as the output
-            directory:
-                - iterable[0]: tile1
-                - iterable[1]: tile2
-                - iterable[2]: tile3
-                - iterable[3]: output path
-                - iterable[4]: save_img
+        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and analyzed for
+            antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; tile3, the third tile;
+            output path, the directory where the output image should be saved; and save_img, a flag indicating whether to save the output image.
 
     Returns:
         dict: A dictionary containing the results of the analysis:
