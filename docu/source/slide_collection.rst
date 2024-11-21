@@ -15,15 +15,34 @@ Slide
     :members: __init__, quantify_slide, summarize_quantification_results, reconstruct_slide
 
 
-Submodules
-===========
-
 Tile Processing
+================
+Primary Functions
 -----------------
+.. autofunction:: cubats.slide_collection.tile_processing.quantify_tile
+
+Internal Functions
+------------------
 .. automodule:: cubats.slide_collection.tile_processing
-    :members: ihc_stain_separation, quantify_tile, calculate_pixel_intensity, calculate_score, separate_stains_and_save__tiles_as_tif
+    :members:
+    :exclude-members: quantify_tile
+    :undoc-members:
+    :private-members:
+    :show-inheritance:
 
 Antigen Analysis
+================
+
+Primary Functions
+-----------------
+.. autofunction:: cubats.slide_collection.colocalization.compute_dual_antigen_colocalization
+.. autofunction:: cubats.slide_collection.colocalization.compute_triplet_antigen_colocalization
+
+Internal Functions
 ------------------
 .. automodule:: cubats.slide_collection.colocalization
-    :members: compute_dual_antigen_colocalization, compute_triplet_antigen_colocalization
+    :members:
+    :exclude-members: compute_dual_antigen_colocalization, compute_triplet_antigen_colocalization
+    :undoc-members:
+    :private-members:
+    :show-inheritance:

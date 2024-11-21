@@ -3,7 +3,7 @@
 # TODO add multi processing
 
 # Standard Library
-import logging
+import logging.config
 import os
 from os import listdir, path
 from time import time
@@ -62,11 +62,11 @@ def run_tumor_segmentation(
         model_path (str): The path to the ONNX model file.
         tile_size (Tuple[int, int]): The size of each tile for segmentation.
         output_path (Union[str, None], optional): The path to the output directory. If not provided, the output will be
-        saved in the same directory as the input. Defaults to None.
+            saved in the same directory as the input. Defaults to None.
         normalization (bool, optional): Whether to normalize the input tiles. Depends on the model provided. Defaults
-        to False.
+            to False.
         inversion (bool, optional): Whether to invert the segmentation output. Depends on the model provided. Defaults
-        to False.
+            to False.
         plot_results (bool, optional): Whether to plot the segmentation results. Defaults to False.
 
     Raises:
