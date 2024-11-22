@@ -14,9 +14,9 @@ from PIL import Image
 from tqdm import tqdm
 
 # CuBATS
+import cubats.cutils as cutils
 import cubats.logging_config as log_config
 import cubats.slide_collection.colocalization as colocalization
-import cubats.cutils as cutils
 from cubats.slide_collection.slide import Slide
 
 # Constants

@@ -2,6 +2,7 @@
 This module contains functions for processing and analyzing tiles from whole slide images (WSIs).
 
 Credits:
+
 - The `ihc_stain_separation` function is adapted from the work of A. C. Ruifrok and D. A. Johnston in their paper
   “Quantification of histochemical staining by color deconvolution,” Analytical and quantitative cytology and
   histology / the International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug.

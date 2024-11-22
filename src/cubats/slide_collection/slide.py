@@ -212,11 +212,14 @@ class Slide(object):
         self.logger.info(f"Finished processing slide: {self.name}")
 
     def summarize_quantification_results(self):
-        """ Summarizes quantification results.
+        """
+        Summarizes quantification results.
 
         Summarizes quantification results for a given slide and appends them to self.quantification_summary. This
         includes the sums of number if pixels in for zone, percentage of pixels in each zone, as well as a score for
-        each zone. The results are stored inside self.quantification_summary and contains the following keys:
+        each zone.
+
+        The results are stored inside self.quantification_summary and contains the following keys:
             - Slide (str): Name of the slide.
             - High Positive (float): Percentage of pixels in the high positive zone.
             - Positive (float): Percentage of pixels in the positive zone.
@@ -224,13 +227,12 @@ class Slide(object):
             - Negative (float): Percentage of pixels in the negative zone.
             - Background (float): Percentage of pixels in the white space background or fatty tissues.
             - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide
-                may be misleading since much negative tissue may lead to a negative score even though the slide may
-                contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
-                interpreted with caution.
+              may be misleading since much negative tissue may lead to a negative score even though the slide may
+              contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
+              interpreted with caution.
 
         Raises:
             ValueError: If the slide is a mask slide or a reference slide.
-
         """
         start_time_summarize = time()
         self.logger.info(

@@ -31,7 +31,6 @@ def analyze_dual_antigen_colocalization(iterable):
             output path, the directory where the output image should be saved; and save_img, a flag indicating whether
             to save the output image.
 
-
     Returns:
         dict: A dictionary containing the results of the analysis:
             - Tilename: Name of the tile
@@ -65,6 +64,7 @@ def analyze_dual_antigen_colocalization(iterable):
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory. The
         coloring scheme is as follows:
+
             - Overlapping pixels (positive in both tiles):
                 - Highly positive: Red ([255, 0, 0])
                 - Positive: Red ([255, 0, 0])
@@ -179,9 +179,9 @@ def analyze_triplet_antigen_colocalization(iterable):
 
     Args:
         iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and
-        analyzed for antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; tile3,
-        the third tile; output path, the directory where the output image should be saved; and save_img, a flag
-        indicating whether to save the output image.
+            analyzed for antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage
+            tile3, the third tile; output path, the directory where the output image should be saved; and save_img, a
+            flag indicating whether to save the output image.
 
     Returns:
         dict: A dictionary containing the results of the analysis:
@@ -216,6 +216,7 @@ def analyze_triplet_antigen_colocalization(iterable):
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory. The
         coloring scheme is as follows:
+
             - Overlapping pixels (positive in both tiles):
                 - Highly positive: Red ([255, 0, 0])
                 - Positive: Red ([255, 0, 0])
