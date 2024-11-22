@@ -16,7 +16,7 @@ from tqdm import tqdm
 # CuBATS
 import cubats.logging_config as log_config
 import cubats.slide_collection.colocalization as colocalization
-import cubats.Utils as utils
+import cubats.cutils as cutils
 from cubats.slide_collection.slide import Slide
 
 # Constants
@@ -269,7 +269,7 @@ class SlideCollection(object):
         for file in os.listdir(self.src_dir):
             if os.path.isfile(os.path.join(self.src_dir, file)):
                 if not file.startswith(".") and (file.endswith(".tiff") or file.endswith(".tif")):
-                    filename = utils.get_name(file)
+                    filename = cutils.get_name(file)
                     mask = False
                     ref = False
                     # Look for mask and reference slide. If no reference selected HE slide will be selected

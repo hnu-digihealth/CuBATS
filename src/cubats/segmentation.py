@@ -28,7 +28,7 @@ from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
-from cubats import Utils as utils
+from cubats import cutils as cutils
 
 # Initialize logging
 logging.config.dictConfig(log_config.LOGGING)
@@ -331,7 +331,7 @@ def _segment_file(
 
     # Extract the base name and file type
     base_name, file_type = path.splitext(file_path)
-    wsi_name = utils.get_name(base_name)
+    wsi_name = cutils.get_name(base_name)
 
     # Construct output paths for the mask and thumbnail
     mask_out = path.join(output_path, f"{wsi_name}_mask{file_type}")

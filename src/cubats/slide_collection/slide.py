@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
-from cubats import Utils as utils
+from cubats import cutils as cutils
 from cubats.slide_collection import tile_processing
 
 
@@ -290,7 +290,7 @@ class Slide(object):
         self.quantification_summary["Negative (%)"] = round(percentages[3], 2)
         self.quantification_summary["Background (%)"] = round(
             percentages[4], 2)
-        self.quantification_summary["Score"] = utils.get_score_name(
+        self.quantification_summary["Score"] = cutils.get_score_name(
             scores)  # TODO necessary?
         end_time_summarize = time()
         self.logger.debug(
