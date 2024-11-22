@@ -1,3 +1,19 @@
+"""
+This module contains functions for processing and analyzing tiles from whole slide images (WSIs).
+
+Credits:
+- The `ihc_stain_separation` function is adapted from the work of A. C. Ruifrok and D. A. Johnston in their paper
+  “Quantification of histochemical staining by color deconvolution,” Analytical and quantitative cytology and
+  histology / the International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug.
+  2001. PMID: 11531144. Source: https://scikit-image.org/docs/stable/auto_examples/color_exposure/ \
+    plot_ihc_color_separation.html
+
+- The `calculate_pixel_intensity` function is inspired by the work of Varghese et al. (2014) "IHC Profiler: An Open
+  Source Plugin for the Quantitative Evaluation and Automated Scoring of Immunohistochemistry Images of Human Tissue
+  Samples."
+
+Last Modified: 2023-10-05
+"""
 # Standard Library
 import os
 
@@ -116,10 +132,6 @@ def ihc_stain_separation(
     """
     Function receives IHC image, separates individual stains (Hematoxylin, Eosin, DAB) from image and returns an image
     for each of the individual stains.
-    Credits: Credits for this function are owed to A. C. Ruifrok and D. A. Johnston with there paper “Quantification of
-    histochemical staining by color deconvolution,” Analytical and quantitative cytology and histology / the
-    International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug. 2001. PMID:
-    11531144: https://scikit-image.orgdocs/stable/auto_examples/color_exposure/plot_ihc_color_separationhtml#sphx-glr-auto-examples-color-exposure-plot-ihc-color-separation-py
 
     Args:
         ihc_rgb (Image): IHC image in RGB
@@ -175,9 +187,6 @@ def calculate_pixel_intensity(image):
 
     After calculating pixel intensities this function calculates percentage contribution of each of the zones as well
     as the a pathology score.
-
-    Credits Varghese et al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated
-    Scoring of Immunihistochemistry Images of Human Tissue Samples"
 
     Args:
         image (Image): Input image
@@ -273,7 +282,8 @@ def calculate_score(zones, count):
 def mask_tile(tile, mask):
     """
     This function takes a tile and a mask and masks the tile with the mask. The mask is a binary image with the same
-    dimensions as the tile. The function returns the masked tile as Image, containing the tile where the mask is positive and white where it is negative.
+    dimensions as the tile. The function returns the masked tile as Image, containing the tile where the mask is
+    positive and white where it is negative.
 
     Args:
         tile (Image): Tile to be masked

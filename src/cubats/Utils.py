@@ -10,9 +10,12 @@ from PIL import Image
 
 
 def get_name(f):
-    """Returns Object name, and removes image type extension from filename
+    """
+    Returns Object name, and removes image type extension from filename.
 
-    Credits: valtils.py, line 55-72
+    Credits: Adapted from valtils.py, line 87-105
+    Last Modified: 2023-10-05
+
 
     Args:
         f (String): Path to file
@@ -72,13 +75,13 @@ def get_score_name(score):
     return score
 
 
-def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
-    """This function takes an Openslide Object as input and downscales it based on the Slides
-        optimal level for downsampling and the given Scalefactor. IT returns a PIL Image as well
-        as downsample parameters.
+def downsample_Openslide_to_PIL(openslide_object, SCALEFACTOR: int):
+    """
+    This function takes an Openslide Object as input and downscales it based on the Slides optimal level for
+    downsampling and the given Scalefactor. IT returns a PIL Image as well as downsample parameters.
 
     Args:
-        Openslide_object (Openslide Object): The Object that needs to be downscaling
+        openslide_object (openslide.OpenSlide): The Object that needs to be downscaling
         SCALEFACTOR (int): Factor for downscaling
 
     Returns:
@@ -88,13 +91,13 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
         new_w (int): width of output Image
         new_h (int): height of output Image
     """
-    if not hasattr(Openslide_object, 'dimensions') or not hasattr(Openslide_object, 'read_region'):
+    if not hasattr(openslide_object, 'dimensions') or not hasattr(openslide_object, 'read_region'):
         raise ValueError("Invalid Openslide object.")
 
     if not isinstance(SCALEFACTOR, int) or SCALEFACTOR <= 0:
         raise ValueError("SCALEFACTOR must be a positive integer.")
 
-    old_w, old_h = Openslide_object.dimensions
+    old_w, old_h = openslide_object.dimensions
     # rescaled width and height of Image
     new_w, new_h = old_w // SCALEFACTOR, old_h // SCALEFACTOR
 
@@ -102,10 +105,10 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
         new_w, new_h = 1, 1
 
     # Find optimal level for downsampling
-    level = Openslide_object.get_best_level_for_downsample(SCALEFACTOR)
+    level = openslide_object.get_best_level_for_downsample(SCALEFACTOR)
     # Conversion to PIL image
-    wsi = Openslide_object.read_region(
-        (0, 0), level, Openslide_object.level_dimensions[level]
+    wsi = openslide_object.read_region(
+        (0, 0), level, openslide_object.level_dimensions[level]
     )
     wsi = wsi.convert("RGB")
     img = wsi.resize((new_w, new_h), Image.LANCZOS)
@@ -114,11 +117,12 @@ def downsample_Openslide_to_PIL(Openslide_object, SCALEFACTOR: int):
 
 
 def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True):
-    """This function plots quantification results of a given tilename. It plots the DAB-image, the histogram of the intensity distribution,
-        a bar plot containing the amount of pixels attributed to each zone and numeric results. Display of the image and numeric results are
-        optional, default is set to True. Images can only be display if they have been saved during quantification in functions:
-        - quantify_all_slides
-        - quantify_single_slide
+    """ Plots quantification results for a tile.
+
+    This function plots quantification results of a given tilename. It plots the DAB-image, the histogram of the
+    intensity distribution, a bar plot containing the amount of pixels attributed to each zone and numeric results.
+    Display of the image and numeric results are optional, default is set to True. Images can only be display if they
+    have been saved during quantification in functions: quantify_all_slides or quantify_single_slide.
 
     Args:
         tilename (str): name of tile (col_row)
@@ -211,9 +215,10 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
                 tile_exists = True
                 break
 
-    assert (
-        tile_exists
-    ), "The given tilename does not exist for one or more of the slides. Please make sure to select an existing tilename."
+    if not tile_exists:
+        raise ValueError(
+            "The given tilename does not exist for one or more of the slides. \
+                Please make sure to select an existing tilename.")
 
     max_y_hist = round(max([max(hist) for hist in hists]), -4) + 10000
     max_y_zone = round(max([max(zone) for zone in zones[:4]]), -4) + 20000

@@ -95,7 +95,8 @@ class TestQuantifyTile(unittest.TestCase):
     @patch('cubats.slide_collection.tile_processing.Image.fromarray')
     @patch('cubats.slide_collection.tile_processing.ihc_stain_separation')
     @patch('cubats.slide_collection.tile_processing.calculate_pixel_intensity')
-    def test_quantify_tile_save_img_true_dir_none(self, mock_calculate_pixel_intensity, mock_ihc_stain_separation, mock_fromarray, mock_makedirs):
+    def test_quantify_tile_save_img_true_dir_none(self, mock_calculate_pixel_intensity, mock_ihc_stain_separation,
+                                                  mock_fromarray, mock_makedirs):
         # Create a numpy array with mean < 235 and std > 15 so it passes function conditions
         mock_tile_np = np.random.normal(
             loc=100, scale=20, size=(10, 10, 3)).astype(np.uint8)
@@ -403,7 +404,8 @@ class TestTileProcessing(unittest.TestCase):
     @patch('cubats.slide_collection.tile_processing.ihc_stain_separation')
     # Mock tqdm to pass through
     @patch('cubats.slide_collection.tile_processing.tqdm', side_effect=lambda x: x)
-    def test_separate_stains_and_save__tiles_as_tif(self, mock_tqdm, mock_ihc_stain_separation, mock_imsave, mock_makedirs):
+    def test_separate_stains_and_save__tiles_as_tif(self, mock_tqdm, mock_ihc_stain_separation, mock_imsave,
+                                                    mock_makedirs):
         # Mock deepzoom_object
         mock_deepzoom_object = MagicMock()
         mock_deepzoom_object.level_tiles = {0: (2, 2)}

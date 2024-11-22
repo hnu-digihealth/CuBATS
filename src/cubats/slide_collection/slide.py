@@ -138,7 +138,8 @@ class Slide(object):
             img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
                 None.
             detailed_mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
-                mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however, might result in larger inaccuracies for WSI with low congruence.
+                mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
+                might result in larger inaccuracies for WSI with low congruence.
 
         """
         start_time = time()
@@ -161,7 +162,7 @@ class Slide(object):
             self.dab_tile_dir = img_dir
             os.makedirs(self.dab_tile_dir, exist_ok=True)
 
-        # Creates an iterable containing xy-Tuples for each created tile, the DeepZoomGenerator itself, as well as DAB_tile directory.
+        # Creates an iterable containing xy-Tuples for each tile, DeepZoomGenerator, and directory.
         iterable = [
             (
                 x,
@@ -181,7 +182,7 @@ class Slide(object):
             )
         ]
 
-        # Multiprocessing of tiles using concurrent.futures, gathering results and adding them to dictionary in linear manner.
+        # Multiprocessing using concurrent.futures, gathering results and adding them to dictionary in linear manner.
         with concurrent.futures.ProcessPoolExecutor() as exe:
             results = tqdm(
                 exe.map(tile_processing.quantify_tile, iterable),
@@ -206,29 +207,29 @@ class Slide(object):
         pickle.dump(self.detailed_quantification_results, open(f_out, "wb"))
         end_time_save = time()
         self.logger.debug(
-            f"Saved quantification results for {self.name} to {f_out} in {round((end_time_save - start_time_save)/60,2)} minutes.")
+            f"Saved quantification results for {self.name} to {f_out} in \
+                {round((end_time_save - start_time_save)/60,2)} minutes.")
         self.logger.info(f"Finished processing slide: {self.name}")
 
     def summarize_quantification_results(self):
-        """
-            Summarizes quantification results for a given slide and appends them to self.quantification_summary. This includes the sums of number
-            if pixels in for zone, percentage of pixels in each zone, as well as a score for each zone. The score is calculated as follows:
+        """ Summarizes quantification results.
 
-            self.quantification_summary contains the following keys:
-                - Slide (str): Name of the slide.
-                - High Positive (float): Percentage of pixels in the high positive zone.
-                - Positive (float): Percentage of pixels in the positive zone.
-                - Low Positive (float): Percentage of pixels in the low positive zone.
-                - Negative (float): Percentage of pixels in the negative zone.
-                - Background (float): Percentage of pixels in the white space background or fatty tissues.
-                - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide
-                  may be misleading since much negative tissue may lead to a negative score even though the slide may
-                  contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
-                  interpreted with caution.
+        Summarizes quantification results for a given slide and appends them to self.quantification_summary. This
+        includes the sums of number if pixels in for zone, percentage of pixels in each zone, as well as a score for
+        each zone. The results are stored inside self.quantification_summary and contains the following keys:
+            - Slide (str): Name of the slide.
+            - High Positive (float): Percentage of pixels in the high positive zone.
+            - Positive (float): Percentage of pixels in the positive zone.
+            - Low Positive (float): Percentage of pixels in the low positive zone.
+            - Negative (float): Percentage of pixels in the negative zone.
+            - Background (float): Percentage of pixels in the white space background or fatty tissues.
+            - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide
+                may be misleading since much negative tissue may lead to a negative score even though the slide may
+                contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
+                interpreted with caution.
 
         Raises:
             ValueError: If the slide is a mask slide or a reference slide.
-
 
         """
         start_time_summarize = time()
@@ -293,11 +294,13 @@ class Slide(object):
             scores)  # TODO necessary?
         end_time_summarize = time()
         self.logger.debug(
-            f"Finished summarizing quantification results for slide: {self.name} in {round((end_time_summarize - start_time_summarize)/60,2)} minutes.")
+            f"Finished summarizing quantification results for slide: {self.name} in \
+                {round((end_time_summarize - start_time_summarize)/60,2)} minutes.")
 
     def reconstruct_slide(self, in_path, out_path):
         """
-        Reconstructs a slide into a WSI based on saved tiles. This is only possible if tiles have been saved during processing. The WSI is then saved as .tif in the directory passed by out_path.
+        Reconstructs a slide into a WSI based on saved tiles. This is only possible if tiles have been saved during
+        processing. The WSI is then saved as .tif in the directory passed by out_path.
 
         Args:
             in_path (str): Path to saved tiles
@@ -309,7 +312,7 @@ class Slide(object):
         counter = 0
         cols, rows = self.tiles.level_tiles[self.level_count - 1]
         row_array = []
-        # Iterate through tiles and append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
+        # append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
         for row in tqdm(range(rows), desc="Reconstructing slide: " + self.name):
             column_array = []
             for col in range(cols):

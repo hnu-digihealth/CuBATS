@@ -300,7 +300,7 @@ def _segment_file(
                     resizing = False
             else:
                 # Resize the tile to the model input size if needed using numpy.
-                # Note: For model used during developement numpy conversion was necessary as torch resulted in false results.
+                # Note: Model used during developement needed numpy conversion as torch resulted in false results.
                 if tile_size != model_input_size[2:]:
                     resizing = True
                     rescaled_tile = resize(np.asarray(

@@ -14,7 +14,8 @@ class TestRegistration(unittest.TestCase):
     @patch('cubats.registration.os.listdir')
     @patch('cubats.registration.os.path.exists')
     @patch('pathlib.Path.mkdir')
-    def test_register_with_ref(self, mock_mkdir, mock_path_exists, mock_listdir, mock_path_join, mock_valis, mock_kill_jvm):
+    def test_register_with_ref(self, mock_mkdir, mock_path_exists, mock_listdir, mock_path_join,
+                               mock_valis, mock_kill_jvm):
         # Mock the os.path.exists to return True for specific paths
         mock_path_exists.side_effect = lambda path: path in [
             '/dummy/src', 'reference_slide']

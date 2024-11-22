@@ -272,7 +272,7 @@ class SlideCollection(object):
                     filename = utils.get_name(file)
                     mask = False
                     ref = False
-                    # if string contains _mask, it is the mask slide, if it does't contain mask but HE it is the reference slide
+                    # Look for mask and reference slide. If no reference selected HE slide will be selected
                     if re.search("_mask", filename):
                         mask = True
                     elif re.search("HE", filename) or filename == self.reference_slide:
@@ -319,7 +319,8 @@ class SlideCollection(object):
               previous processing.
 
         Args:
-            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir of the slide collection.
+            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir of the slide
+                collection.
 
         """
         prev_res_start_time = time()
@@ -400,7 +401,8 @@ class SlideCollection(object):
                     pass
         prev_res_end_time = time()
         self.logger.info(
-            f"Finished loading previous results for {self.collection_name} in {round((prev_res_end_time - prev_res_start_time), 2 )} seconds")
+            f"Finished loading previous results for {self.collection_name} in \
+                {round((prev_res_end_time - prev_res_start_time), 2 )} seconds")
 
     def generate_mask(self, save_img=False):
         """Generates mask coordinates based on the mask slide.
@@ -416,7 +418,8 @@ class SlideCollection(object):
         """
         if self.mask is None:
             raise ValueError(
-                "Slide Collection does not have a mask slide. Please check if src_dir contains a mask slide. If not,please run 'run_segmentation_pipeline' to generate a mask slide.")
+                "Slide Collection does not have a mask slide. Please check if src_dir contains a mask slide. \
+                    If not,please run 'run_segmentation_pipeline' to generate a mask slide.")
 
         mask_start_time = time()
         self.logger.debug("Generating mask coordinates")
@@ -558,10 +561,12 @@ class SlideCollection(object):
             pickle.dump(self.quant_res_df, open(out, "wb"))
             save_end_time = time()
             self.logger.debug(
-                f"Successfully saved quantification results to {out} in {round((save_end_time - save_start_time),2)} seconds")
+                f"Successfully saved quantification results to {out} in \
+                    {round((save_end_time - save_start_time),2)} seconds")
         else:
             self.logger.warning(
-                "No quantification results were found. Please call quantify_all_slides() to quantify all slides in this slide collection or call quantify_single_slide() to quantify a single slide.")
+                "No quantification results were found. Please call quantify_all_slides() to quantify all slides \
+                    in this slide collection or call quantify_single_slide() to quantify a single slide.")
 
     def get_dual_antigen_combinations(self):
         """ Creates antigen pairs and calls compute_antigen_combinations for each pair.
@@ -662,10 +667,15 @@ class SlideCollection(object):
         # Create iterable for multiprocessing
         iterable = []
         for i in slide1.detailed_quantification_results:
-            if slide1.detailed_quantification_results[i]["Tilename"] == slide2.detailed_quantification_results[i]["Tilename"]:
+            if (
+                slide1.detailed_quantification_results[i]["Tilename"]
+                == slide2.detailed_quantification_results[i]["Tilename"]
+            ):
                 _dict1 = slide1.detailed_quantification_results[i]
                 _dict2 = slide2.detailed_quantification_results[i]
-                iterable.append((_dict1, _dict2, dir, save_img))
+                iterable.append((
+                    _dict1, _dict2, dir, save_img)
+                )
 
         # for i in slide1:
         #     if slide1[i]["Tilename"] == slide2[i]["Tilename"]:
@@ -826,11 +836,17 @@ class SlideCollection(object):
         # Create iterable for multiprocessing
         iterable = []
         for i in slide1.detailed_quantification_results:
-            if (slide1.detailed_quantification_results[i]["Tilename"] == slide2.detailed_quantification_results[i]["Tilename"] == slide3.detailed_quantification_results[i]["Tilename"]):
+            if (
+                slide1.detailed_quantification_results[i]["Tilename"]
+                == slide2.detailed_quantification_results[i]["Tilename"]
+                == slide3.detailed_quantification_results[i]["Tilename"]
+            ):
                 _dict1 = slide1.detailed_quantification_results[i]
                 _dict2 = slide2.detailed_quantification_results[i]
                 _dict3 = slide3.detailed_quantification_results[i]
-                iterable.append((_dict1, _dict2, _dict3, dirname, save_img))
+                iterable.append(
+                    (_dict1, _dict2, _dict3, dirname, save_img)
+                )
         for i in slide1:
             if (
                 slide1[i]["Tilename"] == slide2[i]["Tilename"]

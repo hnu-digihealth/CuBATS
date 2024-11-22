@@ -14,53 +14,57 @@ COLOR_BACKGROUND = [192, 192, 192]  # Gray
 
 def analyze_dual_antigen_colocalization(iterable):
     """
-    This function analyzes antigen colocalization in the same tile from 2 different WSIs and returns the results as a dictionary.
+    This function analyzes antigen colocalization in the same tile from 2 different WSIs and returns the results as a
+    dictionary.
 
-    The function performs pixel-wise comparison across two images to calculate total coverage, overlapping coverage, and
-    complementary coverage. The intensity levels are divided into five categories based on their intensity values. Overall
-    positivity is defined as intensity values less than 181, with further subdivisions into highly positive (0-60), positive
-    (61-120), and low positive (121-180). Negative pixels are defined as intensity values between 181 and 234, and background
-    pixels are defined as intensity values between 235 and 255. The results are saved in a dictionary and returned. Optionally,
-    an image containing the colored results can be saved in the specified directory.
+    The function performs pixel-wise comparison across two images to calculate total coverage, overlapping coverage,
+    and complementary coverage. The intensity levels are divided into five categories based on their intensity values.
+    Overall positivity is defined as intensity values less than 181, with further subdivisions into highly positive
+    (0-60), positive (61-120), and low positive (121-180). Negative pixels are defined as intensity values between 181
+    and 234, and background pixels are defined as intensity values between 235 and 255. The results are saved in a
+    dictionary and returned. Optionally, an image containing the colored results can be saved in the specified
+    directory.
 
     Args:
-        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and analyzed for
-            antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; output path, the directory where
-            the output image should be saved; and save_img, a flag indicating whether to save the output image.
+        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and
+            analyzed for antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage;
+            output path, the directory where the output image should be saved; and save_img, a flag indicating whether
+            to save the output image.
 
 
     Returns:
         dict: A dictionary containing the results of the analysis:
             - Tilename: Name of the tile
-            - Flag: Flag indicating if the tile was processed or not. (1: processed; -1: not processed due to both tiles not being
-              processable; -2: one of the tiles was not processable due to wrong shape)
-            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by both tiles combined, with respect
-              to actual tissue in the images. (Only if Flag == 1)
-            - Total Overlap: Percentage of positive pixels that are positive in both images combined, with respect to actual tissue
-              in the images. (Only if Flag == 1)
-            - Total Complement: Percentage of positive pixels that are only covered by one of the two images, with respect to actual
-              tissue in the images. (Only if Flag == 1)
-            - High Positive Overlap: Percentage of highly positive pixels covered by both tiles combined, with respect to actual
-              tissue in the images. (Only if Flag == 1)
-            - High Positive Complement: Percentage of highly positive pixels covered by only one of the two tiles, with respect to
+            - Flag: Flag indicating if the tile was processed or not. (1: processed; -1: not processed due to both
+              tiles not being processable; -2: one of the tiles was not processable due to wrong shape)
+            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by both tiles combined,
+              with respect to actual tissue in the images. (Only if Flag == 1)
+            - Total Overlap: Percentage of positive pixels that are positive in both images combined, with respect to
               actual tissue in the images. (Only if Flag == 1)
-            - Positive Overlap: Percentage of positive pixels covered by both tiles combined, with respect to actual tissue in the
-              images. (Only if Flag == 1)
-            - Positive Complement: Percentage of positive pixels covered by only one of the two tiles, with respect to actual tissue
-              in the images. (Only if Flag == 1)
-            - Low Positive Overlap: Percentage of low positive pixels covered by both tiles combined, with respect to actual tissue
-              in the images. (Only if Flag == 1)
-            - Low Positive Complement: Percentage of low positive pixels covered by only one of the two tiles, with respect to actual
+            - Total Complement: Percentage of positive pixels that are only covered by one of the two images, with
+              respect to actual tissue in the images. (Only if Flag == 1)
+            - High Positive Overlap: Percentage of highly positive pixels covered by both tiles combined, with respect
+              to actual tissue in the images. (Only if Flag == 1)
+            - High Positive Complement: Percentage of highly positive pixels covered by only one of the two tiles, with
+              respect to actual tissue in the images. (Only if Flag == 1)
+            - Positive Overlap: Percentage of positive pixels covered by both tiles combined, with respect to actual
               tissue in the images. (Only if Flag == 1)
-            - Negative: Percentage of negative pixels not covered by either of the two tiles, with respect to actual tissue in the
-              images. (Only if Flag == 1)
-            - Tissue: Percentage of actual tissue across the tiles with respect to the total pixel count of the tile (1024 x 1024 =
-              1048576). (Only if Flag == 1)
-            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with respect to the total
-              pixel count of the tile (1024 x 1024 = 1048576). (Only if Flag == 1)
+            - Positive Complement: Percentage of positive pixels covered by only one of the two tiles, with respect to
+              actual tissue in the images. (Only if Flag == 1)
+            - Low Positive Overlap: Percentage of low positive pixels covered by both tiles combined, with respect to
+              actual tissue in the images. (Only if Flag == 1)
+            - Low Positive Complement: Percentage of low positive pixels covered by only one of the two tiles, with
+              respect to actual tissue in the images. (Only if Flag == 1)
+            - Negative: Percentage of negative pixels not covered by either of the two tiles, with respect to actual
+              tissue in the images. (Only if Flag == 1)
+            - Tissue: Percentage of actual tissue across the tiles with respect to the total pixel count of the tile
+              (1024 x 1024 = 1048576). (Only if Flag == 1)
+            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+              respect to the total pixel count of the tile (1024 x 1024 = 1048576). (Only if Flag == 1)
 
     Optional Image Saving:
-        If save_img is True, an image containing the colored results will be saved in the specified directory. The coloring scheme is as follows:
+        If save_img is True, an image containing the colored results will be saved in the specified directory. The
+        coloring scheme is as follows:
             - Overlapping pixels (positive in both tiles):
                 - Highly positive: Red ([255, 0, 0])
                 - Positive: Red ([255, 0, 0])
@@ -112,9 +116,10 @@ def analyze_dual_antigen_colocalization(iterable):
     # If both contain tissue: Process both tiles
     else:
         colocal_dict["Flag"] = 1
-        high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, low_complement, negative, background = _process_two_tiles(
-            tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-        )
+        high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, \
+            low_complement, negative, background = _process_two_tiles(
+                tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
+            )
     # Sum up the results
     coverage = (
         high_overlap
@@ -128,7 +133,7 @@ def analyze_dual_antigen_colocalization(iterable):
     total_complement = high_complement + pos_complement + low_complement
     tissue_count = coverage + negative
 
-    # Vals in % for overlap, complement, negative in respect to entire image. Except background with respect to total pixel count
+    # overlap, complement, negative in respect to entire image. Tissue, background with respect to total pixel count
     coverage = round((coverage / tissue_count) * 100, 4)
     total_overlap = round((total_overlap / tissue_count) * 100, 4)
     total_complement = round((total_complement / tissue_count) * 100, 4)
@@ -161,51 +166,56 @@ def analyze_dual_antigen_colocalization(iterable):
 
 def analyze_triplet_antigen_colocalization(iterable):
     """
-    This function analyzes antigen colocalization in the same tile from 3 different WSIs and returns the results as dictionary.
+    This function analyzes antigen colocalization in the same tile from 3 different WSIs and returns the results as
+    dictionary.
 
-    The function performs pixel-wise comparison across three images to calculate total coverage, overlapping coverage, and
-    complementary coverage. The intensity levels are divided into five categories based on their intensity values. Overall
-    positivity is defined as intensity values less than 181, with further subdivisions into highly positive (0-60), positive
-    (61-120), and low positive (121-180). Negative pixels are defined as intensity values between 181 and 234, and background
-    pixels are defined as intensity values between 235 and 255. The results are saved in a dictionary and returned. Optionally,
-    an image containing the colored results can be saved in the specified directory.
+    The function performs pixel-wise comparison across three images to calculate total coverage, overlapping coverage,
+    and complementary coverage. The intensity levels are divided into five categories based on their intensity values.
+    Overall positivity is defined as intensity values less than 181, with further subdivisions into highly positive
+    (0-60), positive (61-120), and low positive (121-180). Negative pixels are defined as intensity values between 181
+    and 234, and background pixels are defined as intensity values between 235 and 255. The results are saved in a
+    dictionary and returned. Optionally, an image containing the colored results can be saved in the specified
+    directory.
 
     Args:
-        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and analyzed for
-            antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; tile3, the third tile;
-            output path, the directory where the output image should be saved; and save_img, a flag indicating whether to save the output image.
+        iterable (iterable): An iterable containing the following elements: tile1, the first tile to be compared and
+        analyzed for antigen coverage; tile2, the second tile to be compared and analyzed for antigen coverage; tile3,
+        the third tile; output path, the directory where the output image should be saved; and save_img, a flag
+        indicating whether to save the output image.
 
     Returns:
         dict: A dictionary containing the results of the analysis:
             - Tilename: Name of the tile
-            - Flag: Flag indicating if the tile was processed or not. (1: processed; 0: not processed due both tiles not being
-              processable; -1: all tiles not containing tissue)
-            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by all three tiles combined,
-              with respect to actual tissue in the images. (Only if Flag == 1)
+            - Flag: Flag indicating if the tile was processed or not. (1: processed; 0: not processed due both tiles
+              not being processable; -1: all tiles not containing tissue)
+            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by all three tiles
+              combined, with respect to actual tissue in the images. (Only if Flag == 1)
             - Total Overlap: Percentage of positive pixels that are positive in at least two or all three images
               combined, with respect to actual tissue in the images. (Only if Flag == 1)
             - Total Complement: Percentage of positive pixels that are only covered by one of the three images, with
               respect to actual tissue in the images. (Only if Flag == 1)
-            - High Positive Overlap: Percentage of highly positive pixels covered by all three tiles combined, with respect
-              to actual tissue in the images. (Only if Flag == 1)
-            - High Positive Complement: Percentage of highly positive pixels covered by only one of the three tiles, with
+            - High Positive Overlap: Percentage of highly positive pixels covered by all three tiles combined, with
               respect to actual tissue in the images. (Only if Flag == 1)
-            - Positive Overlap: Percentage of positive pixels covered by all three tiles combined. , with respect to actual
-              tissue in the images. (Only if Flag == 1)
-            - Positive Complement: Percentage of positive pixels covered by only one of the three tiles. (Only if Flag == 1)
+            - High Positive Complement: Percentage of highly positive pixels covered by only one of the three tiles,
+              with respect to actual tissue in the images. (Only if Flag == 1)
+            - Positive Overlap: Percentage of positive pixels covered by all three tiles combined. , with respect to
+              actual tissue in the images. (Only if Flag == 1)
+            - Positive Complement: Percentage of positive pixels covered by only one of the three tiles. (Only if Flag
+              == 1)
             - Low Positive Overlap: Percentage of low positive pixels covered by all three tiles combined, with respect
               to actual tissue in the images. (Only if Flag == 1)
             - Low Positive Complement: Percentage of low positive pixels covered by only one of the three tiles, with
               respect to actual tissue in the images. (Only if Flag == 1)
-            - Negative: Percentage of negative pixels not covered by any of the three tiles, with respect to actual tissue
-              in the images.(Only if Flag == 1)
+            - Negative: Percentage of negative pixels not covered by any of the three tiles, with respect to actual
+              tissue in the images.(Only if Flag == 1)
             - Tissue: Percentage of actual tissue accros the tiles with respect to total pixel count of the tile
               (1024 x 1024 = 1048576). (Only if Flag == 1)
-            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with respect to
-              total pixel count of the tile (1024 x 1024 = 1048576). (Only if Flag == 1)
+            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+              respect to total pixel count of the tile (1024 x 1024 = 1048576). (Only if Flag == 1)
 
     Optional Image Saving:
-        If save_img is True, an image containing the colored results will be saved in the specified directory. The coloring scheme is as follows:
+        If save_img is True, an image containing the colored results will be saved in the specified directory. The
+        coloring scheme is as follows:
             - Overlapping pixels (positive in both tiles):
                 - Highly positive: Red ([255, 0, 0])
                 - Positive: Red ([255, 0, 0])
@@ -265,18 +275,22 @@ def analyze_triplet_antigen_colocalization(iterable):
     elif flag_count == 1:
         colocal_dict["Flag"] = 1
         if tile1["Flag"] == 0:
-            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, low_complement, negative, background = _process_two_tiles(
-                tile2, tile3, dir, save_img, [COLOR_TILE2, COLOR_TILE3]
-            )
+            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, \
+                low_complement, negative, background = _process_two_tiles(
+                    tile2, tile3, dir, save_img, [COLOR_TILE2, COLOR_TILE3]
+                )
         elif tile2["Flag"] == 0:
-            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, low_complement, negative, background = _process_two_tiles(
-                tile1, tile3, dir, save_img, [COLOR_TILE1, COLOR_TILE3]
-            )
+            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, \
+                low_complement, negative, background = _process_two_tiles(
+                    tile1, tile3, dir, save_img, [COLOR_TILE1, COLOR_TILE3]
+                )
         elif tile3["Flag"] == 0:
-            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, low_complement, negative, background = _process_two_tiles(
-                tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-            )
-    # Check for Error 3: Flag = -2: One of images doesn't have the correct shape # TODO Think about padding images to correct shape
+            high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, \
+                low_complement, negative, background = _process_two_tiles(
+                    tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
+                )
+    # Check for Error 3: Flag = -2: One of images doesn't have the correct shape
+    # TODO Think about padding images to correct shape
     elif (
         tile1["Image Array"].shape != (1024, 1024)
         or tile2["Image Array"].shape != (1024, 1024)
@@ -287,9 +301,10 @@ def analyze_triplet_antigen_colocalization(iterable):
     # Otherwise calculate all three images
     else:
         colocal_dict["Flag"] = 1
-        high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, low_complement, negative, background = _process_three_tiles(
-            tile1, tile2, tile3, dir, save_img,
-        )
+        high_overlap, pos_overlap, low_overlap, high_complement, pos_complement, \
+            low_complement, negative, background = _process_three_tiles(
+                tile1, tile2, tile3, dir, save_img,
+            )
 
     coverage = (
         high_overlap
@@ -303,7 +318,7 @@ def analyze_triplet_antigen_colocalization(iterable):
     total_complement = high_complement + pos_complement + low_complement
     tissue_count = coverage + negative
 
-    # Vals in % for overlap, complement, negative in respect to entire image. Except background with respect to total pixel count
+    # overlap, complement, negative in respect to entire image. Tissue, background with respect to total pixel count
     coverage = round((coverage / tissue_count) * 100, 4)
     total_overlap = round((total_overlap / tissue_count) * 100, 4)
     total_complement = round((total_complement / tissue_count) * 100, 4)
@@ -336,9 +351,10 @@ def analyze_triplet_antigen_colocalization(iterable):
 
 def _process_single_tile(tile, dir, save_img, color):
     """
-    Processes two image tiles to categorize pixels into overlap, different complement levels, negative tissue, and background.
-    Optionally saves the processed image to the specified directory if save_img is True. This function is typically called by
-    analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization when two of the three tiles contain tissue.
+    Processes two image tiles to categorize pixels into overlap, different complement levels, negative tissue, and
+    background. Optionally saves the processed image to the specified directory if save_img is True. This function is
+    typically called by analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization when two of the
+    three tiles contain tissue.
 
     Args:
         tile (dict): A dictionary containing the image under the key "Image Array".
@@ -356,8 +372,9 @@ def _process_single_tile(tile, dir, save_img, color):
 
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory.
-        The coloring scheme depends on the color parameter and is specified by the calling function. For more information,
-        refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization functions.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
+        functions.
     """
     high_complement = 0
     pos_complement = 0
@@ -409,9 +426,10 @@ def _process_single_tile(tile, dir, save_img, color):
 
 def _process_two_tiles(tile1, tile2, dir, save_img, colors):
     """
-    Processes two image tiles to categorize pixels into overlap, different complement levels, negative tissue, and background.
-    Optionally saves the processed image to the specified directory if save_img is True. This function is typically called by
-    analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization when two of the three tiles contain tissue.
+    Processes two image tiles to categorize pixels into overlap, different complement levels, negative tissue, and
+    background. Optionally saves the processed image to the specified directory if save_img is True. This function is
+    typically called by analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization when two of the
+    three tiles contain tissue.
 
     Args:
         tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
@@ -433,8 +451,9 @@ def _process_two_tiles(tile1, tile2, dir, save_img, colors):
 
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory.
-        The coloring scheme depends on the color parameter and is specified by the calling function. For more information,
-        refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization functions.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
+        functions.
     """
 
     high_overlap = 0

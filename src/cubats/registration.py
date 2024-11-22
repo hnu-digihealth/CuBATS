@@ -21,7 +21,8 @@ def register_with_ref(
     max_non_rigid_registartion_dim_px=DEFAULT_MAX_NON_RIGID_REG_SIZE,
 ):
     """
-    Register the slides with a reference slide using Valis. This function automatically registers the slides and saves the registered slides in the specified directory.
+    Register the slides with a reference slide using Valis. This function automatically registers the slides and saves
+    the registered slides in the specified directory.
 
     Args:
         slide_src_dir (_type_): _description_
@@ -71,7 +72,8 @@ def register(
     max_non_rigid_registartion_dim_px=DEFAULT_MAX_NON_RIGID_REG_SIZE,
 ):
     """
-    Register the slides using Valis. This function automatically registers the slides and saves the registered slides in the specified directory.
+    Register the slides using Valis. This function automatically registers the slides and saves the registered slides
+    in the specified directory.
 
     Args:
         slide_src_dir (_type_): _description_
