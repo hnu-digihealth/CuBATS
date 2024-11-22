@@ -1,5 +1,6 @@
 """
-This module contains functions for processing and analyzing tiles from whole slide images (WSIs).
+This module contains functions for processing and analyzing tiles from whole slide images (WSIs), including color
+deconvolution and quantification.
 
 Credits:
 
@@ -32,32 +33,34 @@ from tqdm import tqdm
 def quantify_tile(iterable):
     """
     This function processes a single input tile and returns a dictionary.
-        - If the tile is mostly white and thus shows no- or only little tissue, the tile will not be processed further
-          The returned dict will contain the Tilename and a Flag = -1
-
-        - Else the tile will be processed, including stain_separation and pixel_intensity calculations. The DAB Image
-          will then be saved in passed directory and results of pixel intensity will be returned inside the dictionary.
+    If the tile contains tissue (mean pixel value < 230 and standard deviation > 15), it will undergo stain separation
+    and pixel intensity calculations. The results will be returned in the dictionary. The flag will be set to 1. If
+    save_img is True the DAB image will additionally be saved in the specified directory.
+    If the tile is mostly white (mean pixel value >= 230 or standard deviation <= 15), it will not be processed
+    further. The returned dictionary will contain the tile name and a flag set to 0.
 
     Args:
         iterable (iterable): Iterable containing the following Information on passed tile:
 
-         - index 0: Column, necessary for naming
-         - index 1: Row, necessary for naming
-         - index 2: Tile itself, necessary since processes cannot access shared memory
-         - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory
+            - index 0: Column, necessary for naming
+            - index 1: Row, necessary for naming
+            - index 2: Tile itself, necessary since processes cannot access shared memory
+            - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory
+            - save_img: Boolean, if True, DAB image will be saved in specified directory
 
 
     Returns:
         dict: Dictionary containing tile results:
-            - Tilename
-            - Histogram
-            - Hist_centers
-            - Zones
-            - Percentage
-            - Score
-            - Px_count
-            - Flag
-            - Image Array
+
+            - Tilename (str): Name of the tile.
+            - Histogram (ndarray): Histogram of the tile.
+            - Hist_centers (ndarray): Centers of histogram bins.
+            - Zones (ndarray): Number of pixels in each intensity zone.
+            - Percentage (ndarray): Percentage of pixels in each zone.
+            - Score (ndarray): Score for the tile.
+            - Px_count (int): Total number of pixels in the tile.
+            - Flag (int): Processing flag (1 if processed, 0 if not).
+            - Image Array (ndarray): Array of pixel values for positive pixels.
 
         TODO Add modes for optional histogram etc save
 
@@ -131,79 +134,64 @@ def ihc_stain_separation(
     eosin=False,
 ):
     """
-    Function receives IHC image, separates individual stains (Hematoxylin, Eosin, DAB) from image and returns an image
-    for each of the individual stains.
+    Separates individual stains (Hematoxylin, Eosin, DAB) from an IHC image and returns an image for each stain.
 
     Args:
-        ihc_rgb (Image): IHC image in RGB
-
-        hematoxylin(bool): Boolean, if True returns Hematoxylin image
-
-        eosin (bool): Boolean, if True returns Eosin image
+        ihc_rgb (Image): IHC image in RGB format.
+        hematoxylin (bool): If True, returns Hematoxylin image as well. Defaults to False.
+        eosin (bool): If True, returns Eosin image. Defaults to False.
 
     Returns:
-        Tuple:
-
-        - ihc_h (Image): Hematoxylin staining of image if hematoxylin=True
-
-        - ihc_e (Image): Eosin staining of image if eosin=True
-
-        - ihc_d (Image): DAB (3',3'-Diaminobenzidine)
+        tuple: A tuple containing:
+            - ihc_d (Image): DAB (3',3'-Diaminobenzidine) stain of the image.
+            - ihc_h (Image): Hematoxylin stain of the image if hematoxylin=True, otherwise None.
+            - ihc_e (Image): Eosin stain of the image if eosin=True, otherwise None.
 
     """
     # convert RGB image to HED using prebuild skimage method
     ihc_hed = rgb2hed(ihc_rgb)
 
     # Create RGB image for each seperate stain
-    # Convert to ubyte for easier saving to drive as image
     null = np.zeros_like(ihc_hed[:, :, 0])
-    if hematoxylin:
-        ihc_h = img_as_ubyte(
-            hed2rgb(np.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
-    else:
-        ihc_h = None
-
-    if eosin:
-        ihc_e = img_as_ubyte(
-            hed2rgb(np.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
-    else:
-        ihc_e = None
-
+    null = np.zeros_like(ihc_hed[:, :, 0])
+    ihc_h = img_as_ubyte(hed2rgb(
+        np.stack((ihc_hed[:, :, 0], null, null), axis=-1))) if hematoxylin else None
+    ihc_e = img_as_ubyte(
+        hed2rgb(np.stack((null, ihc_hed[:, :, 1], null), axis=-1))) if eosin else None
     ihc_d = img_as_ubyte(
         hed2rgb(np.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
 
-    return (ihc_d, ihc_h, ihc_e)
+    return ihc_d, ihc_h, ihc_e
 
 
 def calculate_pixel_intensity(image):
     """
-    Calculates pixel intensity of each pixel in the input image and separates them into 4 different zones based on
-    their intensity. Intensity of each pixel lies between 0 and 255. Intensities above 235 are predominantly fatty
-    tissues but dont contribute to pathological scoring:
+    Calculates pixel intensity of each pixel in the input image and separates them into 5 different zones based on
+    their intensity. The image is converted to grayscale format, resulting in a distribution of intensity values
+    between 0-255. Intensities above 235 are predominantly background or fatty tissues and do not contribute to
+    pathological scoring:
 
         - Zone 1 = High positive (intensity: 0-60)
         - Zone 2 = Positive (intensity: 61-120)
         - Zone 3 = Low positive (intensity: 121-180)
         - Zone 4 = negative (intensity: 181-235)
+        - Zone 5: White space or fatty tissue (intensity: 236-255)
 
     After calculating pixel intensities this function calculates percentage contribution of each of the zones as well
     as the a pathology score.
 
     Args:
-        image (Image): Input image
+        image (Image): Input image.
 
     Returns:
-        Tuple:
-        - hist (ndarray): histogram of the tile.
-        - hist_centers(ndarray): center of bins of histogram
-        - zones (ndarray): Number of pixels for each zone. During processing pixels in the tile are assigned to one of
-          four zones based on pixel intensity. For more information see 'tile calculate_pixel_intensity'
-        - percentage (ndarray): Percentage of pixels in each zone
-        - score (ndarray): Score for each of the ties
-        - pixel_count (int): Total number of pixels in the tile
-        - image_analysis (ndarray): Pixelvalues of for positive pixels. Pixels with values ranging from 0 to 121 are
-          considered positive.
-
+        tuple: A tuple containing:
+            - hist (ndarray): Histogram of the image.
+            - hist_centers (ndarray): Centers of histogram bins.
+            - zones (ndarray): Number of pixels in each intensity zone.
+            - percentage (ndarray): Percentage of pixels in each intensity zone.
+            - score (float): Calculated score for the image.
+            - pixelcount (int): Total number of pixels in the image.
+            - img_analysis (ndarray): Array of pixel values colocalization.
     """
 
     # Conversion to gray-scale-ubyte image
@@ -254,19 +242,21 @@ def calculate_pixel_intensity(image):
 
 def calculate_score(zones, count):
     """
-    Calculates Percentage of amount of pixels in each zone in respect to
-    pixelcount.
-    TODO Check for Score and >66,6% px intensity
+    Calculates the percentage of pixels in each zone relative to the total pixel count and computes a score for each
+    zone. TODO Check for Score and >66,6% px intensity
 
     Args:
         zones (ndarray): Array containing amount of pixels from each zone
-
-        pixelcount (int): total pixelcount
+        pixelcount (int): Total number of pixels.
 
     Returns:
-        Tuple:
-        - percentage (ndarray): Array containing percentage of pixels in each zone.
-        - score (ndarray): Array containing calculation of score for each zone
+        tuple: A tuple containing:
+            - percentage (ndarray): Array containing the percentage of pixels in each zone.
+            - score (ndarray): Array containing the calculated score for each zone.
+
+    Raises:
+        ZeroDivisionError: If pixel count is zero.
+
 
     """
     if count == 0:
@@ -282,9 +272,8 @@ def calculate_score(zones, count):
 
 def mask_tile(tile, mask):
     """
-    This function takes a tile and a mask and masks the tile with the mask. The mask is a binary image with the same
-    dimensions as the tile. The function returns the masked tile as Image, containing the tile where the mask is
-    positive and white where it is negative.
+    Masks the tile with the given mask. The mask is a binary image with the same dimensions as the tile. The function
+    returns the masked tile as an Image, containing the tile where the mask is positive and white where it is negative.
 
     Args:
         tile (Image): Tile to be masked
@@ -292,7 +281,6 @@ def mask_tile(tile, mask):
 
     Returns:
         Image: Masked tile
-
     """
     # Convert tile to numpy array
     tile_np = np.array(tile)
@@ -313,49 +301,42 @@ def mask_tile(tile, mask):
 
 
 def separate_stains_and_save__tiles_as_tif(
-    deepzoom_object, deepzoom_level, target_directory
+    openslide_deepzoom, deepzoom_level, out_dir
 ):
     """
-    This function iterates through OpenSlide Deep Zoom Object at the given
-    Deep Zoom level and saves each individual slide in the given Directory
-    named as "col_row".tif just as "save_all_tiles_as_tif" does. However,
-    additionally this function calls the "color_separation" function,
-    separates H-,E-,DAB stains from each tile and saves an additional tif for
-    each stain in a newly created subdirectory respectively.
+    Iterates over an `openslide.DeepZoomGenerator` at the given `deepzoom_level` and separates hematoxylin, eosin and
+    DAB stains for the from the original tile. The original tile and separated stains are saved as tif images in the
+    specified `out_dir`.
 
     Args:
-        deepzoom_object (DeepZoomGenerator): DeepZoomGenerator
-        deepzoom_level (int): Wanted Deep Zoom level through which
-            shall be iterated
-        target_directory (str): Target directory in which tiles are stored
-
+        openslide_deepzoom (DeepZoomGenerator): DeepZoomGenerator.
+        deepzoom_level (int): Desired Deep Zoom level to iterate through.
+        out_dir (str): Target directory in which tiles and separated stains are stored.
     """
     # Create directories for original tiles, hematoxylin stain, eosin stain
     # and DAB stain
-    ORIGINAL_TILES_DIR = target_directory + "/original_tiles"
+    ORIGINAL_TILES_DIR = out_dir + "/original_tiles"
     os.makedirs(ORIGINAL_TILES_DIR, exist_ok=True)
-    DAB_TILE_DIR = target_directory + "/DAB_tiles"
+    DAB_TILE_DIR = out_dir + "/DAB_tiles"
     os.makedirs(DAB_TILE_DIR, exist_ok=True)
-    H_TILE_DIR = target_directory + "/H_tiles"
+    H_TILE_DIR = out_dir + "/H_tiles"
     os.makedirs(H_TILE_DIR, exist_ok=True)
-    E_TILE_DIR = target_directory + "/E_tiles"
+    E_TILE_DIR = out_dir + "/E_tiles"
     os.makedirs(E_TILE_DIR, exist_ok=True)
 
-    cols, rows = deepzoom_object.level_tiles[deepzoom_level - 1]
+    cols, rows = openslide_deepzoom.level_tiles[deepzoom_level - 1]
     for row in tqdm(range(rows)):
         for col in range(cols):
             tile_name = str(col) + "_" + str(row)
 
-            temp = deepzoom_object.get_tile(deepzoom_level - 1, (col, row))
+            temp = openslide_deepzoom.get_tile(deepzoom_level - 1, (col, row))
             temp_rgb = temp.convert("RGB")
             temp_np = np.array(temp_rgb)
 
             tiff.imsave(ORIGINAL_TILES_DIR + "/"
                         + tile_name + "_original.tif", temp_np)
-            # print("Saving tile:" + tile_name)
 
-            # Now only process tiles that are mostly covered and not blank to
-            # save runtime and space
+            # Now only process tiles that are mostly covered tiles
             if temp_np.mean() < 230 and temp_np.std() > 15:
                 # print("Separating color for tile: ", tile_name)
                 DAB, H, E = ihc_stain_separation(temp_np, True, True)
@@ -366,4 +347,3 @@ def separate_stains_and_save__tiles_as_tif(
                 tiff.imsave(E_TILE_DIR + "/" + tile_name + "_E.tif", E)
             else:
                 pass
-                # print("NOT PROCESSING TILE", tile_name)

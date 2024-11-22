@@ -17,18 +17,22 @@ Slide
 
 Tile Processing
 ================
+Module Documentation
+---------------------
+.. automodule:: cubats.slide_collection.tile_processing
+    :exclude-members: quantify_tile, ihc_stain_separation, calculate_pixel_intensity, calculate_score, mask_tile, separate_stains_and_save_tiles_as_tif
+
 Primary Functions
 -----------------
 .. autofunction:: cubats.slide_collection.tile_processing.quantify_tile
 
 Internal Functions
 ------------------
-.. automodule:: cubats.slide_collection.tile_processing
-    :members:
-    :exclude-members: quantify_tile
-    :undoc-members:
-    :private-members:
-    :show-inheritance:
+.. autofunction:: cubats.slide_collection.tile_processing.ihc_stain_separation
+.. autofunction:: cubats.slide_collection.tile_processing.calculate_pixel_intensity
+.. autofunction:: cubats.slide_collection.tile_processing.calculate_score
+.. autofunction:: cubats.slide_collection.tile_processing.mask_tile
+.. autofunction:: cubats.slide_collection.tile_processing.separate_stains_and_save__tiles_as_tif
 
 Antigen Analysis
 ================

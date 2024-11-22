@@ -24,12 +24,12 @@ class Slide(object):
     """ Slide Class.
 
     'Slide' class instatiates a slide object containing all relevant information and results for a single slide. All
-     slide specific operations that can be performed on a single slide rather than on a slide collection are
+     slide specific operations that can be performed on a single slide rather than on a collection of slides are
      implemented in this class. This includes quantification of staining intensities and reconstruction of a slide. The
      class is initialized with the name of the slide, the path to the slide file, as well as information on whether the
      slide is a mask or reference slide. The class contains a dictionary of detailed quantification results for each
      tile, as well as a dictionary of summarized quantification results for the entire slide. The slide object also
-     contains information on the openslide object, the tiles, the level count, the level dimensions, as well as the
+     contains information on the OpenSlide object, the tiles, the level count, the level dimensions, as well as the
      tile count. The slide object also contains a directory to save the tiles after color deconvolution, which is
      necessary for reconstruction of the slide later on.
 
@@ -114,11 +114,12 @@ class Slide(object):
     def quantify_slide(self, mask_coordinates, save_dir, save_img=False, img_dir=None, detailed_mask=None):
         """ Quantifies staining intensities for all tiles of this slide.
 
-        This function uses multiprocessing to quantify staining intensities of all tiles for the slide. First Each tile
-        is subjected to color deconvolution algotithm and quantification of staining intensities. If save_img = True,
-        each tile is save in img_dir after color deconvolution allowing for reconstruction of the slide later on. After
-        color deconvolution, each tile is processed as a grayscale image and each pixels staining intensity (0-255) is
-        quantified and attributed to one of four zones according to the IHC Profilers algorithm:
+        This function uses multiprocessing to quantify staining intensities of all tiles for the slide.
+
+        Each tile undergoes color deconvolution followed by staining intensity quantification based on the IHC
+        Profiler's algorithm. If `save_img` is True, tiles are saved in `img_dir` after deconvolution for later
+        reconstruction. After color deconvolution, each tile is processed as a grayscale image, and each pixel's
+        staining intensity (0-255) is quantified and categorized into zones:
 
             - Zone1: High Positive (0-60)
             - Zone2: Positive (61-120)
@@ -126,9 +127,8 @@ class Slide(object):
             - Zone4: Negative (181-235)
             - (Zone5: White Space or Fatty Tissues (236-255), irrelevant for quantification)
 
-        The results for each tile are stored within a dictionary and all dictionaries are accumulated in the nested
-        dictionary self.detailed_quantification_results. Ultimately, the results are summarized and stored in self.
-        quantification_summary. Both the detailed and summarized results are stored as PICKLE in the save_dir.
+        Results are stored in `self.detailed_quantification_results` and summarized in `self.quantification_summary`.
+        Both are saved as PICKLE files in `save_dir`.
 
         Args:
             mask_coordinates (list): List of xy-coordinates from the maskslide where the mask is positive.
@@ -215,11 +215,11 @@ class Slide(object):
         """
         Summarizes quantification results.
 
-        Summarizes quantification results for a given slide and appends them to self.quantification_summary. This
-        includes the sums of number if pixels in for zone, percentage of pixels in each zone, as well as a score for
-        each zone.
+        Summarizes quantification results for a given slide and appends them to `self.quantification_summary`. This
+        includes the total number of pixels in each zone, the percentage of pixels in each zone, and a score for each
+        zone.
 
-        The results are stored inside self.quantification_summary and contains the following keys:
+        The summary contains the following keys:
             - Slide (str): Name of the slide.
             - High Positive (float): Percentage of pixels in the high positive zone.
             - Positive (float): Percentage of pixels in the positive zone.
@@ -255,7 +255,7 @@ class Slide(object):
         # sum_z4: sum of pixels in negative zone
         # white: sum of pixels in white space or fatty tissues zone
         # count: total number of pixels in the slide
-        sum_z1, sum_z2, sum_z3, sum_z4, white, count = (
+        sum_z1, sum_z2, sum_z3, sum_z4, background, count = (
             0.00,
             0.00,
             0.00,
@@ -271,11 +271,11 @@ class Slide(object):
                 sum_z2 += self.detailed_quantification_results[i]["Zones"][1]
                 sum_z3 += self.detailed_quantification_results[i]["Zones"][2]
                 sum_z4 += self.detailed_quantification_results[i]["Zones"][3]
-                white += self.detailed_quantification_results[i]["Zones"][4]
+                background += self.detailed_quantification_results[i]["Zones"][4]
                 count += self.detailed_quantification_results[i]["Px_count"]
 
         # Calculate percentages and scores
-        zones = [sum_z1, sum_z2, sum_z3, sum_z4, white]
+        zones = [sum_z1, sum_z2, sum_z3, sum_z4, background]
         percentages = [0] * 5
         scores = [0] * 5
         for i in range(len(zones)):
@@ -301,8 +301,8 @@ class Slide(object):
 
     def reconstruct_slide(self, in_path, out_path):
         """
-        Reconstructs a slide into a WSI based on saved tiles. This is only possible if tiles have been saved during
-        processing. The WSI is then saved as .tif in the directory passed by out_path.
+        Reconstructs a slide into a Whole Slide Image (WSI) based on saved tiles. This is only possible if tiles have
+        been saved during processing. The WSI is then saved as .tif in the specified `out_path`.
 
         Args:
             in_path (str): Path to saved tiles
