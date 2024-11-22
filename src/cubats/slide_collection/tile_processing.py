@@ -10,9 +10,9 @@ Credits:
   2001. PMID: 11531144. Source: https://scikit-image.org/docs/stable/auto_examples/color_exposure/ \
     plot_ihc_color_separation.html
 
-- The `calculate_pixel_intensity` function is inspired by the work of Varghese et al. (2014) "IHC Profiler: An Open
-  Source Plugin for the Quantitative Evaluation and Automated Scoring of Immunohistochemistry Images of Human Tissue
-  Samples."
+- The `calculate_pixel_intensity` and calculate_percentage_and_score function are inspired by the work of Varghese et
+al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of
+Immunohistochemistry Images of Human Tissue Samples."
 
 Last Modified: 2023-10-05
 """
@@ -146,7 +146,6 @@ def ihc_stain_separation(
             - ihc_d (Image): DAB (3',3'-Diaminobenzidine) stain of the image.
             - ihc_h (Image): Hematoxylin stain of the image if hematoxylin=True, otherwise None.
             - ihc_e (Image): Eosin stain of the image if eosin=True, otherwise None.
-
     """
     # convert RGB image to HED using prebuild skimage method
     ihc_hed = rgb2hed(ihc_rgb)
@@ -171,11 +170,11 @@ def calculate_pixel_intensity(image):
     between 0-255. Intensities above 235 are predominantly background or fatty tissues and do not contribute to
     pathological scoring:
 
-        - Zone 1 = High positive (intensity: 0-60)
-        - Zone 2 = Positive (intensity: 61-120)
-        - Zone 3 = Low positive (intensity: 121-180)
-        - Zone 4 = negative (intensity: 181-235)
-        - Zone 5: White space or fatty tissue (intensity: 236-255)
+        - Zone 1: High positive (intensity: 0-60)
+        - Zone 2: Positive (intensity: 61-120)
+        - Zone 3: Low positive (intensity: 121-180)
+        - Zone 4: Negative (intensity: 181-235)
+        - Zone 5: Background or fatty tissues (intensity: 236-255)
 
     After calculating pixel intensities this function calculates percentage contribution of each of the zones as well
     as the a pathology score.
@@ -209,8 +208,7 @@ def calculate_pixel_intensity(image):
     zones = np.zeros(5)
     # pixelcount
     pixelcount = 0
-    # iterates through each pixel in the image and assigns it to one of the
-    # intensity zones
+    # Assigns each pixel to an intensity zone
     for y in range(h):
         for x in range(w):
             if gray_scale_ubyte[x, y] < 61:  # High positive tissue
@@ -230,20 +228,28 @@ def calculate_pixel_intensity(image):
                 pixelcount += 1
                 img_analysis[x, y] = gray_scale_ubyte[x, y]
             else:
-                # White space aka. fatty tissue needed for calculation in
-                # respect to actual tissue
+                # Background or fatty tissue needed for calculation with respect to actual tissue
                 zones[4] += 1
                 pixelcount += 1
 
-    percentage, score = calculate_score(zones, pixelcount)
+    percentage, score = calculate_percentage_and_score(zones, pixelcount)
 
     return hist, hist_centers, zones, percentage, score, pixelcount, img_analysis
 
 
-def calculate_score(zones, count):
+def calculate_percentage_and_score(zones, pixel_count):
     """
     Calculates the percentage of pixels in each zone relative to the total pixel count and computes a score for each
-    zone. TODO Check for Score and >66,6% px intensity
+    zone. If more than 66.6% of the total pixels are attributed to a single zone, that zone's score is assigned. Else,
+    the score for each zone is calculated using this formula:
+
+    .. math::
+
+        \\text{Score} = \\frac{(\\text{number of pixels in zone} \\times \\text{weight of zone})}{\\text{total
+        pixels in image}}
+
+    with weights 4 for the high positive zone, 3 for the positive zone, 2 for the low positive zone, 1 for the negative
+    zone, and 0 for the background. The final score is the maximum score among all zones.
 
     Args:
         zones (ndarray): Array containing amount of pixels from each zone
@@ -252,22 +258,36 @@ def calculate_score(zones, count):
     Returns:
         tuple: A tuple containing:
             - percentage (ndarray): Array containing the percentage of pixels in each zone.
-            - score (ndarray): Array containing the calculated score for each zone.
+            - score (str): Name of the zone if it exceeds 66.6%, otherwise the name of the zone with the highest score.
 
     Raises:
         ZeroDivisionError: If pixel count is zero.
-
-
+        ValueError: If all zones have zero pixels.
     """
-    if count == 0:
+    if pixel_count == 0:
         raise ZeroDivisionError("Count cannot be zero")
-    percentage = np.zeros(zones.size)
-    score = np.zeros(zones.size)
-    for i in range(zones.size):
-        percentage[i] = (zones[i] / count) * 100
-        score[i] = (zones[i] * (zones.size - (i + 1))) / count
 
-    return percentage, score
+    if np.sum(zones) == 0:
+        raise ValueError("All zones have zero pixels")
+
+    percentage = np.zeros(zones.size)
+    zone_names = ["High Positive", "Positive",
+                  "Low Positive", "Negative", "Background"]
+    weights = [4, 3, 2, 1, 0]  # Weights for each zone
+
+    for i in range(zones.size):
+        percentage[i] = (zones[i] / pixel_count) * 100
+
+    # Check if any zone exceeds 66.6%
+    for i in range(zones.size):
+        if percentage[i] > 66.6:
+            return percentage, zone_names[i]
+
+    # Else calculate the score for each zone and determine highest score
+    scores = [(zones[i] * weights[i]) / pixel_count for i in range(zones.size)]
+    max_score_index = np.argmax(scores[:4])
+
+    return percentage, zone_names[max_score_index]
 
 
 def mask_tile(tile, mask):

@@ -16,7 +16,6 @@ from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
-from cubats import cutils as cutils
 from cubats.slide_collection import tile_processing
 
 
@@ -264,6 +263,14 @@ class Slide(object):
             0,
         )
 
+        # Score counts
+        score_counts = {
+            "High Positive": 0,
+            "Positive": 0,
+            "Low Positive": 0,
+            "Negative": 0,
+            "Background": 0
+        }
         # Iterate through tiles_dict and sum up number of pixels in each zone as well as the total number of pixels
         for i in self.detailed_quantification_results:
             if self.detailed_quantification_results[i]["Flag"] == 1:
@@ -273,14 +280,31 @@ class Slide(object):
                 sum_z4 += self.detailed_quantification_results[i]["Zones"][3]
                 background += self.detailed_quantification_results[i]["Zones"][4]
                 count += self.detailed_quantification_results[i]["Px_count"]
+                score_name = self.detailed_quantification_results[i]["Score"]
+                score_counts[score_name] += 1
 
         # Calculate percentages and scores
         zones = [sum_z1, sum_z2, sum_z3, sum_z4, background]
         percentages = [0] * 5
-        scores = [0] * 5
         for i in range(len(zones)):
             percentages[i] = (zones[i] / count) * 100
-            scores[i] = (zones[i] * (len(zones) - i)) / count
+
+        # Calculate the summary score for the slide using weights
+        weights = {
+            "High Positive": 4,
+            "Positive": 3,
+            "Low Positive": 2,
+            "Negative": 1,
+            "Background": 0
+        }
+
+        total_processed_tiles = sum(score_counts.values())
+        weighted_scores = [score_counts[score] * weights[score]
+                           / total_processed_tiles for score in score_counts]
+        max_score_index = np.argmax(weighted_scores[:4])  # Exclude Background
+        zone_names = ["High Positive", "Positive",
+                      "Low Positive", "Negative", "Background"]
+        slide_score = zone_names[max_score_index]
 
         # Create dictionary and append to quantification_results
         self.quantification_summary["Name"] = self.name
@@ -292,8 +316,7 @@ class Slide(object):
         self.quantification_summary["Negative (%)"] = round(percentages[3], 2)
         self.quantification_summary["Background (%)"] = round(
             percentages[4], 2)
-        self.quantification_summary["Score"] = cutils.get_score_name(
-            scores)  # TODO necessary?
+        self.quantification_summary["Score"] = slide_score
         end_time_summarize = time()
         self.logger.debug(
             f"Finished summarizing quantification results for slide: {self.name} in \

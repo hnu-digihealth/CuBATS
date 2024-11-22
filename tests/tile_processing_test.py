@@ -7,10 +7,9 @@ import numpy as np
 from PIL import Image
 
 # CuBATS
-from cubats.slide_collection.tile_processing import (calculate_pixel_intensity,
-                                                     calculate_score,
-                                                     ihc_stain_separation,
-                                                     quantify_tile)
+from cubats.slide_collection.tile_processing import (
+    calculate_percentage_and_score, calculate_pixel_intensity,
+    ihc_stain_separation, quantify_tile)
 
 
 class TestQuantifyTile(unittest.TestCase):
@@ -356,45 +355,107 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
 class TestCalculateScore(unittest.TestCase):
 
-    def test_normal_case(self):
-        zones = np.array([10, 20, 30, 40, 0])
-        count = 100
-        expected_percentage = np.array([10.0, 20.0, 30.0, 40.0, 0.0])
-        expected_score = np.array([0.4, 0.6, 0.6, 0.4, 0.0])
-
-        percentage, score = calculate_score(zones, count)
-
-        np.testing.assert_array_almost_equal(percentage, expected_percentage)
-        np.testing.assert_array_almost_equal(score, expected_score)
-
     def test_edge_case_zeros(self):
-        zones = np.array([0, 0, 0, 0])
+        zones = np.array([0, 0, 0, 0, 0])
         count = 100
-        expected_percentage = np.array([0.0, 0.0, 0.0, 0.0])
-        expected_score = np.array([0.0, 0.0, 0.0, 0.0])
 
-        percentage, score = calculate_score(zones, count)
-
-        np.testing.assert_array_almost_equal(percentage, expected_percentage)
-        np.testing.assert_array_almost_equal(score, expected_score)
+        with self.assertRaises(ValueError):
+            calculate_percentage_and_score(zones, count)
 
     def test_invalid_input_zero_count(self):
-        zones = np.array([10, 20, 30, 40])
+        zones = np.array([10, 20, 30, 40, 0])
         count = 0
 
         with self.assertRaises(ZeroDivisionError):
-            calculate_score(zones, count)
+            calculate_percentage_and_score(zones, count)
 
     def test_large_numbers(self):
         zones = np.array([1000000, 2000000, 3000000, 4000000, 0])
         count = 10000000
         expected_percentage = np.array([10.0, 20.0, 30.0, 40.0, 0.0])
-        expected_score = np.array([0.4, 0.6, 0.6, 0.4, 0.0])
+        expected_score = "Positive"  # Based on the weights and the highest score
 
-        percentage, score = calculate_score(zones, count)
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
-        np.testing.assert_array_almost_equal(score, expected_score)
+        self.assertEqual(score, expected_score)
+
+    def test_dominant_zone(self):
+        zones = np.array([70, 10, 10, 5, 5])
+        count = 100
+        expected_percentage = np.array([70.0, 10.0, 10.0, 5.0, 5.0])
+        expected_score = "High Positive"  # More than 66.6% in the first zone
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_high_positive_score(self):
+        zones = np.array([20, 21, 29, 30, 0])
+        count = 100
+        expected_percentage = np.array([20.0, 21.0, 29.0, 30.0, 0.0])
+        expected_score = "High Positive"  # Based the weights and highest score
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_positive_score(self):
+        zones = np.array([20, 27, 29, 24, 0])
+        count = 100
+        expected_percentage = np.array([20.0, 27.0, 29.0, 24.0, 0.0])
+        expected_score = "Positive"  # Based on the weights and the highest score
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_low_positive_score(self):
+        zones = np.array([10, 20, 50, 10, 10])
+        count = 100
+        expected_percentage = np.array([10.0, 20.0, 50.0, 10.0, 10.0])
+        expected_score = "Low Positive"  # Based on the weights and the highest score
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_negative_score(self):
+        zones = np.array([10, 19.5, 10, 60.5, 0])
+        count = 100
+        expected_percentage = np.array([10.0, 19.5, 10.0, 60.5, 0.0])
+        expected_score = "Negative"  # Based on the weights and the highest score
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_background_score(self):
+        zones = np.array([3, 10, 10, 10, 67])
+        count = 100
+        expected_percentage = np.array([3.0, 10.0, 10.0, 10.0, 67.0])
+        expected_score = "Background"  # Based on the weights and the highest score
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
+
+    def test_background_66_percent(self):
+        zones = np.array([10, 20, 10, 10, 66])
+        count = 100
+        expected_percentage = np.array([10.0, 20.0, 10.0, 10.0, 66.0])
+        expected_score = "Positive"  # Background is exactly 66%, so the score is calculated
+
+        percentage, score = calculate_percentage_and_score(zones, count)
+
+        np.testing.assert_array_almost_equal(percentage, expected_percentage)
+        self.assertEqual(score, expected_score)
 
 
 class TestTileProcessing(unittest.TestCase):
