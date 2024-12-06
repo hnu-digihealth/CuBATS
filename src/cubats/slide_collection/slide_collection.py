@@ -508,7 +508,7 @@ class SlideCollection(object):
         slide = [
             slide for slide in self.collection_list if slide.name == slide_name][0]
 
-        # Create directorie for images if they are to be saved.
+        # Create directories for images if they are to be saved.
         if save_img:
             dab_tile_dir = os.path.join(
                 self.tiles_dir, slide_name, DAB_TILE_DIR)
@@ -525,18 +525,20 @@ class SlideCollection(object):
             else:
                 slide.quantify_slide(self.mask_coordinates, self.pickle_dir)
 
-        # Check if a row with the same 'Name' exists
+        # Check if a row already exists
         existing_row_index = self.quant_res_df[self.quant_res_df['Name']
                                                == slide.quantification_summary['Name']].index
 
         if not existing_row_index.empty:
-            # Overwrite the existing row
+            # Update existing row
             self.quant_res_df.loc[existing_row_index[0]
                                   ] = slide.quantification_summary
         else:
-            # Append the new row
-            self.quant_res_df = self.quant_res_df.append(
-                slide.quantification_summary, ignore_index=True)
+            # Append the new row TODO change to pd.concat, append deprecated
+            self.quant_res_df = pd.concat([self.quant_res_df, pd.DataFrame(
+                slide.quantification_summary)], ignore_index=True)
+            # self.quant_res_df = self.quant_res_df.append(
+            #    slide.quantification_summary, ignore_index=True)
 
         # Sort the DataFrame by the 'Name' column
         self.quant_res_df = self.quant_res_df.sort_values(

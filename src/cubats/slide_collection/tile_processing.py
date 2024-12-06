@@ -7,12 +7,13 @@ Credits:
 - The `ihc_stain_separation` function is adapted from the work of A. C. Ruifrok and D. A. Johnston in their paper
   “Quantification of histochemical staining by color deconvolution,” Analytical and quantitative cytology and
   histology / the International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug.
-  2001. PMID: 11531144. Source: https://scikit-image.org/docs/stable/auto_examples/color_exposure/ \
-    plot_ihc_color_separation.html
+  2001. PMID: 11531144. Source: \
+    https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_ihc_color_separation.html
 
-- The `calculate_pixel_intensity` and calculate_percentage_and_score function are inspired by the work of Varghese et
-al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of
-Immunohistochemistry Images of Human Tissue Samples."
+- The `calculate_pixel_intensity` and `calculate_percentage_and_score` function are inspired by the work of Varghese et
+  al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of
+  Immunohistochemistry Images of Human Tissue Samples."
+
 
 Last Modified: 2023-10-05
 """
