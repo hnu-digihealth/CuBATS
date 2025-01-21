@@ -16,7 +16,6 @@ def get_name(f):
     Credits: Adapted from valtils.py, line 87-105
     Last Modified: 2023-10-05
 
-
     Args:
         f (String): Path to file
 
@@ -66,8 +65,7 @@ def get_score_name(score):
 
     zone_names = ["High Positive", "Positive", "Low Positive", "Negative"]
     if len(score) < 4:
-        raise ValueError(
-            f"Score list must contain exactly {len(zone_names)} elements.")
+        raise ValueError(f"Score list must contain exactly {len(zone_names)} elements.")
 
     max = np.max(score[:4])
     score = zone_names[score.index(max)]
@@ -91,7 +89,9 @@ def downsample_Openslide_to_PIL(openslide_object, SCALEFACTOR: int):
         new_w (int): width of output Image
         new_h (int): height of output Image
     """
-    if not hasattr(openslide_object, 'dimensions') or not hasattr(openslide_object, 'read_region'):
+    if not hasattr(openslide_object, "dimensions") or not hasattr(
+        openslide_object, "read_region"
+    ):
         raise ValueError("Invalid Openslide object.")
 
     if not isinstance(SCALEFACTOR, int) or SCALEFACTOR <= 0:
@@ -117,7 +117,7 @@ def downsample_Openslide_to_PIL(openslide_object, SCALEFACTOR: int):
 
 
 def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True):
-    """ Plots quantification results for a tile.
+    """Plots quantification results for a tile.
 
     This function plots quantification results of a given tilename. It plots the DAB-image, the histogram of the
     intensity distribution, a bar plot containing the amount of pixels attributed to each zone and numeric results.
@@ -150,8 +150,7 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
                     img = skimage.io.imread(file)
                     images.append(img)
                 except Exception as e:
-                    print(
-                        f"Error reading image {file}: {e}")
+                    print(f"Error reading image {file}: {e}")
         fig, ax = plt.subplots(
             4,
             self.quantification_results_list.__len__(),
@@ -193,32 +192,28 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
         for j in range(self.quantification_results_list[i][1].__len__()):
             if self.quantification_results_list[i][1][j]["Tilename"] == tilename:
                 names.append(self.quantification_results_list[i][0])
-                hists.append(
-                    self.quantification_results_list[i][1][j]["Histogram"])
+                hists.append(self.quantification_results_list[i][1][j]["Histogram"])
                 hist_centers.append(
                     self.quantification_results_list[i][1][j]["Hist_centers"]
                 )
-                zones.append(
-                    self.quantification_results_list[i][1][j]["Zones"])
+                zones.append(self.quantification_results_list[i][1][j]["Zones"])
                 percentages.append(
                     self.quantification_results_list[i][1][j]["Percentage"]
                 )
                 scores.append(
                     self.get_score_name(
-                        self.quantification_results_list[i][1][j]["Score"].tolist(
-                        )
+                        self.quantification_results_list[i][1][j]["Score"].tolist()
                     )
                 )
-                px_count.append(
-                    self.quantification_results_list[i][1][j]["Px_count"]
-                )
+                px_count.append(self.quantification_results_list[i][1][j]["Px_count"])
                 tile_exists = True
                 break
 
     if not tile_exists:
         raise ValueError(
             "The given tilename does not exist for one or more of the slides. \
-                Please make sure to select an existing tilename.")
+                Please make sure to select an existing tilename."
+        )
 
     max_y_hist = round(max([max(hist) for hist in hists]), -4) + 10000
     max_y_zone = round(max([max(zone) for zone in zones[:4]]), -4) + 20000
@@ -273,7 +268,6 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
             )
             ax[numeric_idx, i].set_title("Numeric Results: " + names[i])
 
-    fig.suptitle(
-        f"Quantification Results for Tile: {tilename}\n", fontsize=16)
+    fig.suptitle(f"Quantification Results for Tile: {tilename}\n", fontsize=16)
     fig.tight_layout()
     plt.show()
