@@ -634,7 +634,7 @@ class SlideCollection(object):
         """
         slide = [slide for slide in self.slides if slide.name == slide_name][0]
 
-        # Create directorie for images if they are to be saved.
+        # Create directories for images if they are to be saved.
         if save_img:
             dab_tile_dir = os.path.join(self.tiles_dir, slide_name, DAB_TILE_DIR)
             if detailed_mode:

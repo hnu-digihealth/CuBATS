@@ -10,9 +10,10 @@ Credits:
   2001. PMID: 11531144. Source: \
     https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_ihc_color_separation.html
 
-- The `calculate_pixel_intensity` and calculate_percentage_and_score function are inspired by the work of Varghese et
+- The `calculate_pixel_intensity` and `calculate_percentage_and_score` function are inspired by the work of Varghese et
   al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of
   Immunohistochemistry Images of Human Tissue Samples."
+
 
 Last Modified: 2023-10-05
 """

@@ -1,6 +1,6 @@
 
-Segmentation and Mask Generation
-********************************
+Segmentation
+************
 
 Primary Functions
 ======================
