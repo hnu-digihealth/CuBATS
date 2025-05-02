@@ -6,7 +6,6 @@ import pickle
 from time import time
 
 # Third Party
-import cupy as cp
 import numpy as np
 import openslide
 from openslide.deepzoom import DeepZoomGenerator
@@ -17,6 +16,7 @@ from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
+from cubats.config import xp
 from cubats.slide_collection import tile_processing
 
 
@@ -119,7 +119,6 @@ class Slide(object):
         save_img=False,
         img_dir=None,
         detailed_mask=None,
-        gpu_acceleration=False,
     ):
         """Quantifies staining intensities for all tiles of this slide.
 
@@ -149,14 +148,11 @@ class Slide(object):
             detailed_mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
                 mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
                 might result in larger inaccuracies for WSI with low congruence.
-            gpu_acceleration (bool): Boolean determining whether GPU acceleration is applied. If the device is capable
-                of GPU acceleration this will automatically be set by the SlideCollection class and passed by the
-                calling function.
 
         """
         self.logger.debug(
             f"Quantifying slide: {self.name}, save_img: {save_img}, \
-                detailed_mode: {detailed_mask is not None}, gpu_acceleration {gpu_acceleration}"
+                detailed_mode: {detailed_mask is not None}"
         )
         if self.is_mask:
             self.logger.error("Cannot quantify mask slide.")
@@ -168,8 +164,10 @@ class Slide(object):
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
-                self.logger.error("img_dir must be provided if save_img is True.")
-                raise ValueError("img_dir must be provided if save_img is True.")
+                self.logger.error(
+                    "img_dir must be provided if save_img is True.")
+                raise ValueError(
+                    "img_dir must be provided if save_img is True.")
             self.dab_tile_dir = img_dir
             os.makedirs(self.dab_tile_dir, exist_ok=True)
 
@@ -189,7 +187,6 @@ class Slide(object):
                 ),
                 self.dab_tile_dir,
                 save_img,
-                gpu_acceleration,
             )
             for x, y in tqdm(
                 mask_coordinates,
@@ -197,24 +194,6 @@ class Slide(object):
                 total=len(mask_coordinates),
             )
         ]
-        # iterable = [
-        #     (x, y, tile, mask_px, self.dab_tile_dir, save_img, gpu_acceleration)
-        #     for x, y in tqdm(
-        #         mask_coordinates,
-        #         desc="Pre-processing  Slide",
-        #         total=len(mask_coordinates),
-        #     )
-        #     for tile, mask_px in [
-        #         (
-        #             tile_processing.mask_tile(
-        #                 self.tiles.get_tile(self.level_count - 1, (x, y)),
-        #                 detailed_mask.get_tile(self.level_count - 1, (x, y)),
-        #             )
-        #             if detailed_mask is not None
-        #             else (self.tiles.get_tile(self.level_count - 1, (x, y)), 1048576)
-        #         )
-        #     ]
-        # ]
         end_time_preprocessing = time()
         if end_time_preprocessing - start_time_preprocessing >= 60:
             self.logger.info(
@@ -251,12 +230,13 @@ class Slide(object):
             )
 
         # Retrieve Quantification results and save to disk
-        self.summarize_quantification_results(gpu_acceleration)
+        self.summarize_quantification_results()
 
         # Save dictionary as pickle
         start_time_save = time()
         f_out = os.path.join(save_dir, f"{self.name}_processing_info.pickle")
-        self.logger.info(f"Saving quantification results for {self.name} to {f_out}")
+        self.logger.info(
+            f"Saving quantification results for {self.name} to {f_out}")
         with open(f_out, "wb") as f:
             pickle.dump(
                 self.detailed_quantification_results,
@@ -270,7 +250,7 @@ class Slide(object):
         )
         self.logger.info(f"Finished processing slide: {self.name}")
 
-    def summarize_quantification_results(self, gpu_acceleration=False):
+    def summarize_quantification_results(self):
         """
         Summarizes quantification results.
 
@@ -299,10 +279,13 @@ class Slide(object):
             ValueError: If the slide is a mask slide or a reference slide.
         """
         start_time_summarize = time()
-        self.logger.info(f"Summarizing quantification results for slide: {self.name}")
+        self.logger.info(
+            f"Summarizing quantification results for slide: {self.name}")
         if self.is_mask:
-            self.logger.error("Cannot summarize quantification results for mask slide.")
-            raise ValueError("Cannot summarize quantification results for mask slide.")
+            self.logger.error(
+                "Cannot summarize quantification results for mask slide.")
+            raise ValueError(
+                "Cannot summarize quantification results for mask slide.")
         elif self.is_reference:
             self.logger.error(
                 "Cannot summarize quantification results for reference slide."
@@ -311,130 +294,7 @@ class Slide(object):
                 "Cannot summarize quantification results for reference slide."
             )
 
-        # Init variables:
-        # sum_z1: sum of pixels in high positive zone
-        # sum_z2: sum of pixels in positive zone
-        # sum_z3: sum of pixels in low positive zone
-        # sum_z4: sum of pixels in negative zone
-        # white: sum of pixels in white space or fatty tissues zone
-        # count: total number of pixels in the slide
-        (
-            sum_high_positive,
-            sum_positive,
-            sum_low_positive,
-            sum_negative,
-            sum_background,
-            sum_tissue_count,
-            error,
-            processed_tiles,
-        ) = (
-            0.00,
-            0.00,
-            0.00,
-            0.00,
-            0.00,
-            0.00,
-            0,
-            0,
-        )
-
-        # Score counts
-        score_counts = {
-            "High Positive": 0,
-            "Positive": 0,
-            "Low Positive": 0,
-            "Negative": 0,
-            "Background": 0,
-        }
-        # Iterate through tiles_dict and sum up number of pixels in each zone as well as the total number of pixels
-        for i in self.detailed_quantification_results:
-            if self.detailed_quantification_results[i]["Flag"] == 1:
-                processed_tiles += 1
-                sum_high_positive += self.detailed_quantification_results[i]["Zones"][0]
-                sum_positive += self.detailed_quantification_results[i]["Zones"][1]
-                sum_low_positive += self.detailed_quantification_results[i]["Zones"][2]
-                sum_negative += self.detailed_quantification_results[i]["Zones"][3]
-                sum_background += self.detailed_quantification_results[i]["Zones"][4]
-                sum_tissue_count += self.detailed_quantification_results[i][
-                    "Px_count"
-                ]  # Can be removed later
-                score_name = self.detailed_quantification_results[i]["Score"]
-                score_counts[score_name] += 1
-            elif self.detailed_quantification_results[i]["Flag"] == 0:
-                error += 1
-
-        # Calculate percentages and scores
-        if gpu_acceleration:
-            zones = cp.array(
-                [
-                    sum_high_positive,
-                    sum_positive,
-                    sum_low_positive,
-                    sum_negative,
-                    sum_background,
-                ]
-            )
-            total_pixel_count = cp.sum(zones)
-            perc_high_positive = (zones[0] / sum_tissue_count) * 100
-            perc_positive = (zones[1] / sum_tissue_count) * 100
-            perc_low_positive = (zones[2] / sum_tissue_count) * 100
-            perc_negative = (zones[3] / sum_tissue_count) * 100
-            perc_background = (zones[4] / total_pixel_count) * 100
-            perc_coverage = perc_high_positive + perc_positive + perc_low_positive
-            perc_tissue = (sum_tissue_count / total_pixel_count) * 100
-            h_score = (
-                (perc_high_positive * 3) + (perc_positive * 2) + (perc_low_positive * 1)
-            )
-            # Calculate the summary score for the slide using weights
-            weights_score = cp.array([4, 3, 2, 1, 0])
-            total_processed_tiles = sum(score_counts.values())
-            percentages = cp.array(
-                [perc_high_positive, perc_positive, perc_low_positive, perc_negative]
-            )
-            if cp.any(percentages > 66.6):
-                max_score_index = int(cp.argmax(percentages))  # Exclude Background
-            else:
-                scores = zones * weights_score / total_processed_tiles
-                max_score_index = int(cp.argmax(scores[:4]))  # Exclude Background
-        else:
-            zones = np.array(
-                [
-                    sum_high_positive,
-                    sum_positive,
-                    sum_low_positive,
-                    sum_negative,
-                    sum_background,
-                ]
-            )
-            total_pixel_count = np.sum(zones)
-            perc_high_positive = (zones[0] / sum_tissue_count) * 100
-            perc_positive = (zones[1] / sum_tissue_count) * 100
-            perc_low_positive = (zones[2] / sum_tissue_count) * 100
-            perc_negative = (zones[3] / sum_tissue_count) * 100
-            perc_background = (zones[4] / total_pixel_count) * 100
-            perc_coverage = perc_high_positive + perc_positive + perc_low_positive
-            perc_tissue = (sum_tissue_count / total_pixel_count) * 100
-            h_score = (
-                (perc_high_positive * 3) + (perc_positive * 2) + (perc_low_positive * 1)
-            )
-            weights_h_score = [3, 2, 1, 0, 0]
-            h_score = np.sum(percentages[:4] * weights_h_score[:4]) / 100
-            # Calculate the summary score for the slide using weights
-            weights_score = np.array([4, 3, 2, 1, 0])
-            total_processed_tiles = sum(score_counts.values())
-            if np.any(percentages > 66.6):
-                max_score_index = int(np.argmax(percentages[:4]))  # Exclude Background
-            else:
-                scores = zones * weights_score / total_processed_tiles
-                max_score_index = int(np.argmax(scores[:4]))  # Exclude Background
-
-        # Calculate percentage of processed tiles and error
-        perc_processed_tiles = (
-            processed_tiles / len(self.detailed_quantification_results)
-        ) * 100
-        perc_error = (error / len(self.detailed_quantification_results)) * 100
-
-        # Get Score of entire slide
+        # Init variables
         zone_names = [
             "High Positive",
             "Positive",
@@ -442,18 +302,63 @@ class Slide(object):
             "Negative",
             "Background",
         ]
+        wheights = xp.array([4, 3, 2, 1, 0])
+        sum_zones = xp.zeros((5,), dtype=xp.float32)
+        processed_tiles = 0
+        error_tiles = 0
+
+        # Iterate through tiles and aggregate results
+        for tile_result in self.detailed_quantification_results.values():
+            if tile_result["Flag"] == 1:
+                processed_tiles += 1
+                sum_zones += xp.array(tile_result["Zones"], dtype=xp.float32)
+            else:
+                error_tiles += 1
+
+        # Calculate percentages and scores
+        total_pixels = xp.sum(sum_zones)
+        tissue_count = xp.sum(sum_zones[:4])
+
+        # Percentage for intensity zones based on tissue count
+        percentages_tissue = (sum_zones[:4] / tissue_count) * 100
+
+        # Percentage for background based on total pixels
+        percentage_background = (sum_zones[4] / total_pixels) * 100
+
+        # Coverage percentage of positively stained tissue
+        perc_coverage = xp.sum(percentages_tissue[:3])
+
+        # Total percentage of tissue
+        perc_tissue = (tissue_count / total_pixels) * 100
+
+        # Calculate H-Score
+        h_score = xp.sum(percentages_tissue[:3] * xp.array([3, 2, 1]))
+
+        # Determine slide score (exclude background)
+        if xp.any(percentages_tissue > 66.6):
+            max_score_index = int(xp.argmax(percentages_tissue))
+        else:
+            scores = (sum_zones * wheights) / processed_tiles
+            max_score_index = int(xp.argmax(scores[:4]))
+
         slide_score = zone_names[max_score_index]
+
+        # Calculate percentage of processed tiles and error
+        perc_processed_tiles = (
+            processed_tiles / len(self.detailed_quantification_results)) * 100
+        perc_error = (
+            error_tiles / len(self.detailed_quantification_results)) * 100
 
         # Update the dictionary
         self.quantification_summary = {
             "Name": self.name,
             "Coverage (%)": round(float(perc_coverage), 4),
-            "High Positive (%)": round(float(perc_high_positive), 4),
-            "Positive (%)": round(float(perc_positive), 4),
-            "Low Positive (%)": round(float(perc_low_positive), 4),
-            "Negative (%)": round(float(perc_negative), 4),
+            "High Positive (%)": round(float(percentages_tissue[0]), 4),
+            "Positive (%)": round(float(percentages_tissue[1]), 4),
+            "Low Positive (%)": round(float(percentages_tissue[2]), 4),
+            "Negative (%)": round(float(percentages_tissue[3]), 4),
             "Total Tissue (%)": round(float(perc_tissue), 4),
-            "Background / No Tissue (%)": round(float(perc_background), 4),
+            "Background / No Tissue (%)": round(float(percentage_background), 4),
             "H-Score": round(float(h_score), 2),
             "Score": slide_score,
             "Total Processed Tiles (%)": round(float(perc_processed_tiles), 4),
@@ -500,7 +405,8 @@ class Slide(object):
         # Create WSI and save as pyramidal TIF in self.reconstruct_dir
         logging.getLogger("pyvips").setLevel(logging.WARNING)
         segmented_wsi = np.concatenate(row_array, axis=0)
-        segmented_wsi = VipsImage.new_from_array(segmented_wsi).cast(BandFormat.INT)
+        segmented_wsi = VipsImage.new_from_array(
+            segmented_wsi).cast(BandFormat.INT)
         end_time = time()
         self.logger.info(
             f"Finished reconstructing slide: {self.name} in {round((end_time - start_time)/60,2)} minutes."

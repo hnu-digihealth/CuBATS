@@ -3,11 +3,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Third Party
-import cupy as cp
 import numpy as np
 from PIL import Image
 
 # CuBATS
+from cubats.config import xp
 from cubats.slide_collection.tile_processing import (
     calculate_percentage_and_score, calculate_pixel_intensity,
     ihc_stain_separation, quantify_tile)
@@ -41,7 +41,8 @@ class TestQuantifyTile(unittest.TestCase):
         self, mock_calculate_pixel_intensity, mock_ihc_stain_separation
     ):
         # Create a tile that should be processed
-        tile = Image.fromarray(np.random.randint(0, 255, (10, 10, 3), dtype=np.uint8))
+        tile = Image.fromarray(np.random.randint(
+            0, 255, (10, 10, 3), dtype=np.uint8))
         iterable = [1, 1, tile, "/fake/dir", False, True]
 
         # Mock the return values of the called functions
@@ -117,7 +118,8 @@ class TestQuantifyTile(unittest.TestCase):
         mock_tile_np = np.random.normal(loc=100, scale=20, size=(10, 10, 3)).astype(
             np.uint8
         )
-        print(f"Mock tile mean: {mock_tile_np.mean()}, std: {mock_tile_np.std()}")
+        print(
+            f"Mock tile mean: {mock_tile_np.mean()}, std: {mock_tile_np.std()}")
         assert mock_tile_np.mean() < 235
         assert mock_tile_np.std() > 15
 
@@ -134,7 +136,8 @@ class TestQuantifyTile(unittest.TestCase):
         )
 
         # Mock calculate_pixel_intensity
-        mock_calculate_pixel_intensity.return_value = ([], [], [], [], [], [], [])
+        mock_calculate_pixel_intensity.return_value = (
+            [], [], [], [], [], [], [])
 
         # Call the function and expect a ValueError
         # CuBATS
@@ -227,7 +230,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
                 [[121, 121, 121], [181, 181, 181], [240, 240, 240]],
                 [[255, 255, 255], [236, 236, 236], [20, 20, 20]],
             ],
-            dtype=cp.uint8,
+            dtype=xp.uint8,
         )
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
@@ -407,107 +410,91 @@ class TestCalculateScore(unittest.TestCase):
             calculate_percentage_and_score(zones, count)
 
     def test_large_numbers(self):
-        zones = cp.array([1000000, 2000000, 3000000, 4000000, 0])
+        zones = xp.array([1000000, 2000000, 3000000, 4000000, 0])
         count = 10000000
         expected_percentage = np.array([10.0, 20.0, 30.0, 40.0, 0.0])
         expected_score = "Positive"  # Based on the weights and the highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_dominant_zone(self):
-        zones = cp.array([70, 10, 15, 5, 5])
+        zones = xp.array([70, 10, 15, 5, 5])
         count = 100
         expected_percentage = np.array([70.0, 10.0, 15.0, 5.0, 5.0])
         expected_score = "High Positive"  # More than 66.6% in the first zone
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_high_positive_score(self):
-        zones = cp.array([20, 21, 29, 30, 0])
+        zones = xp.array([20, 21, 29, 30, 0])
         count = 100
         expected_percentage = np.array([20.0, 21.0, 29.0, 30.0, 0.0])
         expected_score = "High Positive"  # Based the weights and highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_positive_score(self):
-        zones = cp.array([20, 27, 29, 24, 0])
+        zones = xp.array([20, 27, 29, 24, 0])
         count = 100
         expected_percentage = np.array([20.0, 27.0, 29.0, 24.0, 0.0])
         expected_score = "Positive"  # Based on the weights and the highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_low_positive_score(self):
-        zones = cp.array([10, 30, 50, 10, 10])
+        zones = xp.array([10, 30, 50, 10, 10])
         count = 100
         expected_percentage = np.array([10.0, 30.0, 50.0, 10.0, 10.0])
         expected_score = "Low Positive"  # Based on the weights and the highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_negative_score(self):
-        zones = cp.array([10, 19.5, 10, 60.5, 0])
+        zones = xp.array([10, 19.5, 10, 60.5, 0])
         count = 100
         expected_percentage = np.array([10.0, 19.5, 10.0, 60.5, 0.0])
         expected_score = "Negative"  # Based on the weights and the highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_background_score(self):
-        zones = cp.array([3, 10, 10, 10, 67])
+        zones = xp.array([3, 10, 10, 10, 67])
         count = 100
         expected_percentage = np.array([3.0, 10.0, 10.0, 10.0, 67.0])
         expected_score = "Background"  # Based on the weights and the highest score
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_background_66_percent(self):
-        zones = cp.array([10, 20, 10, 10, 66])
+        zones = xp.array([10, 20, 10, 10, 66])
         count = 100
         expected_percentage = np.array([10.0, 20.0, 10.0, 10.0, 66.0])
         expected_score = (
             "Positive"  # Background is exactly 66%, so the score is calculated
         )
 
-        percentage, score = calculate_percentage_and_score(
-            zones, count, gpu_acceleration=True
-        )
+        percentage, score = calculate_percentage_and_score(zones, count)
 
         np.testing.assert_array_almost_equal(percentage, expected_percentage)
         self.assertEqual(score, expected_score)
@@ -557,9 +544,12 @@ class TestTileProcessing(unittest.TestCase):
         mock_makedirs.assert_any_call(
             "/mock/target_directory/original_tiles", exist_ok=True
         )
-        mock_makedirs.assert_any_call("/mock/target_directory/DAB_tiles", exist_ok=True)
-        mock_makedirs.assert_any_call("/mock/target_directory/H_tiles", exist_ok=True)
-        mock_makedirs.assert_any_call("/mock/target_directory/E_tiles", exist_ok=True)
+        mock_makedirs.assert_any_call(
+            "/mock/target_directory/DAB_tiles", exist_ok=True)
+        mock_makedirs.assert_any_call(
+            "/mock/target_directory/H_tiles", exist_ok=True)
+        mock_makedirs.assert_any_call(
+            "/mock/target_directory/E_tiles", exist_ok=True)
 
         # Check if tiles are saved
         # Adjusted expected call count

@@ -22,7 +22,6 @@ Last Modified: 2023-10-05
 import os
 
 # Third Party
-import cupy as cp
 import cv2
 import numpy as np
 import tifffile as tiff
@@ -32,10 +31,14 @@ from skimage.color import hed2rgb, rgb2gray, rgb2hed
 from skimage.exposure import histogram
 from tqdm import tqdm
 
+# CuBATS
+from cubats.config import xp
+from cubats.cutils import to_numpy
+
 
 def quantify_tile(iterable):
-    """
-    This function processes a single input tile and returns a dictionary.
+    """ This function processes a single input tile and returns a dictionary.
+
     If the tile contains tissue (mean pixel value < 230 and standard deviation > 15), it will undergo stain separation
     and pixel intensity calculations. The results will be returned in the dictionary. The flag will be set to 1. If
     save_img is True the DAB image will additionally be saved in the specified directory.
@@ -50,7 +53,6 @@ def quantify_tile(iterable):
             - index 2: Tile itself, necessary since processes cannot access shared memory
             - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory
             - save_img: Boolean, if True, DAB image will be saved in specified directory
-            - gpu_acceleration: Boolean, if True GPU acceleration will be utilized during computation
 
     Returns:
         dict: Dictionary containing tile results:
@@ -74,10 +76,6 @@ def quantify_tile(iterable):
     tile = iterable[2]
     DAB_TILE_DIR = iterable[3]
     save_img = iterable[4]
-    gpu_acceleration = iterable[5]
-    # Initialize GPU in each worker process
-    if gpu_acceleration:
-        cp.cuda.Device(0).use()
 
     tile_name = str(col) + "_" + str(row)
     # Initialize Dictionary for single tile
@@ -87,23 +85,19 @@ def quantify_tile(iterable):
     # Convert tile to numpy array
     temp = tile  # DEEPZOOM_OBJECT.get_tile(DEEPZOOM_LEVEL - 1, (row, col))
     temp_rgb = temp.convert("RGB")
-    if gpu_acceleration:
-        temp = cp.array(temp_rgb)
-        mean = cp.mean(temp)
-        std = cp.std(temp)
-    else:
-        temp = np.array(temp_rgb)
-        mean = np.mean(temp)
-        std = np.std(temp)
+
+    temp = xp.array(temp_rgb)
+    mean = xp.mean(temp)
+    std = xp.std(temp)
 
     # Only process tiles that are mostly covered and not blank to save runtime and space
     if mean < 230 and std > 15:
         # Separate stains
-        DAB, H, E = ihc_stain_separation(temp, gpu_acceleration=gpu_acceleration)
+        DAB, H, E = ihc_stain_separation(temp)
 
         # Calculate pixel intensity
         (hist, hist_centers, zones, percentage, score, pixel_count, img_analysis) = (
-            calculate_pixel_intensity(DAB, gpu_acceleration)
+            calculate_pixel_intensity(DAB)
         )
 
         # Save image as tif in passed directory if wanted.
@@ -112,7 +106,7 @@ def quantify_tile(iterable):
                 raise ValueError(
                     "Target directory must be specified if save_img is True"
                 )
-            img = Image.fromarray(DAB)
+            img = Image.fromarray(to_numpy(DAB))
             DAB_TILE_DIR = f"{DAB_TILE_DIR}/{tile_name}.tif"
             # print(DAB_TILE_DIR)
             img.save(DAB_TILE_DIR)
@@ -136,7 +130,6 @@ def ihc_stain_separation(
     ihc_rgb,
     hematoxylin=False,
     eosin=False,
-    gpu_acceleration=False,
 ):
     """
     Separates individual stains (Hematoxylin, Eosin, DAB) from an IHC image and returns an image for each stain.
@@ -145,7 +138,6 @@ def ihc_stain_separation(
         ihc_rgb (Image): IHC image in RGB format.
         hematoxylin (bool): If True, returns Hematoxylin image as well. Defaults to False.
         eosin (bool): If True, returns Eosin image. Defaults to False.
-        gpu_acceleration (bool): If True, GPU will be utilized during computation. Defaults to False.
 
     Returns:
         tuple: A tuple containing:
@@ -153,49 +145,40 @@ def ihc_stain_separation(
             - ihc_h (Image): Hematoxylin stain of the image if hematoxylin=True, otherwise None.
             - ihc_e (Image): Eosin stain of the image if eosin=True, otherwise None.
     """
-    # xp = cp if gpu_acceleration else np
-    if gpu_acceleration:
-        # Convert RGB image to HED using prebuilt skimage method
-        ihc_hed = rgb2hed(cp.asnumpy(ihc_rgb))
-        ihc_hed = cp.array(ihc_hed)
-        # Create RGB image for each seperate stain
-        null = cp.zeros_like(ihc_hed[:, :, 0])
-        ihc_h = (
-            img_as_ubyte(
-                hed2rgb(cp.asnumpy(cp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
-            )
-            if hematoxylin
-            else None
+    # Convert RGB image to HED using prebuilt skimage method
+    # Convert to numpy array if transformation
+    ihc_hed = rgb2hed(to_numpy(ihc_rgb))
+    ihc_hed = xp.array(ihc_hed)
+    # Create RGB image for each seperate stain
+    null = xp.zeros_like(ihc_hed[:, :, 0])
+    # Separate Hematoxylin stain
+    ihc_h = (
+        img_as_ubyte(
+            hed2rgb(to_numpy(
+                xp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
         )
-        ihc_e = (
-            img_as_ubyte(
-                hed2rgb(cp.asnumpy(cp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
-            )
-            if eosin
-            else None
+        if hematoxylin
+        else None
+    )
+    # Separate Eosin stain
+    ihc_e = (
+        img_as_ubyte(
+            hed2rgb(to_numpy(
+                xp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
         )
-        ihc_d = img_as_ubyte(
-            hed2rgb(cp.asnumpy(cp.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
-        )
-    else:
-        ihc_hed = rgb2hed(ihc_rgb)
-        null = np.zeros_like(ihc_hed[:, :, 0])
-        ihc_h = (
-            img_as_ubyte(hed2rgb(np.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
-            if hematoxylin
-            else None
-        )
-        ihc_e = (
-            img_as_ubyte(hed2rgb(np.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
-            if eosin
-            else None
-        )
-        ihc_d = img_as_ubyte(hed2rgb(np.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
+        if eosin
+        else None
+    )
+    # Separate DAB stain
+    ihc_d = img_as_ubyte(
+        hed2rgb(to_numpy(
+            xp.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
+    )
 
     return ihc_d, ihc_h, ihc_e
 
 
-def calculate_pixel_intensity(image, gpu_acceleration=False):
+def calculate_pixel_intensity(image):
     """
     Calculates pixel intensity of each pixel in the input image and separates them into 5 different zones based on
     their intensity. The image is converted to grayscale format, resulting in a distribution of intensity values
@@ -212,97 +195,72 @@ def calculate_pixel_intensity(image, gpu_acceleration=False):
     as the a pathology score.
 
     Args:
-        image (ndarray): Input image.
-        gpu_acceleration (bool): If True, GPU will be utilized during computation. Defaults to False.
+        image (numpy.ndarray): Input image.
 
     Returns:
         tuple: A tuple containing:
             - hist (ndarray): Histogram of the image.
             - hist_centers (ndarray): Centers of histogram bins.
-            - zones (ndarray): Number of pixels in each intensity zone.
-            - percentage (ndarray): Percentage of pixels in each intensity zone.
+            - zones (xp.ndarray): Number of pixels in each intensity zone.
+            - percentage (xp.ndarray): Percentage of pixels in each intensity zone.
             - score (str): Overall score of the tile.
             - pixelcount (int): Tissue count of the tile.
-            - img_analysis (ndarray): Array of pixel values colocalization.
+            - img_analysis (xp.ndarray): Array of pixel values colocalization.
     """
-
-    # cp = cp if gpu_acceleration else np
 
     # Conversion to gray-scale-ubyte image
     gray_scale_image = rgb2gray(image)
     gray_scale_ubyte = img_as_ubyte(gray_scale_image)
-    # Calculates a histogram of the input image
+
+    # Calculate histogram
     hist, hist_centers = histogram(gray_scale_image)
 
+    # Convert to xp array for processing
+    gray_scale_ubyte = xp.array(gray_scale_ubyte)
     w, h = gray_scale_ubyte.shape
 
-    if gpu_acceleration:
-        # array containg only high-, positive & low positive pixels
-        img_analysis = cp.full((w, h), 255, dtype="uint8")
+    # Initilize arrays for analysis
+    img_analysis = xp.full((w, h), 255, dtype="uint8")
+    zones = xp.zeros(5, dtype=xp.int32)
 
-        # Array for Zones of pixel intensity
-        zones = cp.zeros(5, dtype=cp.int32)
-        gray_scale_ubyte = cp.array(gray_scale_ubyte)
-    else:
-        img_analysis = np.full((w, h), 255, dtype="uint8")
-
-        # Array for Zones of pixel intensity
-        zones = np.zeros(5, dtype=np.int32)
-        gray_scale_ubyte = np.array(gray_scale_ubyte)
-
+    # Define intensity masks
     high_positive_mask = gray_scale_ubyte < 61
     positive_mask = (gray_scale_ubyte >= 61) & (gray_scale_ubyte < 121)
     low_positive_mask = (gray_scale_ubyte >= 121) & (gray_scale_ubyte < 181)
     negative_mask = (gray_scale_ubyte >= 181) & (gray_scale_ubyte < 235)
     background_mask = gray_scale_ubyte >= 235
 
-    # Update img_analysis with pixel values based on intensity zones
+    # Update img_analysis with pixel values based on intensity masks
     img_analysis[high_positive_mask] = gray_scale_ubyte[high_positive_mask]
     img_analysis[positive_mask] = gray_scale_ubyte[positive_mask]
     img_analysis[low_positive_mask] = gray_scale_ubyte[low_positive_mask]
     img_analysis[negative_mask] = gray_scale_ubyte[negative_mask]
 
-    if gpu_acceleration:
-        zones[0] = cp.sum(high_positive_mask)
-        zones[1] = cp.sum(positive_mask)
-        zones[2] = cp.sum(low_positive_mask)
-        zones[3] = cp.sum(negative_mask)
-        zones[4] = cp.sum(background_mask)
-        pixel_count = cp.sum(zones[:4])
-        percentage, score = calculate_percentage_and_score(
-            cp.asnumpy(zones), pixel_count, gpu_acceleration
-        )
-        return (
-            hist,
-            hist_centers,
-            cp.asnumpy(zones),
-            cp.asnumpy(percentage),
-            score,
-            int(pixel_count),
-            cp.asnumpy(img_analysis),
-        )
-    else:
-        zones[0] = np.sum(high_positive_mask)
-        zones[1] = np.sum(positive_mask)
-        zones[2] = np.sum(low_positive_mask)
-        zones[3] = np.sum(negative_mask)
-        zones[4] = np.sum(background_mask)
-        pixel_count = np.sum(zones[:4])
-        percentage, score = calculate_percentage_and_score(
-            zones, pixel_count, gpu_acceleration
-        )
-        return (
-            hist,
-            hist_centers,
-            zones,
-            percentage,
-            score,
-            pixel_count,
-            img_analysis,
-        )
+    # Calculate zones
+    zones[0] = xp.sum(high_positive_mask)
+    zones[1] = xp.sum(positive_mask)
+    zones[2] = xp.sum(low_positive_mask)
+    zones[3] = xp.sum(negative_mask)
+    zones[4] = xp.sum(background_mask)
+
+    # Calculate pixel count and percentage
+    tissue_count = xp.sum(zones[:4])
+    percentage, score = calculate_percentage_and_score(
+        zones, tissue_count
+    )
+
+    return (
+        hist,
+        hist_centers,
+        zones,
+        percentage,
+        score,
+        int(tissue_count),
+        img_analysis,
+    )
 
 
-def calculate_percentage_and_score(zones, pixel_count, gpu_acceleration=False):
+def calculate_percentage_and_score(zones, tissue_count):
     """
     Calculates the percentage of pixels in each zone relative to the total pixel count and computes a score for each
     zone. If more than 66.6% of the total pixels are attributed to a single zone, that zone's score is assigned. Else,
@@ -317,13 +275,12 @@ def calculate_percentage_and_score(zones, pixel_count, gpu_acceleration=False):
     zone, and 0 for the background. The final score is the maximum score among all zones.
 
     Args:
-        zones (ndarray): Array containing amount of pixels from each zone
-        pixel_count (int): Tissue count of the tile.
-        gpu_acceleration (bool): If True, GPU will be utilized during computation. Defaults to False
+        zones (xp.ndarray): Array containing amount of pixels from each zone
+        tissue_count (int): Tissue count of the tile.
 
     Returns:
         tuple: A tuple containing:
-            - percentage (ndarray): Array containing the percentage of pixels in each zone.
+            - percentage (xp.ndarray): Array containing the percentage of pixels in each zone.
             - score (str): Name of the zone if it exceeds 66.6%, otherwise the name of the zone with the highest score.
 
     Raises:
@@ -331,55 +288,33 @@ def calculate_percentage_and_score(zones, pixel_count, gpu_acceleration=False):
         ValueError: If all zones have zero pixels.
     """
 
-    # cp = cp if gpu_acceleration else np
-
-    if pixel_count == 0:
+    if tissue_count == 0:
         raise ZeroDivisionError("Count cannot be zero")
 
-    if sum(zones) == 0:
+    if xp.sum(zones) == 0:
         raise ValueError("All zones have zero pixels")
 
-    if gpu_acceleration:
-        # percentage = np.zeros(zones.size)
-        zones = cp.array(zones)
-        percentage = (zones / pixel_count) * 100
-        zone_names = [
-            "High Positive",
-            "Positive",
-            "Low Positive",
-            "Negative",
-            "Background",
-        ]
+    # Calculate percentage of pixels in each zone
+    percentage = (zones / tissue_count) * 100
+    zone_names = [
+        "High Positive",
+        "Positive",
+        "Low Positive",
+        "Negative",
+        "Background",
+    ]
 
-        if cp.any(percentage > 66.6):
-            max_score_index = int(cp.argmax(percentage))
-            return cp.asnumpy(percentage), zone_names[max_score_index]
-        weights = cp.array([4, 3, 2, 1, 0])  # Weights for each zone
-        # Else calculate the score for each zone and determine highest score
-        scores = (zones * weights) / pixel_count
-        max_score_index = int(cp.argmax(scores[:4]))
-
-        return cp.asnumpy(percentage), zone_names[max_score_index]
-    else:
-        percentage = (zones / pixel_count) * 100
-        zone_names = [
-            "High Positive",
-            "Positive",
-            "Low Positive",
-            "Negative",
-            "Background",
-        ]
-
-        if np.any(percentage > 66.6):
-            max_score_index = int(np.argmax(percentage))
-            return percentage, zone_names[max_score_index]
-
-        weights = np.array([4, 3, 2, 1, 0])  # Weights for each zone
-        # Else calculate the score for each zone and determine highest score
-        scores = (zones * weights) / pixel_count
-        max_score_index = int(np.argmax(scores[:4]))
-
+    # Check if any zone exceeds 66.6% of the total pixels
+    if xp.any(percentage > 66.6):
+        max_score_index = int(xp.argmax(percentage))
         return percentage, zone_names[max_score_index]
+
+    # Else calculate wheighted score for each zone
+    weights = xp.array([4, 3, 2, 1, 0])  # Weights for each zone
+    scores = (zones * weights) / tissue_count
+    max_score_index = int(xp.argmax(scores[:4]))  # ignore background zone
+
+    return percentage, zone_names[max_score_index]
 
 
 def mask_tile(tile, mask):
@@ -402,7 +337,8 @@ def mask_tile(tile, mask):
         mask_np = cv2.cvtColor(mask_np, cv2.COLOR_RGB2GRAY)
     _, binary_mask = cv2.threshold(mask_np, 127, 255, cv2.THRESH_BINARY)
     binary_mask_inv = cv2.bitwise_not(binary_mask)
-    binary_mask_inv_3ch = cv2.merge((binary_mask_inv, binary_mask_inv, binary_mask_inv))
+    binary_mask_inv_3ch = cv2.merge(
+        (binary_mask_inv, binary_mask_inv, binary_mask_inv))
 
     masked_tile = cv2.bitwise_and(tile_np, binary_mask_inv_3ch)
     white_bg = np.ones_like(tile_np) * 255
@@ -442,7 +378,8 @@ def separate_stains_and_save__tiles_as_tif(openslide_deepzoom, deepzoom_level, o
             temp_rgb = temp.convert("RGB")
             temp_np = np.array(temp_rgb)
 
-            tiff.imsave(ORIGINAL_TILES_DIR + "/" + tile_name + "_original.tif", temp_np)
+            tiff.imsave(ORIGINAL_TILES_DIR + "/"
+                        + tile_name + "_original.tif", temp_np)
 
             # Now only process tiles that are mostly covered tiles
             if temp_np.mean() < 230 and temp_np.std() > 15:

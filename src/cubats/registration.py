@@ -43,7 +43,8 @@ def register_with_ref(
     if not isinstance(microregistration, bool):
         raise ValueError("microregistration must be a boolean")
     if not isinstance(max_non_rigid_registration_dim_px, int):
-        raise ValueError("max_non_rigid_registartion_dim_px must be an integer")
+        raise ValueError(
+            "max_non_rigid_registartion_dim_px must be an integer")
 
     registered_slides_dst = os.path.join(results_dst_dir, "registered_slides")
 
@@ -96,7 +97,8 @@ def high_resolution_alignement(slide_src_dir, results_dst_dir, micro_reg_fractio
     """
     # Perform high resolution rigid registration using the MicroRigidRegistrar
     start = time()
-    REGISTERED_SLIDE_DEST_DIR = os.path.join(results_dst_dir, "registered_slides")
+    REGISTERED_SLIDE_DEST_DIR = os.path.join(
+        results_dst_dir, "registered_slides")
     registrar = registration.Valis(slide_src_dir, results_dst_dir)
     # , micro_rigid_registrar_cls=MicroRigidRegistrar
     rigid_registrar, non_rigid_registrar, error_df = registrar.register()

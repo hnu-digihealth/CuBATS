@@ -1,58 +1,49 @@
 # config.py
+# Standard Library
+import platform
+
+# Third Party
+from array_api_compat import get_namespace
+
+gpu_enabled = False
 
 
-gpu_acceleration = False
-
-
-def set_gpu_acceleration(value):
-    global gpu_acceleration
-    gpu_acceleration = value
-
-
-def get_gpu_acceleration():
-    return gpu_acceleration
-
-
-def has_nvidia_gpu():
+def get_backend_namespace():
     """
-    Checks if the system has an NVIDIA GPU compatible with CuPy.
+    Detects the appropriate backend (NumPy or CuPy) and returns the array API namespace.
 
     Returns:
-        bool: True if an NVIDIA GPU is available, False otherwise.
+        module: The array API namespace (NumPy or CuPy).
     """
+    global gpu_enabled
     try:
-        # Third Party
-        import cupy as cp
-
-        num_gpus = cp.cuda.runtime.getDeviceCount()
-        return num_gpus > 0
-    except ImportError:
-        return False
-    except cp.cuda.runtime.CUDARuntimeError:
-        return False
-
-
-def get_array_module():
-    """
-    Returns the appropriate array module (NumPy or CuPy) based on the gpu_acceleration flag.
-
-    Returns:
-        module: The array module, either NumPy or CuPy.
-
-    Raises:
-        ValueError: If the array module is not set.
-    """
-    if gpu_acceleration:
-        try:
+        if platform.system() == "Windows":
             # Third Party
-            import cupy as cp
+            import cupy as cp  # type: ignore
+            if cp.cuda.runtime.getDeviceCount() > 0:
+                gpu_enabled = True
+                print("Using CuPy for GPU acceleration.")
+                return get_namespace(cp.array([0]))  # Return CuPy namespace
+    except Exception:
+        pass
 
-            print("Using CuPy for GPU acceleration.")
-            return cp
-        except ImportError:
-            print("CuPy is not available. Falling back to NumPy.")
+    # Fallback to NumPy
+    gpu_enabled = False
     # Third Party
     import numpy as np
-
     print("Using NumPy.")
-    return np
+    return get_namespace(np.array([0]))  # Return NumPy namespace
+
+
+def get_backend_info():
+    """
+    Returns a string indicating the backend being used (NumPy or CuPy).
+
+    Returns:
+        str: "CuPy" if CuPy is being used, otherwise "NumPy".
+    """
+    return "CuPy (GPU)" if gpu_enabled else "NumPy (CPU)"
+
+
+# Single call to get the namespace
+xp = get_backend_namespace()

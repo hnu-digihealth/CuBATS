@@ -1,13 +1,17 @@
 # Third Party
-import cupy as cp
 import numpy as np
 from PIL import Image
+
+# CuBATS
+from cubats.config import xp
+from cubats.cutils import to_numpy
 
 # Define color schemes for each tile
 COLOR_OVERLAP = [255, 0, 0]  # Strong Red
 COLOR_TILE1 = [[0, 255, 0], [102, 255, 102], [153, 255, 153]]  # Green shades
 COLOR_TILE2 = [[0, 0, 204], [102, 204, 255], [153, 204, 255]]  # Blue shades
-COLOR_TILE3 = [[255, 165, 0], [255, 200, 102], [255, 225, 153]]  # Orange shades
+COLOR_TILE3 = [[255, 165, 0], [255, 200, 102],
+               [255, 225, 153]]  # Orange shades
 COLOR_NEGATIVE = [255, 255, 255]  # White
 COLOR_BACKGROUND = [192, 192, 192]  # Gray
 
@@ -85,11 +89,9 @@ def analyze_dual_antigen_colocalization(iterable):
     tile2 = iterable[1]
     dir = iterable[2]
     save_img = iterable[3]
-    gpu_acceleration = iterable[4]
 
     tilename = tile1["Tilename"]
-    colocal_dict = {}
-    colocal_dict["Tilename"] = tilename
+    colocal_dict = {"Tilename": tilename}
 
     # Check if both Images contain tissue.If both dont: Flag = -1
     if tile1["Flag"] == 0 and tile2["Flag"] == 0:
@@ -99,18 +101,14 @@ def analyze_dual_antigen_colocalization(iterable):
     elif tile1["Flag"] == 0:
         colocal_dict["Flag"] = 1
         high_complement, pos_complement, low_complement, negative, background = (
-            _process_single_tile_gpu(tile2, dir, save_img, COLOR_TILE2)
-            if gpu_acceleration
-            else _process_single_tile(tile2, dir, save_img, COLOR_TILE2)
+            _process_single_tile(tile2, dir, save_img, COLOR_TILE2)
         )
         high_overlap, pos_overlap, low_overlap = (0, 0, 0)
     # If tile1 contains tissue and tile2 doesn't: Process tile1 only. If save_img is True, coloring for tile1 is green.
     elif tile2["Flag"] == 0:
         colocal_dict["Flag"] = 1
         high_complement, pos_complement, low_complement, negative, background = (
-            _process_single_tile_gpu(tile1, dir, save_img, COLOR_TILE1)
-            if gpu_acceleration
-            else _process_single_tile(tile1, dir, save_img, COLOR_TILE1)
+            _process_single_tile(tile1, dir, save_img, COLOR_TILE1)
         )
         high_overlap, pos_overlap, low_overlap = (0, 0, 0)
     # Check if tiles have the correct shape. If one doesn't: Flag = -2 TODO Padding
@@ -132,15 +130,8 @@ def analyze_dual_antigen_colocalization(iterable):
             low_complement,
             negative,
             background,
-        ) = (
-            _process_two_tiles_gpu(
-                tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-            )
-            if gpu_acceleration
-            else _process_two_tiles(
-                tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-            )
-        )
+        ) = _process_two_tiles(tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2])
+
     # Sum up the results
     coverage = (
         high_overlap
@@ -168,7 +159,7 @@ def analyze_dual_antigen_colocalization(iterable):
     tissue_count = round((tissue_count / 1048576) * 100, 4)
     background = round((background / 1048576) * 100, 4)
 
-    # set dict
+    # set dictionary values
     colocal_dict["Total Coverage"] = coverage
     colocal_dict["Total Overlap"] = total_overlap
     colocal_dict["Total Complement"] = total_complement
@@ -262,13 +253,13 @@ def analyze_triplet_antigen_colocalization(iterable):
     tile3 = iterable[2]
     dir = iterable[3]
     save_img = iterable[4]
-    gpu_acceleration = iterable[5]
 
     tilename = tile1["Tilename"]
-    colocal_dict = {}
-    colocal_dict["Tilename"] = tilename
+    colocal_dict = {"Tilename": tilename}
+
     # Count the number of images with Flag=0
-    flag_count = sum([tile1["Flag"] == 0, tile2["Flag"] == 0, tile3["Flag"] == 0])
+    flag_count = sum(
+        [tile1["Flag"] == 0, tile2["Flag"] == 0, tile3["Flag"] == 0])
 
     # Check if all Images contain tissue. If all dont: Flag = -1
     if flag_count == 3:
@@ -285,11 +276,8 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_single_tile_gpu(tile1, dir, save_img, COLOR_TILE1)
-                if gpu_acceleration
-                else _process_single_tile(tile1, dir, save_img, COLOR_TILE1)
-            )
+            ) = _process_single_tile(tile1, dir, save_img, COLOR_TILE1)
+
         # If only tile2 processable, process tile2 with color blue
         elif tile2["Flag"] != 0:
             (
@@ -298,11 +286,8 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_single_tile_gpu(tile2, dir, save_img, COLOR_TILE2)
-                if gpu_acceleration
-                else _process_single_tile(tile2, dir, save_img, COLOR_TILE2)
-            )
+            ) = _process_single_tile(tile2, dir, save_img, COLOR_TILE2)
+
         # If only tile3 processable, process tile3 with color orange
         elif tile3["Flag"] != 0:
             (
@@ -311,12 +296,10 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_single_tile_gpu(tile3, dir, save_img, COLOR_TILE3)
-                if gpu_acceleration
-                else _process_single_tile(tile3, dir, save_img, COLOR_TILE3)
-            )
+            ) = _process_single_tile(tile3, dir, save_img, COLOR_TILE3)
+
         high_overlap, pos_overlap, low_overlap = (0, 0, 0)
+
     # Check if only one tile has Flag=0 and process the remaining two tiles
     elif flag_count == 1:
         colocal_dict["Flag"] = 1
@@ -330,15 +313,8 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_two_tiles_gpu(
-                    tile2, tile3, dir, save_img, [COLOR_TILE2, COLOR_TILE3]
-                )
-                if gpu_acceleration
-                else _process_two_tiles(
-                    tile2, tile3, dir, save_img, [COLOR_TILE2, COLOR_TILE3]
-                )
-            )
+            ) = _process_two_tiles(tile2, tile3, dir, save_img, [COLOR_TILE2, COLOR_TILE3])
+
         elif tile2["Flag"] == 0:
             (
                 high_overlap,
@@ -349,15 +325,8 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_two_tiles_gpu(
-                    tile1, tile3, dir, save_img, [COLOR_TILE1, COLOR_TILE3]
-                )
-                if gpu_acceleration
-                else _process_two_tiles(
-                    tile1, tile3, dir, save_img, [COLOR_TILE1, COLOR_TILE3]
-                )
-            )
+            ) = _process_two_tiles(tile1, tile3, dir, save_img, [COLOR_TILE1, COLOR_TILE3])
+
         elif tile3["Flag"] == 0:
             (
                 high_overlap,
@@ -368,15 +337,8 @@ def analyze_triplet_antigen_colocalization(iterable):
                 low_complement,
                 negative,
                 background,
-            ) = (
-                _process_two_tiles_gpu(
-                    tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-                )
-                if gpu_acceleration
-                else _process_two_tiles(
-                    tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2]
-                )
-            )
+            ) = _process_two_tiles(tile1, tile2, dir, save_img, [COLOR_TILE1, COLOR_TILE2])
+
     # Check for Error 2: Flag = -2: One of images doesn't have the correct shape
     # TODO Think about padding images to correct shape
     elif (
@@ -386,6 +348,7 @@ def analyze_triplet_antigen_colocalization(iterable):
     ):
         colocal_dict["Flag"] = -2
         return colocal_dict
+
     # Otherwise process all three images
     else:
         colocal_dict["Flag"] = 1
@@ -398,17 +361,7 @@ def analyze_triplet_antigen_colocalization(iterable):
             low_complement,
             negative,
             background,
-        ) = (
-            _process_three_tiles_gpu(
-                tile1,
-                tile2,
-                tile3,
-                dir,
-                save_img,
-            )
-            if gpu_acceleration
-            else _process_three_tiles(tile1, tile2, tile3, dir, save_img)
-        )
+        ) = _process_three_tiles(tile1, tile2, tile3, dir, save_img)
 
     coverage = (
         high_overlap
@@ -453,7 +406,7 @@ def analyze_triplet_antigen_colocalization(iterable):
     return colocal_dict
 
 
-def _process_single_tile(tile, dir, save_img, color):
+def _process_single_tile_old(tile, dir, save_img, color):
     """
     Processes a single image tile by iterating across the tile. It categorizes pixels into different complement levels,
     negative tissue, and background. Optionally saves the processed image to specified directory if save_img is True.
@@ -526,11 +479,11 @@ def _process_single_tile(tile, dir, save_img, color):
     return high_complement, pos_complement, low_complement, negative, background
 
 
-def _process_single_tile_gpu(tile, dir, save_img, color):
+def _process_single_tile(tile, dir, save_img, color):
     """
-    Processes a single image tile using vectorization and GPU acceleration. It categorizes pixels into different
-    complement levels, negative tissue, and background. Optionally saves the processed image to specified directory
-    if save_img is True.
+    Processes a single image tile using vectorization and automatic backend detection for GPU acceleration. It
+    categorizes pixels into different complement levels, negative tissue, and background. Optionally saves the
+    processed image to specified directory if save_img is True.
 
     Args:
         tile (dict): A dictionary containing the image under the key "Image Array" and masks under the key "Masks".
@@ -551,7 +504,7 @@ def _process_single_tile_gpu(tile, dir, save_img, color):
         The coloring scheme depends on the color parameter and is specified by the calling function.
     """
     # Convert image arrays to CuPy arrays
-    img1 = cp.array(tile["Image Array"])
+    img1 = xp.array(tile["Image Array"])
 
     # Create masks for different intensity zones for tile1
     high_positive_mask = img1 < 61
@@ -561,17 +514,17 @@ def _process_single_tile_gpu(tile, dir, save_img, color):
     background_mask = img1 >= 235
 
     # Calculate counts for each zone
-    high_complement = cp.sum(high_positive_mask)
-    pos_complement = cp.sum(positive_mask)
-    low_complement = cp.sum(low_positive_mask)
-    negative = cp.sum(negative_mask)
-    background = cp.sum(background_mask)
+    high_complement = xp.sum(high_positive_mask)
+    pos_complement = xp.sum(positive_mask)
+    low_complement = xp.sum(low_positive_mask)
+    negative = xp.sum(negative_mask)
+    background = xp.sum(background_mask)
 
     # Save image if required
     if save_img:
-        colored_img = cp.zeros(
+        colored_img = xp.zeros(
             (high_positive_mask.shape[0], high_positive_mask.shape[1], 3),
-            dtype=cp.uint8,
+            dtype=xp.uint8,
         )
         colored_img[high_positive_mask] = color[0]  # High complement color
         colored_img[positive_mask] = color[1]  # Positive complement color
@@ -579,7 +532,7 @@ def _process_single_tile_gpu(tile, dir, save_img, color):
         colored_img[negative_mask] = [255, 255, 255]  # White for negative
         colored_img[background_mask] = [192, 192, 192]  # Gray for background
 
-        colored_img = cp.asnumpy(colored_img)
+        colored_img = to_numpy(colored_img)
         img = Image.fromarray(colored_img)
         img.save(f"{dir}/{tile['Tilename']}_processed.png")
     total_pixel_count = img1.size
@@ -598,7 +551,7 @@ def _process_single_tile_gpu(tile, dir, save_img, color):
     )
 
 
-def _process_two_tiles(tile1, tile2, dir, save_img, colors):
+def _process_two_tiles_old(tile1, tile2, dir, save_img, colors):
     """
     Processes two image tiles by iterating across the tile. It categorizes pixels into overlap, different complement
     levels, negative tissue, and background. Optionally saves the processed image to the specified directory if
@@ -741,12 +694,13 @@ def _process_two_tiles(tile1, tile2, dir, save_img, colors):
     )
 
 
-def _process_two_tiles_gpu(tile1, tile2, dir, save_img, colors):
+def _process_two_tiles(tile1, tile2, dir, save_img, colors):
     """
-    Processes two image tiles using vectorization and GPU acceleration. It categorizes pixels into overlap, different
-    complement levels, negative tissue, and background. Optionally saves the processed image to the specified directory
-    if save_img is True. This function is typically called by analyze_dual_antigen_colocalization or
-    analyze_triplet_antigen_colocalization when two of the three tiles contain tissue.
+    Processes two image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+    pixels into overlap, different complement levels, negative tissue, and background. Optionally saves the processed
+    image to the specified directory if save_img is True. This function is typically called by
+    analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization when two of the three tiles contain
+    tissue.
 
     Args:
         tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
@@ -774,8 +728,8 @@ def _process_two_tiles_gpu(tile1, tile2, dir, save_img, colors):
 
     """
     # Convert image arrays to CuPy arrays
-    img1 = cp.array(tile1["Image Array"])
-    img2 = cp.array(tile2["Image Array"])
+    img1 = xp.array(tile1["Image Array"])
+    img2 = xp.array(tile2["Image Array"])
 
     # Create masks for different intensity zones for tile1
     high_positive_mask1 = img1 < 61
@@ -792,50 +746,52 @@ def _process_two_tiles_gpu(tile1, tile2, dir, save_img, colors):
     background_mask2 = img2 >= 235
 
     # Calculate overlap and complement counts
-    high_overlap = cp.sum(high_positive_mask1 & high_positive_mask2)
-    pos_overlap = cp.sum(
+    high_overlap = xp.sum(high_positive_mask1 & high_positive_mask2)
+    pos_overlap = xp.sum(
         (high_positive_mask1 & positive_mask2)
         | (positive_mask1 & high_positive_mask2)
         | (positive_mask1 & positive_mask2)
     )
-    low_overlap = cp.sum(
+    low_overlap = xp.sum(
         (high_positive_mask1 & low_positive_mask2)
         | (positive_mask1 & low_positive_mask2)
         | (low_positive_mask1 & high_positive_mask2)
         | (low_positive_mask1 & positive_mask2)
         | (low_positive_mask1 & low_positive_mask2)
     )
-    high_complement = cp.sum(
+    high_complement = xp.sum(
         high_positive_mask1
         & ~(high_positive_mask2 | positive_mask2 | low_positive_mask2)
-    ) + cp.sum(
+    ) + xp.sum(
         ~(high_positive_mask1 | positive_mask1 | low_positive_mask1)
         & high_positive_mask2
     )
-    pos_complement = cp.sum(
-        positive_mask1 & ~(high_positive_mask2 | positive_mask2 | low_positive_mask2)
-    ) + cp.sum(
-        ~(high_positive_mask1 | positive_mask1 | low_positive_mask1) & positive_mask2
+    pos_complement = xp.sum(
+        positive_mask1 & ~(high_positive_mask2
+                           | positive_mask2 | low_positive_mask2)
+    ) + xp.sum(
+        ~(high_positive_mask1 | positive_mask1
+          | low_positive_mask1) & positive_mask2
     )
-    low_complement = cp.sum(
+    low_complement = xp.sum(
         low_positive_mask1
         & ~(high_positive_mask2 | positive_mask2 | low_positive_mask2)
-    ) + cp.sum(
+    ) + xp.sum(
         ~(high_positive_mask1 | positive_mask1 | low_positive_mask1)
         & low_positive_mask2
     )
-    negative = cp.sum(
+    negative = xp.sum(
         (negative_mask1 & negative_mask2)
         | (negative_mask1 & background_mask2)
         | (background_mask1 & negative_mask2)
     )
-    background = cp.sum(background_mask1 & background_mask2)
+    background = xp.sum(background_mask1 & background_mask2)
 
     # Save image if required
     if save_img:
-        colored_img = cp.zeros(
+        colored_img = xp.zeros(
             (high_positive_mask1.shape[0], high_positive_mask1.shape[1], 3),
-            dtype=cp.uint8,
+            dtype=xp.uint8,
         )
         colored_img[high_positive_mask1 & high_positive_mask2] = (
             COLOR_OVERLAP  # High overlap color
@@ -899,9 +855,10 @@ def _process_two_tiles_gpu(tile1, tile2, dir, save_img, colors):
             192,
         ]  # Gray for background
 
-        colored_img = cp.asnumpy(colored_img)
+        colored_img = to_numpy(colored_img)
         img = Image.fromarray(colored_img)
-        img.save(f"{dir}/{tile1['Tilename']}_vs_{tile2['Tilename']}_processed.png")
+        img.save(
+            f"{dir}/{tile1['Tilename']}_vs_{tile2['Tilename']}_processed.png")
     # Check if the sum of all counts equals the total pixel count
     total_pixel_count = img1.size
     total_count = (
@@ -929,7 +886,7 @@ def _process_two_tiles_gpu(tile1, tile2, dir, save_img, colors):
     )
 
 
-def _process_three_tiles(tile1, tile2, tile3, dir, save_img):
+def _process_three_tiles_old(tile1, tile2, tile3, dir, save_img):
     """
     Processes three tiles by iterating across the tiles. It categorizes pixels into overlap, different complement
     levels, negative tissue and background. Optionally saves the processed image into dir if save_img is True. This
@@ -1111,11 +1068,11 @@ def _process_three_tiles(tile1, tile2, tile3, dir, save_img):
     )
 
 
-def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
+def _process_three_tiles(tile1, tile2, tile3, dir, save_img):
     """
-    Processes three tiles using vectorization and GPU acceleration. It categorizes pixels into overlap, different
-    complement levels, negative tissue, and background. Optionally saves the processed image into dir if save_img
-    is True. This function is only called by analyze_triplet_antigen_colocalization.
+    Processes three tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+    pixels into overlap, different complement levels, negative tissue, and background. Optionally saves the processed
+    image into dir if save_img is True. This function is only called by analyze_triplet_antigen_colocalization.
 
     Args:
         tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
@@ -1140,9 +1097,9 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         For the coloring scheme, see the description of analyze_triplet_antigen_combinations().
     """
     # Convert image arrays to CuPy arrays
-    img1 = cp.array(tile1["Image Array"])
-    img2 = cp.array(tile2["Image Array"])
-    img3 = cp.array(tile3["Image Array"])
+    img1 = xp.array(tile1["Image Array"])
+    img2 = xp.array(tile2["Image Array"])
+    img3 = xp.array(tile3["Image Array"])
 
     # Create masks for different intensity zones for tile1
     high_positive_mask1 = img1 < 61
@@ -1167,14 +1124,14 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
 
     # Calculate overlap and complement counts
     # High overlap if all 3 or 2/3 pixels are high positive, regardless of the 3rd
-    high_overlap = cp.sum(
+    high_overlap = xp.sum(
         (high_positive_mask1 & high_positive_mask2 & high_positive_mask3)
         | (high_positive_mask1 & high_positive_mask2 & ~high_positive_mask3)
         | (high_positive_mask1 & high_positive_mask3 & ~high_positive_mask2)
         | (high_positive_mask2 & high_positive_mask3 & ~high_positive_mask1)
     )
     # Positive overlap if at least 2/3 pixels are positive or if 2 below 121 and not high overlap
-    pos_overlap = cp.sum(
+    pos_overlap = xp.sum(
         (positive_mask1 & positive_mask2 & positive_mask3)
         | (positive_mask1 & positive_mask2 & ~positive_mask3)
         | (positive_mask1 & positive_mask3 & ~positive_mask2)
@@ -1217,7 +1174,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         )
     )
     # Low positive overlap if 2/3 pixels are low positive or 2 pixel <181 if not (high-) positive overlap
-    low_overlap = cp.sum(
+    low_overlap = xp.sum(
         (low_positive_mask1 & low_positive_mask2 & low_positive_mask3)
         | (low_positive_mask1 & low_positive_mask2 & ~low_positive_mask3)
         | (low_positive_mask1 & low_positive_mask3 & ~low_positive_mask2)
@@ -1260,7 +1217,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         )
     )
     # High complement if only 1 pixel <61 while the other 2 >= 181
-    high_complement = cp.sum(
+    high_complement = xp.sum(
         (
             high_positive_mask1
             & (negative_mask2 | background_mask2)
@@ -1278,7 +1235,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         )
     )
     # Positive complement if only 1 pixel <121 while the other 2 >= 181
-    pos_complement = cp.sum(
+    pos_complement = xp.sum(
         (
             positive_mask1
             & (negative_mask2 | background_mask2)
@@ -1296,7 +1253,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         )
     )
     # Positive complement if only 1 pixel <181 while the other 2 >= 181
-    low_complement = cp.sum(
+    low_complement = xp.sum(
         (
             low_positive_mask1
             & (negative_mask2 | background_mask2)
@@ -1314,7 +1271,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         )
     )
     # Negative if at least 1/3 pixels >180 and <235 while no other pixel <181
-    negative = cp.sum(
+    negative = xp.sum(
         negative_mask1 & negative_mask2 & negative_mask3
         | negative_mask1 & negative_mask2 & background_mask3
         | negative_mask1 & background_mask2 & negative_mask3
@@ -1324,7 +1281,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
         | background_mask1 & background_mask2 & negative_mask3
     )
     # Background only if all 3 pixels are background
-    background = cp.sum(background_mask1 & background_mask2 & background_mask3)
+    background = xp.sum(background_mask1 & background_mask2 & background_mask3)
 
     # Check if the sum of all counts equals the total pixel count
     total_pixel_count = img1.size
@@ -1345,9 +1302,9 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
 
     # Save image if required
     if save_img:
-        colored_img = cp.zeros(
+        colored_img = xp.zeros(
             (high_positive_mask1.shape[0], high_positive_mask1.shape[1], 3),
-            dtype=cp.uint8,
+            dtype=xp.uint8,
         )
         # High overlap color
         colored_img[
@@ -1544,7 +1501,7 @@ def _process_three_tiles_gpu(tile1, tile2, tile3, dir, save_img):
             192,
         ]
 
-        colored_img = cp.asnumpy(colored_img)
+        colored_img = to_numpy(colored_img)
         img = Image.fromarray(colored_img)
         img.save(
             f"{dir}/{tile1['Tilename']}_vs_{tile2['Tilename']}_vs_{tile3['Tilename']}_processed.png"

@@ -8,17 +8,15 @@ from itertools import combinations
 from time import time
 
 # Third Party
-import cupy as cp
-import numpy as np
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 
 # CuBATS
-import cubats.config as config
 import cubats.cutils as cutils
 import cubats.logging_config as log_config
 import cubats.slide_collection.colocalization as colocalization
+from cubats.config import get_backend_info, xp
 from cubats.slide_collection.slide import Slide
 
 # Constants
@@ -225,20 +223,6 @@ class SlideCollection(object):
         logging.config.dictConfig(log_config.LOGGING)
         self.logger = logging.getLogger(__name__)
 
-        config.set_gpu_acceleration(config.has_nvidia_gpu())
-        # Verify CuPy installation and GPU availability
-        if config.get_gpu_acceleration():
-            self.gpu_acceleration = True
-            num_gpus = cp.cuda.runtime.getDeviceCount()
-            print(
-                f"Number of available GPUs: {num_gpus}. Applying GPU acceleration for subsequent computation."
-            )
-            for i in range(num_gpus):
-                print(f"GPU {i}: {cp.cuda.runtime.getDeviceProperties(i)['name']}")
-            cp.cuda.Device(0).use()
-        else:
-            self.gpu_acceleration = False
-
         # Name of the tumorset
         self.collection_name = collection_name
 
@@ -265,7 +249,8 @@ class SlideCollection(object):
         self.slides = []
 
         # Slide informations
-        self.collection_info = pd.DataFrame(columns=SLIDE_COLLECTION_COLUMN_NAMES)
+        self.collection_info = pd.DataFrame(
+            columns=SLIDE_COLLECTION_COLUMN_NAMES)
 
         # Mask Variables
         self.mask = None
@@ -305,7 +290,7 @@ class SlideCollection(object):
             f"Initialized SlideCollection with collection_name: {self.collection_name}, "
             f"src_dir: {self.src_dir}, dest_dir: {self.dest_dir}, "
             f"ref_slide: {self.reference_slide}, "
-            f"gpu_acceleration: {config.get_gpu_acceleration()}"
+            f"backend: {get_backend_info()}"
         )
 
     def set_dst_dir(self):
@@ -422,7 +407,8 @@ class SlideCollection(object):
             if path is None:
                 path = self.pickle_dir
             path_mask_coord = os.path.join(path, "mask_coordinates.pickle")
-            path_quant_res = os.path.join(path, "quantification_results.pickle")
+            path_quant_res = os.path.join(
+                path, "quantification_results.pickle")
             path_dual_overlap_res = os.path.join(
                 path, "dual_antigen_expressions.pickle"
             )
@@ -432,7 +418,8 @@ class SlideCollection(object):
 
             # load mask coordinates
             if os.path.exists(path_mask_coord):
-                self.mask_coordinates = pickle.load(open(path_mask_coord, "rb"))
+                self.mask_coordinates = pickle.load(
+                    open(path_mask_coord, "rb"))
                 self.logger.debug(
                     f"Successfully loaded mask for {self.collection_name}"
                 )
@@ -443,7 +430,8 @@ class SlideCollection(object):
 
             # load quantification results
             if os.path.exists(path_quant_res):
-                self.quantification_results = pickle.load(open(path_quant_res, "rb"))
+                self.quantification_results = pickle.load(
+                    open(path_quant_res, "rb"))
                 self.logger.debug(
                     f"Sucessfully loaded quantification results for {self.collection_name}"
                 )
@@ -480,7 +468,8 @@ class SlideCollection(object):
 
             # Load processing info for each slide TODO load into slide object
             for slide in self.slides:
-                path_slide = os.path.join(path, f"{slide.name}_processing_info.pickle")
+                path_slide = os.path.join(
+                    path, f"{slide.name}_processing_info.pickle")
                 if os.path.exists(path_slide):
                     slide.detailed_quantification_results = pickle.load(
                         open(path_slide, "rb")
@@ -526,6 +515,7 @@ class SlideCollection(object):
                 reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.
 
         """
+        # If no mask slide is provided, mask coordinates will contain all tiles of the slide.
         if self.mask is None:
             # raise ValueError(
             #     "Slide Collection does not have a mask slide. Please check if src_dir contains a mask slide. \
@@ -539,8 +529,6 @@ class SlideCollection(object):
                 for row in range(rows):
                     self.mask_coordinates.append((col, row))
         else:
-            gpu_acceleration = self.gpu_acceleration
-
             mask_start_time = time()
             self.logger.debug("Generating mask coordinates")
             mask_tiles = self.mask.tiles
@@ -548,25 +536,24 @@ class SlideCollection(object):
             cols, rows = mask_tiles.level_tiles[mask_tiles.level_count - 1]
             for col in tqdm(range(cols), desc="Initializing Mask"):
                 for row in range(rows):
-                    temp = mask_tiles.get_tile(mask_tiles.level_count - 1, (col, row))
+                    temp = mask_tiles.get_tile(
+                        mask_tiles.level_count - 1, (col, row))
                     if temp.mode != "RGB":
                         temp = temp.convert("RBG")
-                    if gpu_acceleration:
-                        temp = cp.array(temp)
-                        mean = cp.mean(temp)
-                    else:
-                        temp_xp = np.array(temp)
-                        mean = np.mean(temp)
+                    temp = xp.array(temp)
+                    mean = xp.mean(temp)
 
                     # If tile is mostly white, drop tile coordinate
                     if mean < 230:
                         self.mask_coordinates.append((col, row))
                         if save_img:
                             tile_name = str(col) + "_" + str(row)
-                            if gpu_acceleration:
-                                img = Image.fromarray(cp.asnumpy(temp_xp))
-                            else:
-                                img = Image.fromarray(temp_xp)
+                            # Convert to NumPy array if necessary
+                            if hasattr(temp, "asnumpy"):
+                                temp = temp.asnumpy()
+                            # Convert to PIL Image
+                            img = Image.fromarray(temp)
+
                             dir = os.path.join(self.tiles_dir, "mask")
                             os.makedirs(dir, exist_ok=True)
                             out_path = os.path.join(dir, tile_name + ".tif")
@@ -581,7 +568,8 @@ class SlideCollection(object):
         # Save mask coordinates as pickle
         out = os.path.join(self.pickle_dir, "mask_coordinates.pickle")
         with open(out, "wb") as file:
-            pickle.dump(self.mask_coordinates, file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.mask_coordinates, file,
+                        protocol=pickle.HIGHEST_PROTOCOL)
         # pickle.dump(self.mask_coordinates, open(out, "wb"))
         self.logger.debug(f"Successfully saved mask coordinates to {out}")
         self.logger.info("Finished Mask Generation")
@@ -610,7 +598,8 @@ class SlideCollection(object):
                 self.logger.info(
                     f"Analyzing Slide: {slide.name}({c}/{len(self.slides) - 2})"
                 )
-                self.quantify_single_slide(slide.name, save_imgs, detailed_mode)
+                self.quantify_single_slide(
+                    slide.name, save_imgs, detailed_mode)
                 c += 1
 
     def quantify_single_slide(self, slide_name, save_img=False, detailed_mode=False):
@@ -636,7 +625,8 @@ class SlideCollection(object):
 
         # Create directories for images if they are to be saved.
         if save_img:
-            dab_tile_dir = os.path.join(self.tiles_dir, slide_name, DAB_TILE_DIR)
+            dab_tile_dir = os.path.join(
+                self.tiles_dir, slide_name, DAB_TILE_DIR)
             if detailed_mode:
                 slide.quantify_slide(
                     self.mask_coordinates,
@@ -644,7 +634,6 @@ class SlideCollection(object):
                     save_img,
                     dab_tile_dir,
                     detailed_mask=self.mask.tiles,
-                    gpu_acceleration=self.gpu_acceleration,
                 )
             else:
                 slide.quantify_slide(
@@ -652,7 +641,6 @@ class SlideCollection(object):
                     self.pickle_dir,
                     save_img,
                     dab_tile_dir,
-                    gpu_acceleration=self.gpu_acceleration,
                 )
         else:
             if detailed_mode:
@@ -660,13 +648,11 @@ class SlideCollection(object):
                     self.mask_coordinates,
                     self.pickle_dir,
                     detailed_mask=self.mask.tiles,
-                    gpu_acceleration=self.gpu_acceleration,
                 )
             else:
                 slide.quantify_slide(
                     self.mask_coordinates,
                     self.pickle_dir,
-                    gpu_acceleration=self.gpu_acceleration,
                 )
 
         # slide_summary_series = pd.Series(slide.quantification_summary)
@@ -717,7 +703,8 @@ class SlideCollection(object):
                 index=False,
                 encoding="utf-8",
             )
-            out = os.path.join(self.pickle_dir, "quantification_results.pickle")
+            out = os.path.join(
+                self.pickle_dir, "quantification_results.pickle")
             with open(out, "wb") as file:
                 pickle.dump(
                     self.quantification_results, file, protocol=pickle.HIGHEST_PROTOCOL
@@ -779,7 +766,8 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_triplet_antigen_combinations method
         for combo in slide_combinations:
-            self.compute_triplet_antigen_combinations(combo[0], combo[1], combo[2])
+            self.compute_triplet_antigen_combinations(
+                combo[0], combo[1], combo[2])
 
     # def compute_antigen_combinations(self, save_img=False):
 
@@ -861,7 +849,8 @@ class SlideCollection(object):
             ):
                 _dict1 = slide1.detailed_quantification_results[i]
                 _dict2 = slide2.detailed_quantification_results[i]
-                iterable.append((_dict1, _dict2, dir, save_img, self.gpu_acceleration))
+                iterable.append(
+                    (_dict1, _dict2, dir, save_img))
         start_time = time()
         self.logger.debug(
             f"Starting antigen analysis for: {slide1.name} & {slide2.name}"
@@ -872,7 +861,8 @@ class SlideCollection(object):
 
         with concurrent.futures.ProcessPoolExecutor() as exe:
             results = tqdm(
-                exe.map(colocalization.analyze_dual_antigen_colocalization, iterable),
+                exe.map(
+                    colocalization.analyze_dual_antigen_colocalization, iterable),
                 total=len(iterable),
                 desc="Calculating Coverage of Slide "
                 + slide1.name
@@ -892,7 +882,8 @@ class SlideCollection(object):
                 f"Finished antigen analysis for: {slide1.name} & {slide2.name} in \
                     {round((end_time - start_time), 2)} seconds."
             )
-        self.summarize_antigen_combinations(comparison_dict, [slide1.name, slide2.name])
+        self.summarize_antigen_combinations(
+            comparison_dict, [slide1.name, slide2.name])
         self.save_antigen_combinations(result_type="dual")
 
     def compute_triplet_antigen_combinations(
@@ -954,7 +945,8 @@ class SlideCollection(object):
                 _dict2 = slide2.detailed_quantification_results[i]
                 _dict3 = slide3.detailed_quantification_results[i]
                 iterable.append(
-                    (_dict1, _dict2, _dict3, dirname, save_img, self.gpu_acceleration)
+                    (_dict1, _dict2, _dict3, dirname,
+                     save_img)
                 )
 
         # Init dict for results of each tile
@@ -1127,7 +1119,8 @@ class SlideCollection(object):
             csv_filename = "triplet_antigen_expressions.csv"
             pickle_filename = "triplet_antigen_expressions.pickle"
         else:
-            raise ValueError("Invalid result_type. Must be 'dual' or 'triplet'.")
+            raise ValueError(
+                "Invalid result_type. Must be 'dual' or 'triplet'.")
 
         # Save results as CSV
         summary_df.to_csv(
