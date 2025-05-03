@@ -381,10 +381,24 @@ class Slide(object):
 
         """
         start_time = time()
+        # Check paths
+        if not os.path.isdir(in_path):
+            self.logger.error(f"Input path {in_path} does not exist.")
+            raise ValueError(f"Input path {in_path} does not exist.")
+        # Check if in_path contains .tif files
+        tif_files = [f for f in os.listdir(in_path) if f.endswith(".tif")]
+        if not tif_files:
+            self.logger.error(f"No .tif files found in input path {in_path}.")
+            raise ValueError(f"No .tif files found in input path {in_path}.")
+
+        # Ensure output directory exists
+        os.makedirs(out_path, exist_ok=True)
+
         # Init variables
         counter = 0
         cols, rows = self.tiles.level_tiles[self.level_count - 1]
         row_array = []
+
         # append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
         for row in tqdm(range(rows), desc="Reconstructing slide: " + self.name):
             column_array = []

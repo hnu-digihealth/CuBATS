@@ -301,27 +301,8 @@ class SlideCollection(object):
         # Pickle dir
         self.pickle_dir = os.path.join(self.data_dir, PICKLE_DIR)
         os.makedirs(self.pickle_dir, exist_ok=True)
-        # Tiles dir
-        self.tiles_dir = os.path.join(self.dest_dir, TILES_DIR)
-        os.makedirs(self.tiles_dir, exist_ok=True)
-        # Colocalization dir
-        self.colocalization_dir = os.path.join(self.dest_dir, COLOCALIZATION)
-        os.makedirs(self.colocalization_dir, exist_ok=True)
-        # Reconstructed dir
-        self.reconstruct_dir = os.path.join(self.dest_dir, RECONSTRUCT_DIR)
-        os.makedirs(self.reconstruct_dir, exist_ok=True)
 
-        # Create subdirectories in tiles_dir for each slide except for the reference slide and the mask
-        for slide in self.slides:
-            if slide.is_mask:
-                pass
-            elif slide.is_reference:
-                pass
-            else:
-                slide_dir = os.path.join(self.tiles_dir, slide.name)
-                os.makedirs(slide_dir, exist_ok=True)
-
-        self.logger.debug("Destination directories set or already exist")
+        self.logger.debug("Data and Pickle directories created")
 
     def init_slide_collection(self):
         """
@@ -515,6 +496,11 @@ class SlideCollection(object):
                 reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.
 
         """
+        # Create tiles directory if it does not exist
+        if save_img:
+            self.tiles_dir = os.path.join(self.dest_dir, TILES_DIR)
+            os.makedirs(self.tiles_dir, exist_ok=True)
+
         # If no mask slide is provided, mask coordinates will contain all tiles of the slide.
         if self.mask is None:
             # raise ValueError(
@@ -625,8 +611,13 @@ class SlideCollection(object):
 
         # Create directories for images if they are to be saved.
         if save_img:
+            # Create directory for tiles if it does not exist
+            self.tiles_dir = os.path.join(self.dest_dir, TILES_DIR)
+            os.makedirs(self.tiles_dir, exist_ok=True)
+            # Create sub-directory name for the slide
             dab_tile_dir = os.path.join(
                 self.tiles_dir, slide_name, DAB_TILE_DIR)
+
             if detailed_mode:
                 slide.quantify_slide(
                     self.mask_coordinates,
@@ -833,6 +824,12 @@ class SlideCollection(object):
         """
         # Create directory for pair of slides
         if save_img:
+            # Create Colocalization directory if it does not exist
+            self.colocalization_dir = os.path.join(
+                self.dest_dir, COLOCALIZATION)
+            os.makedirs(self.colocalization_dir, exist_ok=True)
+
+            # Create sub-directory for slide pair
             dir = os.path.join(
                 self.colocalization_dir, (slide1.name + "_and_" + slide2.name)
             )
@@ -925,6 +922,12 @@ class SlideCollection(object):
 
         # Create directory for triplet of slides
         if save_img:
+            # Create Colocalization directory if it does not exist
+            self.colocalization_dir = os.path.join(
+                self.dest_dir, COLOCALIZATION)
+            os.makedirs(self.colocalization_dir, exist_ok=True)
+
+            # Create sub-directory for slide triplet
             dirname = os.path.join(
                 self.colocalization_dir,
                 (slide1.name + "_and_" + slide2.name + "_and_" + slide3.name),
