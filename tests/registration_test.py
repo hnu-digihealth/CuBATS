@@ -1,9 +1,9 @@
 # Standard Library
-import unittest
-from unittest.mock import MagicMock, patch
 import os
 import platform
-# OpenSlide setup for macOS and Windows for now until Main class
+import unittest
+from unittest.mock import MagicMock, patch
+
 if platform.system() == "Darwin":  # macOS
     path = os.environ.get('DYLD_FALLBACK_LIBRARY_PATH', '')
     path += (':' if path else '') + '/opt/homebrew/lib'
@@ -16,7 +16,7 @@ elif platform.system() == "Windows":  # Windows
     else:
         os.environ['PATH'] += f";{OPENSLIDE_PATH}"
 
-# Import OpenSlide
+# Third Party
 try:
     # Third Party
     import openslide
