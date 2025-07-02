@@ -65,8 +65,7 @@ def get_score_name(score):
 
     zone_names = ["High Positive", "Positive", "Low Positive", "Negative"]
     if len(score) < 4:
-        raise ValueError(
-            f"Score list must contain exactly {len(zone_names)} elements.")
+        raise ValueError(f"Score list must contain exactly {len(zone_names)} elements.")
 
     max = np.max(score[:4])
     score = zone_names[score.index(max)]
@@ -85,11 +84,17 @@ def to_numpy(array):
         np.ndarray: The converted NumPy array.
     """
     # Check if the input is a CuPy array and convert it to NumPy
-    if hasattr(array, "asnumpy"):
-        return array.asnumpy()
-    else:
-        # If it's already a NumPy array, return it as is
-        return array
+    # Try CuPy import, if it fails, assume array is not a CuPy array
+    try:
+        # Third Party
+        import cupy as cp
+
+        return cp.asnumpy(array)
+    except ImportError:
+        pass
+
+    # Not CuPy — assume NumPy or NumPy-compatible
+    return np.asarray(array)
 
 
 def downsample_Openslide_to_PIL(openslide_object, SCALEFACTOR: int):
@@ -211,24 +216,20 @@ def plot_tile_quantification_results(self, tilename, img_true=True, numeric=True
         for j in range(self.quantification_results_list[i][1].__len__()):
             if self.quantification_results_list[i][1][j]["Tilename"] == tilename:
                 names.append(self.quantification_results_list[i][0])
-                hists.append(
-                    self.quantification_results_list[i][1][j]["Histogram"])
+                hists.append(self.quantification_results_list[i][1][j]["Histogram"])
                 hist_centers.append(
                     self.quantification_results_list[i][1][j]["Hist_centers"]
                 )
-                zones.append(
-                    self.quantification_results_list[i][1][j]["Zones"])
+                zones.append(self.quantification_results_list[i][1][j]["Zones"])
                 percentages.append(
                     self.quantification_results_list[i][1][j]["Percentage"]
                 )
                 scores.append(
                     self.get_score_name(
-                        self.quantification_results_list[i][1][j]["Score"].tolist(
-                        )
+                        self.quantification_results_list[i][1][j]["Score"].tolist()
                     )
                 )
-                px_count.append(
-                    self.quantification_results_list[i][1][j]["Px_count"])
+                px_count.append(self.quantification_results_list[i][1][j]["Px_count"])
                 tile_exists = True
                 break
 

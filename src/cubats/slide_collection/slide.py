@@ -46,12 +46,17 @@ class Slide(object):
 
         tile_count (int): The number of tiles in the slide.
 
+        masked_tiles (list): List containing the tiles after intersection of the slide and mask.
+
         dab_tile_dir (str): Directory to save the tiles after color deconvolution is applied. Necessary for
             reconstruction of the slide. If save_img is False no tiles are saved and this attribute is None.
 
         is_mask (bool): Whether the slide is the slide_collections mask slide.
 
         is_reference (bool): Whether the slide is the slide_collections reference slide.
+
+        antigen_profile (dict, optional): Dictionary containing antigen-specific quantification thresholds
+            (high-positive, medium-positive, low-postitive). If no profile is provided, default thresholds are used.
 
         detailed_quantification_results (dict): Dictionary containing detailed quantification results for each tile of
             the slide. The dictionary is structured as follows:
@@ -66,6 +71,26 @@ class Slide(object):
                   following attribution High Positive, Positive, Low Positive, Negative, Background).
                 - Score (str): Score of the tile based on the zones.
 
+        quantification_summary (dict): Dictionary containing the summarized quantification results for the slide:
+
+            - Name (str): Slide name
+            - Coverage (%) (float): Percentage of all positively quantified pixels in the Slide. This includes all
+              high-postive, medium-positive, and low-positive stained pixels.
+            - High Positive (%) (float): Percentage of highly positive stained pixels in the Slide.
+            - Medium Positive (%) (float): Percentage of medium positive stained pixels in the Slide.
+            - Low Positive  (%) (float): Percentage of low positive stained pixels in the Slide.
+            - Negative  (%) (float): Percentage of negatively stained pixels in the Slide.
+            - Total Tissue  (%) (float): Percentage of tissue in the Slide.
+            - Background / No Tissue (%) (float): Percentage of Background pixels in the Slide.
+            - H-Score (int): H-Score of the slide.
+            - Score (str): Pathological score of the slide: High Positive, Medium Positive, Low Positive, Negative,
+              Background.
+            - Total Processed Tiles (%): Percentage of processed tiles of the slide.
+            - Error (%) (float): Percentage of skipped tiles because they did not contain tissue.
+            - Thresholds: Antigen-specific thresholds used during quantification.
+
+        properties (dict): Dictionary containing relevant slide properties including: `name`, `is_reference`, `is_mask`,
+            `openslide_object`, `tiles`, `level_count`, `level_dimensions`, and `tile_count`.
     """
 
     def __init__(self, name, path, is_mask=False, is_reference=False):
@@ -90,7 +115,7 @@ class Slide(object):
         self.level_count = self.tiles.level_count
         self.level_dimensions = self.tiles.level_dimensions
         self.tile_count = self.tiles.tile_count
-        self.masked_tiles = None
+        self.masked_tiles = None  # Unused: TODO store masked tiles
 
         self.dab_tile_dir = None
 
@@ -99,6 +124,16 @@ class Slide(object):
 
         self.detailed_quantification_results = {}
         self.quantification_summary = {}
+
+        if not is_mask and not is_reference:
+            self.antigen_profile = {
+                "Name": "default",
+                "low_positive_threshold": 181,
+                "medium_positive_threshold": 121,
+                "high_positive_threshold": 61,
+            }
+        else:
+            self.antigen_profile = None
 
         self.properties = {
             "name": self.name,
@@ -118,25 +153,18 @@ class Slide(object):
         save_dir,
         save_img=False,
         img_dir=None,
-        detailed_mask=None,
+        mask=None,
     ):
-        """Quantifies staining intensities for all tiles of this slide.
+        """Quantifies staining intensities for masked tiles of this slide.
 
-        This function uses multiprocessing to quantify staining intensities of all tiles for the slide.
-
+        This function uses multiprocessing to quantify staining intensities of masked tiles for the slide.
         Each tile undergoes color deconvolution followed by staining intensity quantification based on the IHC
         Profiler's algorithm. If `save_img` is True, tiles are saved in `img_dir` after deconvolution for later
         reconstruction. After color deconvolution, each tile is processed as a grayscale image, and each pixel's
-        staining intensity (0-255) is quantified and categorized into zones:
-
-            - Zone1: High Positive (0-60)
-            - Zone2: Positive (61-120)
-            - Zone3: Low Positive (121-180)
-            - Zone4: Negative (181-235)
-            - (Zone5: White Space or Fatty Tissues (236-255), irrelevant for quantification)
-
-        Results are stored in `self.detailed_quantification_results` and summarized in `self.quantification_summary`.
-        Both are saved as PICKLE files in `save_dir`.
+        staining intensity (0-255) is quantified based on the thresholds defined in `self.antigen_profile`. If no
+        specific antigen_profile was provided the default profile will be used. Results are stored in
+        `self.detailed_quantification_results` and summarized in `self.quantification_summary`. Both are saved as
+         PICKLE files in `save_dir`.
 
         Args:
             mask_coordinates (list): List of xy-coordinates from the maskslide where the mask is positive.
@@ -145,14 +173,15 @@ class Slide(object):
                 Necessary for reconstruction of the slide.
             img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
                 None.
-            detailed_mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
+            mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
                 mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
                 might result in larger inaccuracies for WSI with low congruence.
 
         """
         self.logger.debug(
-            f"Quantifying slide: {self.name}, save_img: {save_img}, \
-                detailed_mode: {detailed_mask is not None}"
+            f"Quantifying slide: {self.name}, antigen_profile: "
+            f"{self.antigen_profile['Name'] if self.antigen_profile else 'None'}, "
+            f"save_img: {save_img}, masking_mode: {'pixel-level' if mask is not None else 'tile-level'}"
         )
         if self.is_mask:
             self.logger.error("Cannot quantify mask slide.")
@@ -164,10 +193,8 @@ class Slide(object):
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
-                self.logger.error(
-                    "img_dir must be provided if save_img is True.")
-                raise ValueError(
-                    "img_dir must be provided if save_img is True.")
+                self.logger.error("img_dir must be provided if save_img is True.")
+                raise ValueError("img_dir must be provided if save_img is True.")
             self.dab_tile_dir = img_dir
             os.makedirs(self.dab_tile_dir, exist_ok=True)
 
@@ -180,13 +207,14 @@ class Slide(object):
                 (
                     tile_processing.mask_tile(
                         self.tiles.get_tile(self.level_count - 1, (x, y)),
-                        detailed_mask.get_tile(self.level_count - 1, (x, y)),
+                        mask.get_tile(self.level_count - 1, (x, y)),
                     )
-                    if detailed_mask is not None
+                    if mask is not None
                     else self.tiles.get_tile(self.level_count - 1, (x, y))
                 ),
                 self.dab_tile_dir,
                 save_img,
+                self.antigen_profile,
             )
             for x, y in tqdm(
                 mask_coordinates,
@@ -235,8 +263,7 @@ class Slide(object):
         # Save dictionary as pickle
         start_time_save = time()
         f_out = os.path.join(save_dir, f"{self.name}_processing_info.pickle")
-        self.logger.info(
-            f"Saving quantification results for {self.name} to {f_out}")
+        self.logger.info(f"Saving quantification results for {self.name} to {f_out}")
         with open(f_out, "wb") as f:
             pickle.dump(
                 self.detailed_quantification_results,
@@ -279,13 +306,10 @@ class Slide(object):
             ValueError: If the slide is a mask slide or a reference slide.
         """
         start_time_summarize = time()
-        self.logger.info(
-            f"Summarizing quantification results for slide: {self.name}")
+        self.logger.info(f"Summarizing quantification results for slide: {self.name}")
         if self.is_mask:
-            self.logger.error(
-                "Cannot summarize quantification results for mask slide.")
-            raise ValueError(
-                "Cannot summarize quantification results for mask slide.")
+            self.logger.error("Cannot summarize quantification results for mask slide.")
+            raise ValueError("Cannot summarize quantification results for mask slide.")
         elif self.is_reference:
             self.logger.error(
                 "Cannot summarize quantification results for reference slide."
@@ -297,7 +321,7 @@ class Slide(object):
         # Init variables
         zone_names = [
             "High Positive",
-            "Positive",
+            "Medium Positive",
             "Low Positive",
             "Negative",
             "Background",
@@ -345,9 +369,9 @@ class Slide(object):
 
         # Calculate percentage of processed tiles and error
         perc_processed_tiles = (
-            processed_tiles / len(self.detailed_quantification_results)) * 100
-        perc_error = (
-            error_tiles / len(self.detailed_quantification_results)) * 100
+            processed_tiles / len(self.detailed_quantification_results)
+        ) * 100
+        perc_error = (error_tiles / len(self.detailed_quantification_results)) * 100
 
         # Update the dictionary
         self.quantification_summary = {
@@ -363,6 +387,12 @@ class Slide(object):
             "Score": slide_score,
             "Total Processed Tiles (%)": round(float(perc_processed_tiles), 4),
             "Error (%)": round(float(perc_error), 4),
+            "Thresholds": [
+                self.antigen_profile["high_positive_threshold"],
+                self.antigen_profile["medium_positive_threshold"],
+                self.antigen_profile["low_positive_threshold"],
+                235,
+            ],
         }
         end_time_summarize = time()
         self.logger.debug(
@@ -405,8 +435,7 @@ class Slide(object):
         # Create WSI and save as pyramidal TIF in self.reconstruct_dir
         logging.getLogger("pyvips").setLevel(logging.WARNING)
         segmented_wsi = np.concatenate(row_array, axis=0)
-        segmented_wsi = VipsImage.new_from_array(
-            segmented_wsi).cast(BandFormat.INT)
+        segmented_wsi = VipsImage.new_from_array(segmented_wsi).cast(BandFormat.INT)
         end_time = time()
         self.logger.info(
             f"Finished reconstructing slide: {self.name} in {round((end_time - start_time)/60,2)} minutes."

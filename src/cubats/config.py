@@ -20,9 +20,10 @@ def get_backend_namespace():
         if platform.system() == "Windows":
             # Third Party
             import cupy as cp  # type: ignore
+
             if cp.cuda.runtime.getDeviceCount() > 0:
                 gpu_enabled = True
-                print("Using CuPy for GPU acceleration.")
+                # print("Using CuPy for GPU acceleration.")
                 return get_namespace(cp.array([0]))  # Return CuPy namespace
     except Exception:
         pass
@@ -31,7 +32,8 @@ def get_backend_namespace():
     gpu_enabled = False
     # Third Party
     import numpy as np
-    print("Using NumPy.")
+
+    # print("Using NumPy.")
     return get_namespace(np.array([0]))  # Return NumPy namespace
 
 
