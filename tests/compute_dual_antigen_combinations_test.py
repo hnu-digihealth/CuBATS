@@ -7,7 +7,8 @@ from unittest.mock import patch
 import numpy as np
 
 # CuBATS
-from cubats.slide_collection.colocalization import analyze_dual_antigen_colocalization
+from cubats.slide_collection.colocalization import \
+    analyze_dual_antigen_colocalization
 
 
 class TestComputeDualAntigenColocalization(unittest.TestCase):
