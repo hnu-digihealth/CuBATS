@@ -190,6 +190,8 @@ class Slide(object):
             self.logger.error("Cannot quantify reference slide.")
             raise ValueError("Cannot quantify reference slide.")
 
+        # masking_mode = "pixel-level" if mask is not None else "tile-level"
+
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
@@ -210,11 +212,12 @@ class Slide(object):
                         mask.get_tile(self.level_count - 1, (x, y)),
                     )
                     if mask is not None
-                    else self.tiles.get_tile(self.level_count - 1, (x, y))
+                    else (self.tiles.get_tile(self.level_count - 1, (x, y)), None)
                 ),
                 self.dab_tile_dir,
                 save_img,
                 self.antigen_profile,
+                # masking_mode,
             )
             for x, y in tqdm(
                 mask_coordinates,
@@ -235,8 +238,11 @@ class Slide(object):
             )
 
         start_time_quantification = time()
+        max_workers = os.cpu_count() - 1
+        # k = 4
+        # chunksize = max(1, len(iterable) // (max_workers * k))
         # Multiprocessing using concurrent.futures, gathering results and adding them to dictionary in linear manner.
-        with concurrent.futures.ProcessPoolExecutor() as exe:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
                 exe.map(tile_processing.quantify_tile, iterable),
                 total=len(iterable),
@@ -328,6 +334,7 @@ class Slide(object):
         ]
         wheights = xp.array([4, 3, 2, 1, 0])
         sum_zones = xp.zeros((5,), dtype=xp.float32)
+        sum_mask_count = 0
         processed_tiles = 0
         error_tiles = 0
 
@@ -336,27 +343,48 @@ class Slide(object):
             if tile_result["Flag"] == 1:
                 processed_tiles += 1
                 sum_zones += xp.array(tile_result["Zones"], dtype=xp.float32)
+                sum_mask_count += tile_result["Mask Count"]
             else:
                 error_tiles += 1
 
         # Calculate percentages and scores
-        total_pixels = xp.sum(sum_zones)
+        total_pixels_in_mask = sum_mask_count
         tissue_count = xp.sum(sum_zones[:4])
+        total_pixels = processed_tiles * 1048576
+        total_non_mask_pixels = total_pixels - total_pixels_in_mask
 
         # Percentage for intensity zones based on tissue count
-        percentages_tissue = (sum_zones[:4] / tissue_count) * 100
+        percentage_high_pos = (sum_zones[0] / total_pixels_in_mask) * 100
+        percentage_med_pos = (sum_zones[1] / total_pixels_in_mask) * 100
+        percentage_low_pos = (sum_zones[2] / total_pixels_in_mask) * 100
+        percentage_neg = (sum_zones[3] / total_pixels_in_mask) * 100
+
+        # percentages_tissue = (sum_zones[:4] / total_non_mask_pixels) * 100
 
         # Percentage for background based on total pixels
-        percentage_background = (sum_zones[4] / total_pixels) * 100
+        percentage_background = (sum_zones[4] / total_pixels_in_mask) * 100
 
-        # Coverage percentage of positively stained tissue
-        perc_coverage = xp.sum(percentages_tissue[:3])
+        # Coverage percentage of positively stained tissue (high+medium+low)
+        coverage_pixels = sum_zones[0] + sum_zones[1] + sum_zones[2]
+        perc_coverage = (coverage_pixels / total_pixels_in_mask) * 100
 
         # Total percentage of tissue
-        perc_tissue = (tissue_count / total_pixels) * 100
+        perc_tissue = (tissue_count / total_pixels_in_mask) * 100
+
+        perc_mask = (total_pixels_in_mask / total_pixels) * 100
+        perc_non_mask = (total_non_mask_pixels / total_pixels) * 100
 
         # Calculate H-Score
-        h_score = xp.sum(percentages_tissue[:3] * xp.array([3, 2, 1]))
+        percentages_tissue = xp.array(
+            [
+                percentage_high_pos,
+                percentage_med_pos,
+                percentage_low_pos,
+                percentage_neg,
+            ],
+            dtype=xp.float32,
+        )
+        h_score = xp.sum(percentages_tissue[:3] * xp.array([3, 2, 1]), dtype=xp.float32)
 
         # Determine slide score (exclude background)
         if xp.any(percentages_tissue > 66.6):
@@ -377,12 +405,14 @@ class Slide(object):
         self.quantification_summary = {
             "Name": self.name,
             "Coverage (%)": round(float(perc_coverage), 4),
-            "High Positive (%)": round(float(percentages_tissue[0]), 4),
-            "Positive (%)": round(float(percentages_tissue[1]), 4),
-            "Low Positive (%)": round(float(percentages_tissue[2]), 4),
-            "Negative (%)": round(float(percentages_tissue[3]), 4),
+            "High Positive (%)": round(float(percentage_high_pos), 4),
+            "Medium Positive (%)": round(float(percentage_med_pos), 4),
+            "Low Positive (%)": round(float(percentage_low_pos), 4),
+            "Negative (%)": round(float(percentage_neg), 4),
             "Total Tissue (%)": round(float(perc_tissue), 4),
             "Background / No Tissue (%)": round(float(percentage_background), 4),
+            "Mask Area (%)": round(float(perc_mask), 4),
+            "Non-mask Area (%)": round(float(perc_non_mask), 4),
             "H-Score": round(float(h_score), 2),
             "Score": slide_score,
             "Total Processed Tiles (%)": round(float(perc_processed_tiles), 4),

@@ -50,6 +50,8 @@ QUANTIFICATION_RESULTS_COLUMN_NAMES = {
     "Negative (%)": float,
     "Total Tissue (%)": float,
     "Background / No Tissue (%)": float,
+    "Mask Area (%)": float,
+    "Non-mask Area (%)": float,
     "H-Score": float,
     "Score": str,
     "Total Processed Tiles (%)": float,
@@ -71,6 +73,8 @@ DUAL_ANTIGEN_RESULTS_COLUMN_NAMES = {
     "Negative Tissue (%)": float,
     "Total Tissue (%)": float,
     "Background / No Tissue (%)": float,
+    "Mask Area (%)": float,
+    "Non-mask Area (%)": float,
     "Total Processed Tiles (%)": float,
     "Total Error (%)": float,
     "Error1 (%)": float,
@@ -94,6 +98,8 @@ TRIPLET_ANTIGEN_RESULTS_COLUMN_NAMES = {
     "Negative Tissue (%)": float,
     "Total Tissue (%)": float,
     "Background / No Tissue (%)": float,
+    "Mask Area (%)": float,
+    "Non-mask Area (%)": float,
     "Total Error (%)": float,
     "Error1 (%)": float,
     "Error2 (%)": float,
@@ -629,7 +635,7 @@ class SlideCollection(object):
                     temp = xp.array(temp)
                     mean = xp.mean(temp)
 
-                    # If tile is mostly white, drop tile coordinate
+                    # If tile is mostly white, drop tile coordinate prev cutoff: 230 (10%) now 253 (1%)
                     if mean < 230:
                         self.mask_coordinates.append((col, row))
                         if save_img:
@@ -762,7 +768,7 @@ class SlideCollection(object):
                     self.pickle_dir,
                     save_img,
                     dab_tile_dir,
-                    detailed_mask=self.mask.tiles,
+                    mask=self.mask.tiles,
                 )
             elif masking_mode == "tile-level":
                 slide.quantify_slide(
@@ -776,7 +782,7 @@ class SlideCollection(object):
                 slide.quantify_slide(
                     self.mask_coordinates,
                     self.pickle_dir,
-                    detailed_mask=self.mask.tiles,
+                    mask=self.mask.tiles,
                 )
             elif masking_mode == "tile-level":
                 slide.quantify_slide(
@@ -809,19 +815,21 @@ class SlideCollection(object):
 
         # Sort the DataFrame by the 'Name' column
         self.quantification_results = self.quantification_results.sort_values(
-            by="Name"
+            by="Coverage (%)", ascending=False
         ).reset_index(drop=True)
 
-        self.save_quantification_results()
+        self.save_quantification_results(masking_mode=masking_mode)
 
-    def save_quantification_results(self):
+    def save_quantification_results(self, masking_mode):
         """
         Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
+
         """
         if self.quantification_results.__len__() != 0:
             save_start_time = time()
+            filename = f"{self.data_dir}/{masking_mode}_quantification_results.csv"
             self.quantification_results.to_csv(
-                self.data_dir + "/quantification_results.csv",
+                filename,
                 sep=",",
                 index=False,
                 encoding="utf-8",
@@ -842,7 +850,7 @@ class SlideCollection(object):
                     in this slide collection or call quantify_single_slide() to quantify a single slide."
             )
 
-    def get_dual_antigen_combinations(self):
+    def get_dual_antigen_combinations(self, masking_mode="tile-level"):
         """Creates antigen pairs and calls `compute_antigen_combinations` function for each pair.
 
         Creates all possible combinations of pairs amongst all quantified slides and analyzes antigen expressions for
@@ -864,9 +872,11 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_dual_antigen_combination method
         for combo in slide_combinations:
-            self.compute_dual_antigen_combination(combo[0], combo[1])
+            self.compute_dual_antigen_combination(
+                combo[0], combo[1], masking_mode=masking_mode
+            )
 
-    def get_triplet_antigen_combinations(self):
+    def get_triplet_antigen_combinations(self, masking_mode="tile-level"):
         """Creates antigen triplets and calls `compute_antigen_combinations` function for each triplet.
 
         Creates all possible combinations of triplets amongst all quantified slides and analyzes antigen expressions
@@ -888,9 +898,13 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_triplet_antigen_combinations method
         for combo in slide_combinations:
-            self.compute_triplet_antigen_combinations(combo[0], combo[1], combo[2])
+            self.compute_triplet_antigen_combinations(
+                combo[0], combo[1], combo[2], masking_mode=masking_mode
+            )
 
-    def compute_dual_antigen_combination(self, slide1, slide2, save_img=False):
+    def compute_dual_antigen_combination(
+        self, slide1, slide2, save_img=False, masking_mode="tile-level"
+    ):
         """
         Analyzes antigen expressions for each of tiles of the given pair of slides using Multiprocesing based on the
         antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
@@ -958,10 +972,13 @@ class SlideCollection(object):
 
         # Init dict for results of each tile
         comparison_dict = {}
-
-        with concurrent.futures.ProcessPoolExecutor() as exe:
+        max_workers = os.cpu_count() - 1
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
-                exe.map(colocalization.analyze_dual_antigen_colocalization, iterable),
+                exe.map(
+                    colocalization.analyze_dual_antigen_colocalization,
+                    iterable,
+                ),
                 total=len(iterable),
                 desc="Calculating Coverage of Slide "
                 + slide1.name
@@ -986,10 +1003,10 @@ class SlideCollection(object):
             [slide1.name, slide2.name],
             antigen_profiles=[slide1.antigen_profile, slide2.antigen_profile],
         )
-        self.save_antigen_combinations(result_type="dual")
+        self.save_antigen_combinations(result_type="dual", masking_mode=masking_mode)
 
     def compute_triplet_antigen_combinations(
-        self, slide1, slide2, slide3, save_img=False
+        self, slide1, slide2, slide3, save_img=False, masking_mode="tile-level"
     ):
         """
         Analyzes antigenexpressions for each of tiles of the given triplet of slides using Multiprocessing based on the
@@ -1067,8 +1084,9 @@ class SlideCollection(object):
             f"Starting antigen analysis for: {slide1.name} & {slide2.name} & {slide3.name}"
         )
         comparison_dict = {}
+        max_workers = os.cpu_count() - 1
         # Process tiles using multiprocessing
-        with concurrent.futures.ProcessPoolExecutor() as exe:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
                 exe.map(
                     colocalization.analyze_triplet_antigen_colocalization, iterable
@@ -1103,7 +1121,7 @@ class SlideCollection(object):
                 slide3.antigen_profile,
             ],
         )
-        self.save_antigen_combinations(result_type="triplet")
+        self.save_antigen_combinations(result_type="triplet", masking_mode=masking_mode)
 
     def summarize_antigen_combinations(
         self, comparison_dict, slide_names, antigen_profiles
@@ -1122,6 +1140,8 @@ class SlideCollection(object):
         sum_negative = 0.00
         sum_tissue = 0.00
         sum_background = 0.00
+        sum_mask = 0.00
+        sum_non_mask = 0.00
         error1 = 0
         error2 = 0
 
@@ -1140,6 +1160,8 @@ class SlideCollection(object):
                 sum_negative += comparison_dict[i]["Negative"]
                 sum_tissue += comparison_dict[i]["Tissue"]
                 sum_background += comparison_dict[i]["Background / No Tissue"]
+                sum_mask += comparison_dict[i]["Mask Area"]
+                sum_non_mask += comparison_dict[i]["Non-mask Area"]
             elif comparison_dict[i].get("Flag") == -1:
                 error1 += 1
             elif comparison_dict[i].get("Flag") == -2:
@@ -1158,6 +1180,8 @@ class SlideCollection(object):
             sum_negative /= processed_tiles
             sum_tissue /= processed_tiles
             sum_background /= processed_tiles
+            sum_mask /= processed_tiles
+            sum_non_mask /= processed_tiles
         else:
             sum_total_coverage = 0
             sum_total_overlap = 0
@@ -1171,6 +1195,8 @@ class SlideCollection(object):
             sum_negative = 0
             sum_tissue = 0
             sum_background = 0
+            sum_mask = 0
+            sum_non_mask = 100
 
         total_error = error1 + error2
         total_processed_tiles = (
@@ -1198,6 +1224,8 @@ class SlideCollection(object):
                 "Negative Tissue (%)": round(float(sum_negative), 2),
                 "Total Tissue (%)": round(float(sum_tissue), 2),
                 "Background / No Tissue (%)": round(float(sum_background), 2),
+                "Mask Area (%)": round(float(sum_mask), 2),
+                "Non-mask Area (%)": round(float(sum_non_mask), 2),
                 "Total Processed Tiles (%)": round(float(total_processed_tiles), 2),
                 "Total Error (%)": round(
                     float((total_error / len(comparison_dict)) * 100), 2
@@ -1243,7 +1271,7 @@ class SlideCollection(object):
                 by="Total Coverage (%)", ascending=False
             )
 
-    def save_antigen_combinations(self, result_type="dual"):
+    def save_antigen_combinations(self, result_type="dual", masking_mode="tile-level"):
         """
         Save antigen combination results as CSV and PICKLE.
 
@@ -1252,11 +1280,11 @@ class SlideCollection(object):
         """
         if result_type == "dual":
             summary_df = self.dual_antigen_results
-            csv_filename = "dual_antigen_expressions.csv"
+            csv_filename = f"{masking_mode}_dual_antigen_expressions.csv"
             pickle_filename = "dual_antigen_expressions.pickle"
         elif result_type == "triplet":
             summary_df = self.triplet_antigen_results
-            csv_filename = "triplet_antigen_expressions.csv"
+            csv_filename = f"{masking_mode}_triplet_antigen_expressions.csv"
             pickle_filename = "triplet_antigen_expressions.pickle"
         else:
             raise ValueError("Invalid result_type. Must be 'dual' or 'triplet'.")

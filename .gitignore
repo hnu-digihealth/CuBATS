@@ -166,3 +166,5 @@ cython_debug/
 
 # Logs
 logs/
+src/cubats/script1.py
+src/cubats/script.py
