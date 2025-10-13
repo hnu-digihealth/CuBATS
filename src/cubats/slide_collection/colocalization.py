@@ -95,6 +95,7 @@ def analyze_dual_antigen_colocalization(iterable):
     profile1, profile2 = iterable[2]
     dir = iterable[3]
     save_img = iterable[4]
+    masking_mode = iterable[5]
 
     tilename = tile1["Tilename"]
     colocal_dict = {"Tilename": tilename}
@@ -174,17 +175,52 @@ def analyze_dual_antigen_colocalization(iterable):
     total_overlap = high_overlap + med_overlap + low_overlap
     total_complement = high_complement + med_complement + low_complement
     tissue_count = coverage + negative
-    if masked_pixels > 0:
-        total_coverage = round((coverage / masked_pixels) * 100, 4)
-        total_overlap = round((total_overlap / masked_pixels) * 100, 4)
-        total_complement = round((total_complement / masked_pixels) * 100, 4)
-        high_overlap = round((high_overlap / masked_pixels) * 100, 4)
-        high_complement = round((high_complement / masked_pixels) * 100, 4)
-        med_overlap = round((med_overlap / masked_pixels) * 100, 4)
-        med_complement = round((med_complement / masked_pixels) * 100, 4)
-        low_overlap = round((low_overlap / masked_pixels) * 100, 4)
-        low_complement = round((low_complement / masked_pixels) * 100, 4)
-        negative = round((negative / masked_pixels) * 100, 4)
+
+    if masking_mode == "pixel-level":
+        if masked_pixels > 0:
+            total_coverage = round((coverage / masked_pixels) * 100, 4)
+            total_overlap = round((total_overlap / masked_pixels) * 100, 4)
+            total_complement = round((total_complement / masked_pixels) * 100, 4)
+            high_overlap = round((high_overlap / masked_pixels) * 100, 4)
+            high_complement = round((high_complement / masked_pixels) * 100, 4)
+            med_overlap = round((med_overlap / masked_pixels) * 100, 4)
+            med_complement = round((med_complement / masked_pixels) * 100, 4)
+            low_overlap = round((low_overlap / masked_pixels) * 100, 4)
+            low_complement = round((low_complement / masked_pixels) * 100, 4)
+            negative = round((negative / masked_pixels) * 100, 4)
+            tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+            background = round((background / masked_pixels) * 100, 4)
+            mask = round((masked_pixels / 1048576) * 100, 4)
+            if non_mask > 0:
+                non_mask = round((non_mask / 1048576) * 100, 4)
+            else:
+                non_mask = 0.00
+        else:
+            total_coverage = 0.00
+            total_overlap = 0.00
+            total_complement = 0.00
+            high_overlap = 0.00
+            high_complement = 0.00
+            med_overlap = 0.00
+            med_complement = 0.00
+            low_overlap = 0.00
+            low_complement = 0.00
+            negative = 0.00
+            tissue_count = 0.00
+            background = 0.00
+            mask = 0.00
+            non_mask = round((non_mask / 1048576) * 100, 4)
+    elif masking_mode == "tile-level":
+        total_coverage = round((coverage / tissue_count) * 100, 4)
+        total_overlap = round((total_overlap / tissue_count) * 100, 4)
+        total_complement = round((total_complement / tissue_count) * 100, 4)
+        high_overlap = round((high_overlap / tissue_count) * 100, 4)
+        high_complement = round((high_complement / tissue_count) * 100, 4)
+        med_overlap = round((med_overlap / tissue_count) * 100, 4)
+        med_complement = round((med_complement / tissue_count) * 100, 4)
+        low_overlap = round((low_overlap / tissue_count) * 100, 4)
+        low_complement = round((low_complement / tissue_count) * 100, 4)
+        negative = round((negative / tissue_count) * 100, 4)
         tissue_count = round((tissue_count / masked_pixels) * 100, 4)
         background = round((background / masked_pixels) * 100, 4)
         mask = round((masked_pixels / 1048576) * 100, 4)
@@ -192,21 +228,7 @@ def analyze_dual_antigen_colocalization(iterable):
             non_mask = round((non_mask / 1048576) * 100, 4)
         else:
             non_mask = 0.00
-    else:
-        total_coverage = 0.00
-        total_overlap = 0.00
-        total_complement = 0.00
-        high_overlap = 0.00
-        high_complement = 0.00
-        med_overlap = 0.00
-        med_complement = 0.00
-        low_overlap = 0.00
-        low_complement = 0.00
-        negative = 0.00
-        tissue_count = 0.00
-        background = 0.00
-        mask = 0.00
-        non_mask = round((non_mask / 1048576) * 100, 4)
+
     # Build dict
     colocal_dict["Total Coverage"] = total_coverage
     colocal_dict["Total Overlap"] = total_overlap
@@ -309,6 +331,7 @@ def analyze_triplet_antigen_colocalization(iterable):
     profile1, profile2, profile3 = iterable[3]
     dir = iterable[4]
     save_img = iterable[5]
+    masking_mode = iterable[6]
 
     tilename = tile1["Tilename"]
     colocal_dict = {"Tilename": tilename}
@@ -473,18 +496,51 @@ def analyze_triplet_antigen_colocalization(iterable):
     total_complement = high_complement + med_complement + low_complement
     tissue_count = coverage + negative
 
-    # Compute percentages
-    if masked_pixels > 0:
-        total_coverage = round((coverage / masked_pixels) * 100, 4)
-        total_overlap = round((total_overlap / masked_pixels) * 100, 4)
-        total_complement = round((total_complement / masked_pixels) * 100, 4)
-        high_overlap = round((high_overlap / masked_pixels) * 100, 4)
-        high_complement = round((high_complement / masked_pixels) * 100, 4)
-        med_overlap = round((med_overlap / masked_pixels) * 100, 4)
-        med_complement = round((med_complement / masked_pixels) * 100, 4)
-        low_overlap = round((low_overlap / masked_pixels) * 100, 4)
-        low_complement = round((low_complement / masked_pixels) * 100, 4)
-        negative = round((negative / masked_pixels) * 100, 4)
+    if masking_mode == "pixel-level":
+        if masked_pixels > 0:
+            total_coverage = round((coverage / masked_pixels) * 100, 4)
+            total_overlap = round((total_overlap / masked_pixels) * 100, 4)
+            total_complement = round((total_complement / masked_pixels) * 100, 4)
+            high_overlap = round((high_overlap / masked_pixels) * 100, 4)
+            high_complement = round((high_complement / masked_pixels) * 100, 4)
+            med_overlap = round((med_overlap / masked_pixels) * 100, 4)
+            med_complement = round((med_complement / masked_pixels) * 100, 4)
+            low_overlap = round((low_overlap / masked_pixels) * 100, 4)
+            low_complement = round((low_complement / masked_pixels) * 100, 4)
+            negative = round((negative / masked_pixels) * 100, 4)
+            tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+            background = round((background / masked_pixels) * 100, 4)
+            mask = round((masked_pixels / 1048576) * 100, 4)
+            if non_mask > 0:
+                non_mask = round((non_mask / 1048576) * 100, 4)
+            else:
+                non_mask = 0.00
+        else:
+            total_coverage = 0.00
+            total_overlap = 0.00
+            total_complement = 0.00
+            high_overlap = 0.00
+            high_complement = 0.00
+            med_overlap = 0.00
+            med_complement = 0.00
+            low_overlap = 0.00
+            low_complement = 0.00
+            negative = 0.00
+            tissue_count = 0.00
+            background = 0.00
+            mask = 0.00
+            non_mask = round((non_mask / 1048576) * 100, 4)
+    elif masking_mode == "tile-level":
+        total_coverage = round((coverage / tissue_count) * 100, 4)
+        total_overlap = round((total_overlap / tissue_count) * 100, 4)
+        total_complement = round((total_complement / tissue_count) * 100, 4)
+        high_overlap = round((high_overlap / tissue_count) * 100, 4)
+        high_complement = round((high_complement / tissue_count) * 100, 4)
+        med_overlap = round((med_overlap / tissue_count) * 100, 4)
+        med_complement = round((med_complement / tissue_count) * 100, 4)
+        low_overlap = round((low_overlap / tissue_count) * 100, 4)
+        low_complement = round((low_complement / tissue_count) * 100, 4)
+        negative = round((negative / tissue_count) * 100, 4)
         tissue_count = round((tissue_count / masked_pixels) * 100, 4)
         background = round((background / masked_pixels) * 100, 4)
         mask = round((masked_pixels / 1048576) * 100, 4)
@@ -492,21 +548,6 @@ def analyze_triplet_antigen_colocalization(iterable):
             non_mask = round((non_mask / 1048576) * 100, 4)
         else:
             non_mask = 0.00
-    else:
-        total_coverage = 0.00
-        total_overlap = 0.00
-        total_complement = 0.00
-        high_overlap = 0.00
-        high_complement = 0.00
-        med_overlap = 0.00
-        med_complement = 0.00
-        low_overlap = 0.00
-        low_complement = 0.00
-        negative = 0.00
-        tissue_count = 0.00
-        background = 0.00
-        mask = 0.00
-        non_mask = round((non_mask / 1048576) * 100, 4)
 
     # Build dict using Python floats
     colocal_dict["Total Coverage"] = total_coverage
@@ -638,7 +679,7 @@ def _process_single_tile(tile, dir, save_img, color, antigen_profile):
     low_thresh = antigen_profile["low_positive_threshold"]
 
     # Create masks for different intensity zones for tile1
-    high_positive_mask = img1 < high_thresh & tumor_mask
+    high_positive_mask = (img1 < high_thresh) & tumor_mask
     medium_positive_mask = (img1 >= high_thresh) & (img1 < medium_thresh) & tumor_mask
     low_positive_mask = (img1 >= medium_thresh) & (img1 < low_thresh) & tumor_mask
     negative_mask = (img1 >= low_thresh) & (img1 < 235) & tumor_mask
@@ -892,7 +933,7 @@ def _process_two_tiles(tile1, tile2, dir, save_img, colors, antigen_profiles):
     background_mask1 = (img1 >= 235) & tumor_mask
 
     # Create masks for different intensity zones for tile2
-    high_positive_mask2 = img2 < high_thresh2 & tumor_mask
+    high_positive_mask2 = (img2 < high_thresh2) & tumor_mask
     medium_positive_mask2 = (
         (img2 >= high_thresh2) & (img2 < medium_thresh2) & tumor_mask
     )

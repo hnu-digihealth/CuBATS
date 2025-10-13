@@ -11,7 +11,6 @@ from cubats.slide_collection.colocalization import \
     analyze_triplet_antigen_colocalization
 
 
-@unittest.skip("Skipping all tests temporarily")
 class TestComputeTripletAntigenColocalization(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the test
@@ -39,7 +38,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
 
@@ -50,7 +57,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -80,7 +95,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -110,7 +133,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 75.0)
@@ -148,7 +179,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -200,7 +239,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 75.0)
@@ -238,7 +285,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -261,7 +316,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], -1)
 
@@ -272,7 +335,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], -2)
 
@@ -283,7 +354,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], -2)
 
@@ -294,7 +373,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], -2)
 
@@ -306,7 +393,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         mock_save.assert_called_once()
         # Verify the expected results
@@ -343,7 +438,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 0.0)
@@ -378,7 +481,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 0.0)
@@ -413,7 +524,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 0.0)
@@ -444,7 +563,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -479,7 +606,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -514,7 +649,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -549,7 +692,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -584,7 +735,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -619,7 +778,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -654,7 +821,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -689,7 +864,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -724,7 +907,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -759,7 +950,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -794,7 +993,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -829,7 +1036,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -864,7 +1079,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -899,7 +1122,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -934,7 +1165,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -969,7 +1208,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1004,7 +1251,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1039,7 +1294,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1074,7 +1337,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1109,7 +1380,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1144,7 +1423,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1179,7 +1466,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1243,7 +1538,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 75.0)
@@ -1288,7 +1591,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -1352,12 +1663,12 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         # Run with save_img = True
         save_img_true_result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, True]
+            [img1, img2, img3, self.antigen_profiles, output_path, True, "tile-level"]
         )
 
         # Run with save_img = False
         save_img_false_result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, False]
+            [img1, img2, img3, self.antigen_profiles, output_path, False, "tile-level"]
         )
 
         # Check if the results are the same
@@ -1392,12 +1703,12 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         # Run with save_img = True
         save_img_true_result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, True]
+            [img1, img2, img3, self.antigen_profiles, output_path, True, "tile-level"]
         )
 
         # Run with save_img = False
         save_img_false_result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, False]
+            [img1, img2, img3, self.antigen_profiles, output_path, False, "tile-level"]
         )
 
         # Check if the results are the same
@@ -1460,7 +1771,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = True
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1505,7 +1824,15 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         output_path = self.test_dir.name
         save_img = False
         result = analyze_triplet_antigen_colocalization(
-            [img1, img2, img3, self.antigen_profiles, output_path, save_img]
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "tile-level",
+            ]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -1520,6 +1847,114 @@ class TestComputeTripletAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Negative"], 0.0)
         self.assertAlmostEqual(result["Tissue"], 75.0)
         self.assertAlmostEqual(result["Background / No Tissue"], 25.0)
+
+    def test_skewed_distribution_with_background_masked_pixel_level_triple(self):
+        size = 1024 * 1024
+        nan_pixels = size // 6
+        category_pixels = size // 6
+
+        img1_array = np.full((1024, 1024), np.nan)
+        img2_array = np.full((1024, 1024), np.nan)
+        img3_array = np.full((1024, 1024), np.nan)
+
+        all_indices = np.arange(size)
+        mask_indices = all_indices[: size - nan_pixels]
+
+        np.random.seed(42)
+        np.random.shuffle(mask_indices)
+
+        img1_flat = img1_array.flatten()
+        img2_flat = img2_array.flatten()
+        img3_flat = img3_array.flatten()
+
+        # Tile 1
+        img1_flat[mask_indices[0 * category_pixels : 1 * category_pixels]] = (
+            50  # High positive
+        )
+        img1_flat[mask_indices[1 * category_pixels : 2 * category_pixels]] = (
+            100  # Medium positive
+        )
+        img1_flat[mask_indices[2 * category_pixels : 3 * category_pixels]] = (
+            150  # Low positive
+        )
+        img1_flat[mask_indices[3 * category_pixels : 4 * category_pixels]] = (
+            200  # Negative
+        )
+        img1_flat[mask_indices[4 * category_pixels : 5 * category_pixels]] = (
+            240  # Background
+        )
+
+        # Tile 2
+        img2_flat[mask_indices[0 * category_pixels : 1 * category_pixels]] = (
+            200  # Negative
+        )
+        img2_flat[mask_indices[1 * category_pixels : 2 * category_pixels]] = (
+            150  # Low positive
+        )
+        img2_flat[mask_indices[2 * category_pixels : 3 * category_pixels]] = (
+            100  # Medium positive
+        )
+        img2_flat[mask_indices[3 * category_pixels : 4 * category_pixels]] = (
+            50  # High positive
+        )
+        img2_flat[mask_indices[4 * category_pixels : 5 * category_pixels]] = (
+            240  # Background
+        )
+
+        # Tile 3
+        img3_flat[mask_indices[0 * category_pixels : 1 * category_pixels]] = (
+            150  # Low positive
+        )
+        img3_flat[mask_indices[1 * category_pixels : 2 * category_pixels]] = (
+            50  # High positive
+        )
+        img3_flat[mask_indices[2 * category_pixels : 3 * category_pixels]] = (
+            100  # Medium positive
+        )
+        img3_flat[mask_indices[3 * category_pixels : 4 * category_pixels]] = (
+            200  # Negative
+        )
+        img3_flat[mask_indices[4 * category_pixels : 5 * category_pixels]] = (
+            240  # Background
+        )
+
+        img1_array = img1_flat.reshape((1024, 1024))
+        img2_array = img2_flat.reshape((1024, 1024))
+        img3_array = img3_flat.reshape((1024, 1024))
+
+        img1 = {"Tilename": "tile1", "Flag": 1, "Image Array": img1_array}
+        img2 = {"Tilename": "tile2", "Flag": 1, "Image Array": img2_array}
+        img3 = {"Tilename": "tile3", "Flag": 1, "Image Array": img3_array}
+
+        output_path = self.test_dir.name
+        save_img = False
+
+        result = analyze_triplet_antigen_colocalization(
+            [
+                img1,
+                img2,
+                img3,
+                self.antigen_profiles,
+                output_path,
+                save_img,
+                "pixel-level",
+            ]
+        )
+        self.assertEqual(result["Flag"], 1)
+        self.assertAlmostEqual(result["Total Coverage"], 80.0)
+        self.assertAlmostEqual(result["Total Overlap"], 60.0)
+        self.assertAlmostEqual(result["Total Complement"], 20.0)
+        self.assertAlmostEqual(result["High Positive Overlap"], 0.0)
+        self.assertAlmostEqual(result["High Positive Complement"], 20.0)
+        self.assertAlmostEqual(result["Medium Positive Overlap"], 40.0)
+        self.assertAlmostEqual(result["Medium Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Low Positive Overlap"], 20.0)
+        self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Negative"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 80.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 20.0)
+        self.assertAlmostEqual(result["Mask Area"], 83.333)
+        self.assertAlmostEqual(result["Non-mask Area"], 16.667)
 
 
 if __name__ == "__main__":

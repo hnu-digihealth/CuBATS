@@ -203,9 +203,9 @@ def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
     respect to the mask tissue in the tile, as well as the a pathology score.
 
     Args:
-        image (numpy.ndarray): Input image.
+        image (xp.ndarray): Input image.
         antigen_profile (dict): Dictionary with threshold values.
-        masking_mode (String). Masking mode: tile-level or pixel-level
+        tumor_mask (xp.ndarray). Boolean tumor mask for pixel-level, None for tile-level masking.
 
     Returns:
         tuple: A tuple containing:
@@ -214,7 +214,7 @@ def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
             - zones (xp.ndarray): Number of pixels in each intensity zone with respect to the tumor mask.
             - percentage (xp.ndarray): Percentage of pixels in each intensity zone with respect to the tumor mask.
             - score (str): Overall score of the tile.
-            - tissuecount (int): Tissue count of the tile with respect to the tumor mask.
+            - maskcount (int): Tissue count for tile-level masking. Count of masked pixels for pixel-level.
             - img_analysis (xp.ndarray): Array of pixel values for multi-antigen evaluation.
     """
 
@@ -257,19 +257,6 @@ def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
         low_positive_mask &= tumor_mask
         negative_mask &= tumor_mask
         background_mask &= tumor_mask
-    # if mask == "pixel-level":
-    #     tumor_mask = gray_scale_ubyte < 255
-    #     # Apply tumor mask to all masks including background
-    #     high_positive_mask &= tumor_mask
-    #     positive_mask &= tumor_mask
-    #     low_positive_mask &= tumor_mask
-    #     negative_mask &= tumor_mask
-    #     background_mask = (
-    #         (gray_scale_ubyte >= 235) & (gray_scale_ubyte < 255) & tumor_mask
-    #     )
-    # else:
-    #     tumor_mask = None
-    #     background_mask = gray_scale_ubyte >= 235
 
     # Update img_analysis with pixel values based on intensity masks also containing background
     img_analysis[high_positive_mask] = gray_scale_ubyte[high_positive_mask]
@@ -294,7 +281,7 @@ def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
         mask_count = tissue_count
     # Calculate pixel count and percentage
 
-    if xp.sum(zones) == 0:
+    if xp.sum(zones[:4]) == 0:
         percentage = xp.zeros(5, dtype=xp.int32)
         percentage[4] = 100
         score = "Background"
@@ -335,7 +322,6 @@ def calculate_percentage_and_score(zones):
             - score (str): Name of the zone if it exceeds 66.6%, otherwise the name of the zone with the highest score.
 
     Raises:
-        ZeroDivisionError: If pixel count is zero.
         ValueError: If all zones have zero pixels.
     """
 

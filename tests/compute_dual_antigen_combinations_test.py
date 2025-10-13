@@ -11,7 +11,6 @@ from cubats.slide_collection.colocalization import \
     analyze_dual_antigen_colocalization
 
 
-@unittest.skip("Skipping all tests temporarily")
 class TestComputeDualAntigenColocalization(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the test
@@ -38,7 +37,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertIn("Total Coverage", result)
@@ -60,7 +59,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], -1)
 
@@ -71,7 +70,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], -2)
 
@@ -83,7 +82,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = True
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         _ = result
         mock_save.assert_called_once()
@@ -95,7 +94,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -125,7 +124,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -156,7 +155,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 0.0)
@@ -183,7 +182,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -214,7 +213,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -245,7 +244,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -276,7 +275,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -307,7 +306,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -338,7 +337,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -369,7 +368,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -400,7 +399,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -452,7 +451,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = True
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 75.0)
@@ -490,7 +489,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 87.5)
@@ -541,12 +540,12 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
 
         # Run with save_img = True
         save_img_true_result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, True]
+            [img1, img2, self.antigen_profiles, output_path, True, "tile-level"]
         )
 
         # Run with save_img = False
         save_img_false_result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, False]
+            [img1, img2, self.antigen_profiles, output_path, False, "tile-level"]
         )
 
         # Check if the results are the same
@@ -574,12 +573,12 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
 
         # Run with save_img = True
         save_img_true_result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, True]
+            [img1, img2, self.antigen_profiles, output_path, True, "tile-level"]
         )
 
         # Run with save_img = False
         save_img_false_result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, False]
+            [img1, img2, self.antigen_profiles, output_path, False, "tile-level"]
         )
 
         # Check if the results are the same
@@ -589,7 +588,6 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         img1_array = np.full((1024, 1024), 255)
         img2_array = np.full((1024, 1024), 255)
 
-        # Calculate the number of pixels for each band (1/4 of the total pixels)
         total_pixels = 1024 * 1024
         pixels_per_band = total_pixels // 4
 
@@ -618,7 +616,6 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
             150  # Low positive overlap
         )
 
-        # Reshape the array to its original shape
         img2_array = img2_array.reshape((1024, 1024))
 
         img1 = {"Tilename": "tile1", "Flag": 1, "Image Array": img1_array}
@@ -627,7 +624,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = True
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -665,7 +662,7 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         save_img = False
 
         result = analyze_dual_antigen_colocalization(
-            [img1, img2, self.antigen_profiles, output_path, save_img]
+            [img1, img2, self.antigen_profiles, output_path, save_img, "tile-level"]
         )
         self.assertEqual(result["Flag"], 1)
         self.assertAlmostEqual(result["Total Coverage"], 100.0)
@@ -680,6 +677,133 @@ class TestComputeDualAntigenColocalization(unittest.TestCase):
         self.assertAlmostEqual(result["Negative"], 0.0)
         self.assertAlmostEqual(result["Tissue"], 75.0)
         self.assertAlmostEqual(result["Background / No Tissue"], 25.0)
+
+    def test_equal_distribution_masked_pixel_level(self):
+        img1_array = np.full((1024, 1024), np.nan)
+        img2_array = np.full((1024, 1024), np.nan)
+
+        total_pixels = 1024 * 1024
+        pixels_per_band = total_pixels // 4
+
+        mask_indices = np.arange(total_pixels)[: 3 * pixels_per_band]
+        np.random.shuffle(mask_indices)
+
+        img1_flat = img1_array.flatten()
+        img2_flat = img2_array.flatten()
+
+        # Fill masked pixels with values
+        img1_flat[mask_indices[:pixels_per_band]] = 50  # high positive
+        img1_flat[mask_indices[pixels_per_band : 2 * pixels_per_band]] = 100  # medium
+        img1_flat[mask_indices[2 * pixels_per_band : 3 * pixels_per_band]] = 150  # low
+
+        img2_flat[mask_indices[:pixels_per_band]] = 50
+        img2_flat[mask_indices[pixels_per_band : 2 * pixels_per_band]] = 100
+        img2_flat[mask_indices[2 * pixels_per_band : 3 * pixels_per_band]] = 150
+
+        img1_array = img1_flat.reshape((1024, 1024))
+        img2_array = img2_flat.reshape((1024, 1024))
+
+        img1 = {"Tilename": "tile1", "Flag": 1, "Image Array": img1_array}
+        img2 = {"Tilename": "tile2", "Flag": 1, "Image Array": img2_array}
+        output_path = self.test_dir.name
+
+        result = analyze_dual_antigen_colocalization(
+            [img1, img2, self.antigen_profiles, output_path, False, "pixel-level"]
+        )
+
+        self.assertEqual(result["Flag"], 1)
+        self.assertAlmostEqual(result["Total Coverage"], 100.0)
+        self.assertAlmostEqual(result["Total Overlap"], 100.0)
+        self.assertAlmostEqual(result["Total Complement"], 0.0)
+        self.assertAlmostEqual(result["High Positive Overlap"], 33.3333, places=2)
+        self.assertAlmostEqual(result["High Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Medium Positive Overlap"], 33.3333, places=2)
+        self.assertAlmostEqual(result["Medium Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Low Positive Overlap"], 33.3333, places=2)
+        self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Negative"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 100.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 0.0)
+
+    def test_skewed_distribution_with_background_masked_pixel_level(self):
+        size = 1024 * 1024
+        nan_pixels = size // 6
+        category_pixels = size // 6
+
+        img1_array = np.full((1024, 1024), np.nan)
+        img2_array = np.full((1024, 1024), np.nan)
+
+        all_indices = np.arange(size)
+        np.random.seed(42)
+        nan_indices = np.random.choice(all_indices, size=nan_pixels, replace=False)
+        remaining_indices = np.setdiff1d(all_indices, nan_indices)
+
+        np.random.shuffle(remaining_indices)
+
+        # Tile 1
+        img1_flat = img1_array.flatten()
+        img1_flat[remaining_indices[0 * category_pixels : 1 * category_pixels]] = (
+            50  # High positive
+        )
+        img1_flat[remaining_indices[1 * category_pixels : 2 * category_pixels]] = (
+            100  # Medium positive
+        )
+        img1_flat[remaining_indices[2 * category_pixels : 3 * category_pixels]] = (
+            150  # Low positive
+        )
+        img1_flat[remaining_indices[3 * category_pixels : 4 * category_pixels]] = (
+            200  # Negative
+        )
+        img1_flat[remaining_indices[4 * category_pixels : 5 * category_pixels]] = (
+            240  # Background
+        )
+
+        # Tile 2
+        img2_flat = img2_array.flatten()
+        img2_flat[remaining_indices[0 * category_pixels : 1 * category_pixels]] = (
+            200  # Negative
+        )
+        img2_flat[remaining_indices[1 * category_pixels : 2 * category_pixels]] = (
+            150  # Low positive
+        )
+        img2_flat[remaining_indices[2 * category_pixels : 3 * category_pixels]] = (
+            100  # Medium positive
+        )
+        img2_flat[remaining_indices[3 * category_pixels : 4 * category_pixels]] = (
+            50  # High positive
+        )
+        img2_flat[remaining_indices[4 * category_pixels : 5 * category_pixels]] = (
+            240  # Background
+        )
+
+        img1_array = img1_flat.reshape((1024, 1024))
+        img2_array = img2_flat.reshape((1024, 1024))
+
+        img1 = {"Tilename": "tile1", "Flag": 1, "Image Array": img1_array}
+        img2 = {"Tilename": "tile2", "Flag": 1, "Image Array": img2_array}
+        output_path = self.test_dir.name
+        save_img = False
+
+        result = analyze_dual_antigen_colocalization(
+            [img1, img2, self.antigen_profiles, output_path, save_img, "pixel-level"]
+        )
+        print(result)
+
+        self.assertEqual(result["Flag"], 1)
+        self.assertAlmostEqual(result["Total Coverage"], 80.0)
+        self.assertAlmostEqual(result["Total Overlap"], 40.0)
+        self.assertAlmostEqual(result["Total Complement"], 40.0)
+        self.assertAlmostEqual(result["High Positive Overlap"], 0.0)
+        self.assertAlmostEqual(result["High Positive Complement"], 40.0)
+        self.assertAlmostEqual(result["Medium Positive Overlap"], 0.0)
+        self.assertAlmostEqual(result["Medium Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Low Positive Overlap"], 40.0)
+        self.assertAlmostEqual(result["Low Positive Complement"], 0.0)
+        self.assertAlmostEqual(result["Negative"], 0.0)
+        self.assertAlmostEqual(result["Tissue"], 80.0)
+        self.assertAlmostEqual(result["Background / No Tissue"], 20.0)
+        self.assertAlmostEqual(result["Mask Area"], 83.333)
+        self.assertAlmostEqual(result["Non-mask Area"], 16.667)
 
 
 if __name__ == "__main__":

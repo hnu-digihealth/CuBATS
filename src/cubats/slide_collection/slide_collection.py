@@ -963,6 +963,7 @@ class SlideCollection(object):
                         [slide1.antigen_profile, slide2.antigen_profile],
                         dir,
                         save_img,
+                        masking_mode,
                     )
                 )
         start_time = time()
@@ -1075,6 +1076,7 @@ class SlideCollection(object):
                         ],
                         dirname,
                         save_img,
+                        masking_mode,
                     )
                 )
 
