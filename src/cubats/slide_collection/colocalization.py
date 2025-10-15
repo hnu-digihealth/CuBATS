@@ -18,25 +18,33 @@ COLOR_NON_MASK = [128, 128, 128]  # Darker Gray
 
 def analyze_dual_antigen_colocalization(iterable):
     """
-    This function analyzes antigen colocalization in the same tile from 2 different WSIs and returns the results as a
-    dictionary.
+    This function analyzes antigen co-expression of the same tile from two different antigen slides and returns the
+    results as dictionary.
 
-    The function performs pixel-wise comparison across two images with respect to the tumor mask to calculate total
-    coverage, overlapping coverage, and complementary coverage. The intensity levels are divided into five categories
-    based on their intensity values. Intensity values are defined for each tile by the passed antigen profile which can
-    be defined when initializing the SlideCollection. If not antigen profiles are defined, intensity values will fall
-    back to default thresholds: high positive (0-60), medium positive (61-120), low positive (121-180), negative
-    (181-234), and background (235-255). The results are saved in a dictionary and returned. Optionally, an image
-    containing the colored results can be saved in the specified directory.
+    The function performs pixel-wise comparison across two images to evaluate combined total coverage, antigen overlap,
+    and complementary expression. The intensity levels are divided into five categories based on their intensity values.
+    Intensity values are defined for each tile by the passed antigen profile which can be defined when initializing the
+    SlideCollection. If not antigen profiles are defined, intensity values will fall back to default thresholds:
+    high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+    and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
+    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+    during quantification: `tile-level` or `pixel-level`.
 
     Args:
         iterable (iterable): An iterable containing the following elements:
-            'tile1', the first tile to be compared and analyzed for antigen coverage;
-            'tile2', the second tile to be compared and analyzed for antigen coverage;
-            Antigen-specific profiles: 'profile1' and 'profile2' containing antigen-specific thresholds for
-            tile1 and tile2 respectively;
-            'output path', the directory where the output image should be saved;
-            'save_img', a flag indicating whether to save the output image.
+
+            - `tile1`: the first tile to be compared and analyzed for antigen coverage.
+
+            - `tile2`: the second tile to be compared and analyzed for antigen coverage.
+
+            - `Antigen-specific profiles`: 'profile1', 'profile2', and 'profile3' containing antigen-specific thresholds
+              for tile1, tile2, and tile 3respectively.
+
+            - `output path`: the directory where the output image should be saved.
+
+            - `save_img`: a flag indicating whether to save the output image.
+
+            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.
 
     Returns:
         dict: A dictionary containing the results of the analysis:
@@ -67,6 +75,7 @@ def analyze_dual_antigen_colocalization(iterable):
               (!=255). (Only if Flag == 1)
             - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
               respect to the total pixel count of the tile. (Only if Flag == 1)
+            - Mask Area: Percentage of the tile that is covered by the tumor mask.
             - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
               respect to total pixels in the image (1024 x 1024 = 1048576).
 
@@ -249,26 +258,35 @@ def analyze_dual_antigen_colocalization(iterable):
 
 def analyze_triplet_antigen_colocalization(iterable):
     """
-    This function analyzes antigen colocalization in the same tile from 3 different WSIs and returns the results as
-    dictionary.
+    This function analyzes antigen co-expression of the same tile from 3 different antigen slides and returns the
+    results as dictionary.
 
-    The function performs pixel-wise comparison across three images to calculate total coverage, overlapping coverage,
-    and complementary coverage. The intensity levels are divided into five categories based on their intensity values.
-    Intensity values are defined for each tile by the passed antigen profile which can be defined when initializing the
-    SlideCollection. If not antigen profiles are defined, intensity values will fall back to default thresholds:
-    high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+    The function performs pixel-wise comparison across three images to evaluate combined total coverage, antigen
+    overlap, and complementary expression. The intensity levels are divided into five categories based on their
+    intensity values. Intensity values are defined for each tile by the passed antigen profile which can be defined
+    when initializing the `SlideCollection`. If not antigen profiles are defined, intensity values will fall back to
+    default thresholds: high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
     and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
-    colored results can be saved in the specified directory.
+    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+    during quantification: `tile-level` or `pixel-level`.
 
     Args:
         iterable (iterable): An iterable containing the following elements:
-            'tile1', the first tile to be compared and analyzed for antigen coverage;
-            'tile2', the second tile to be compared and analyzed for antigen coverage,
-            'tile3', the third tileto be compared and analyzed for antigen coverage;
-            Antigen-specific profiles: 'profile1', 'profile2', and 'profile3' containing antigen-specific thresholds
-            for tile1, tile2, and tile 3respectively;
-            'output path', the directory where the output image should be saved;
-            'save_img', a flag indicating whether to save the output image.
+
+            - `tile1`: the first tile to be compared and analyzed for antigen coverage.
+
+            - `tile2`: the second tile to be compared and analyzed for antigen coverage.
+
+            - `tile3`: the third tile to be compared and analyzed for antigen coverage.
+
+            - `Antigen-specific profiles`: 'profile1', 'profile2', and 'profile3' containing antigen-specific thresholds
+              for tile1, tile2, and tile 3respectively.
+
+            - `output path`: the directory where the output image should be saved.
+
+            - `save_img`: a flag indicating whether to save the output image.
+
+            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.
 
     Returns:
         dict: A dictionary containing the results of the analysis:
@@ -299,6 +317,7 @@ def analyze_triplet_antigen_colocalization(iterable):
               (!=255). (Only if Flag == 1)
             - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
               respect to the total pixel count of the tile. (Only if Flag == 1)
+            - Mask Area: Percentage of the tile that is covered by the tumor mask.
             - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
               respect to total pixels in the image (1024 x 1024 = 1048576).
 
@@ -646,27 +665,36 @@ def _process_single_tile(tile, dir, save_img, color, antigen_profile):
 
     Processes a single image tile using vectorization and automatic backend detection for GPU acceleration. It
     categorizes pixels into different complement levels, negative tissue, and background based on the passed antigen
-    profile. Optionally creates and saves a colored image of the analysis into the directory if 'save_img' is True.
+    profile. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
 
     Args:
-        tile (dict): A dictionary containing the image under the key "Image Array" and masks under the key "Masks".
+        tile (dict): A dictionary containing the image under the key `Image Array` and masks under the key `Masks`.
+
         save_img (bool): A flag indicating whether to create a colored image and save it.
+
         dir (str): The directory where the image should be saved if save_img is True.
+
         color (list): A list of RGB color values to be used for different complement levels.
+
         antigen_profile (dict): Antigen profile for the tile, specifying the thresholds applied during processing.
 
     Returns:
         tuple: A tuple containing counts of pixels in the following order:
-            - high_complement (int): Count of pixels with values below 'high_positive_threshold' of 'antigen profile'.
-            - med_complement (int): Count of pixels with values between 'high_positive_threshold' and
-              'medium_positive_threshold' of 'antigen_profile'.
-            - low_complement (int): Count of pixels with values between 'medium_positive_threshold' and
-              'low_positive_threshold' of 'antigen_profile'.
-            - negative (int): Count of pixels with values between 'low_positive_threshold' and 234 of 'antigen_profile'.
-            - background (int): Count of pixels above 235 and below 255.
+
+            - high_complement (int): Sum of pixels with values below `high_positive_threshold` of `antigen profile`.
+
+            - med_complement (int): Sum of pixels with values between `high_positive_threshold` and
+              'medium_positive_threshold` of `antigen_profile`.
+
+            - low_complement (int): Sum of pixels with values between `medium_positive_threshold` and
+              `low_positive_threshold` of `antigen_profile`.
+
+            - negative (int): Sum of pixels with values between `low_positive_threshold` and 234 of `antigen_profile`.
+
+            - background (int): Sum of pixels above 235 and below 255.
 
     Optional Image Saving:
-        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        If `save_img` is True, an image containing the colored results will be saved in the specified directory.
         The coloring scheme depends on the color parameter and is specified by the calling function.
     """
     # Convert image arrays to CuPy arrays
@@ -725,8 +753,8 @@ def _process_two_tiles_old(tile1, tile2, dir, save_img, colors):
     """
     Processes two image tiles by iterating across the tile. It categorizes pixels into overlap, different complement
     levels, negative tissue, and background. Optionally saves the processed image to the specified directory if
-    save_img is True. This function is typically called by analyze_dual_antigen_colocalization or
-    analyze_triplet_antigen_colocalization when two of the three tiles contain tissue.
+    save_img is True. This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
 
     Args:
         tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
@@ -749,7 +777,7 @@ def _process_two_tiles_old(tile1, tile2, dir, save_img, colors):
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory.
         The coloring scheme depends on the color parameter and is specified by the calling function. For more
-        information, refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
         functions.
     """
 
@@ -866,39 +894,53 @@ def _process_two_tiles_old(tile1, tile2, dir, save_img, colors):
 
 def _process_two_tiles(tile1, tile2, dir, save_img, colors, antigen_profiles):
     """
-    Processes antigen expression for two single tiles.
+    Processes antigen co-expression for two single tiles.
 
     Processes two image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
     pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
-    profiles. Optionally creates and saves a colored image of the analysis into the directory if 'save_img' is True.
-    This function is typically called by analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
-    when two of the three tiles contain tissue.
+    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
+    This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
 
     Args:
-        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
-        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key "Image Array".
-        dir (str): The directory where the output image should be saved if save_img is True.
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key `Image Array`.
+
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key `Image Array`.
+
+        dir (str): The directory where the output image should be saved if `save_img` is True.
+
         save_img (bool): A flag indicating whether to save the output image.
+
         colors (list): A list of RGB color values to be used for different complement levels.
+
         antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.
 
     Returns:
         tuple: A tuple containing the counts of:
-            - high_overlap (int): Count of pixels where both tiles are highly positive, according to 'antigen_profiles'.
-            - med_overlap (int): Count of pixels where both tiles are medium positive, according to 'antigen_profiles'.
-            - low_overlap (int): Count of pixels where both tiles are low positive, according to 'antigen_profiles'.
-            - high_complement (int): Count of pixels with values below 'high_positive_threshold' of 'antigen profiles'.
-            - med_complement (int): Count of pixels with values between 'high_positive_threshold' and
-              'medium_positive_threshold' of 'antigen_profiles'
-            - low_complement (int): Count of pixels with values between 'medium_positive_threshold' and
+
+            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.
+
+            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.
+
+            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.
+
+            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of
+              `antigen profiles`.
+
+            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and
+              `medium_positive_threshold` of `antigen_profiles`.
+
+            - low_complement (int): Sum of pixels with only one tile is between 'medium_positive_threshold' and
               'low_positive_threshold' of 'antigen_profiles'.
-            - negative (int): Count of pixels with values between 'low_positive_threshold' and 234 of 'antigen_profile'.
-            - background (int): Count of pixels above 235 and below 255.
+
+            - negative (int): Sum of pixels with values between 'low_positive_threshold' and 235 of 'antigen_profile'.
+
+            - background (int): Sum of pixels above 235 and below 255.
 
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory.
         The coloring scheme depends on the color parameter and is specified by the calling function. For more
-        information, refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
         functions.
     """
     # Convert image arrays to CuPy arrays
@@ -1257,34 +1299,52 @@ def _process_three_tiles(tile1, tile2, tile3, dir, save_img, antigen_profiles):
 
     Processes three image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
     pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
-    profiles. Optionally creates and saves a colored image of the analysis into the directory if 'save_img' is True.
-    This function is only called by analyze_triplet_antigen_colocalization.
+    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
+    This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
 
     Args:
-        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
-        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key "Image Array".
-        tile3 (dict): A dictionary containing tile3's data. The image can be accessed using the key "Image Array".
-        dir (str): The directory where the output image should be saved if save_img is True.
-        save_img (bool): A flag indicating whether to save the output image.
-        antigen_profiles (list): List of three dicts specifying antigen thresholds for each tile respectively.
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key `Image Array`.
 
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key `Image Array`.
+
+        tile3 (dict): A dictionary containing tile3's data. The image can be accessed using the key `Image Array`.
+
+        dir (str): The directory where the output image should be saved if `save_img` is True.
+
+        save_img (bool): A flag indicating whether to save the output image.
+
+        colors (list): A list of RGB color values to be used for different complement levels.
+
+        antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.
 
     Returns:
         tuple: A tuple containing the counts of:
-            - high_overlap (int): Count of pixels where both tiles are highly positive, according to 'antigen_profiles'.
-            - med_overlap (int): Count of pixels where both tiles are medium positive, according to 'antigen_profiles'.
-            - low_overlap (int): Count of pixels where both tiles are low positive, according to 'antigen_profiles'.
-            - high_complement (int): Count of pixels with values below 'high_positive_threshold' of 'antigen profiles'.
-            - med_complement (int): Count of pixels with values between 'high_positive_threshold' and
-              'medium_positive_threshold' of 'antigen_profiles'
-            - low_complement (int): Count of pixels with values between 'medium_positive_threshold' and
+
+            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.
+
+            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.
+
+            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.
+
+            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of
+              `antigen profiles`.
+
+            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and
+              `medium_positive_threshold` of `antigen_profiles`.
+
+            - low_complement (int): Sum of pixels with only one tile is between 'medium_positive_threshold' and
               'low_positive_threshold' of 'antigen_profiles'.
-            - negative (int): Count of pixels with values between 'low_positive_threshold' and 234 of 'antigen_profile'.
-            - background (int): Count of pixels above 235 and below 255.
+
+            - negative (int): Sum of pixels with values between 'low_positive_threshold' and 235 of 'antigen_profile'.
+
+            - background (int): Sum of pixels above 235 and below 255.
 
     Optional Image Saving:
         If save_img is True, an image containing the colored results will be saved in the specified directory.
-        For the coloring scheme, see the description of analyze_triplet_antigen_combinations().
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
+        functions.
     """
     # Convert image arrays to CuPy arrays
     img1 = xp.array(tile1["Image Array"], dtype=xp.float32)

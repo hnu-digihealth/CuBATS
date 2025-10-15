@@ -58,7 +58,7 @@ QUANTIFICATION_RESULTS_COLUMN_NAMES = {
     "Error (%)": float,
     "Thresholds": str,
 }
-DUAL_ANTIGEN_RESULTS_COLUMN_NAMES = {
+DUAL_ANTIGEN_EXPRESSIONS_COLUMN_NAMES = {
     "Slide 1": str,
     "Slide 2": str,
     "Total Coverage (%)": float,
@@ -82,7 +82,7 @@ DUAL_ANTIGEN_RESULTS_COLUMN_NAMES = {
     "Thresholds1": str,
     "Thresholds2": str,
 }
-TRIPLET_ANTIGEN_RESULTS_COLUMN_NAMES = {
+TRIPLET_ANTIGEN_EXPRESSIONS_COLUMN_NAMES = {
     "Slide 1": str,
     "Slide 2": str,
     "Slide 3": str,
@@ -113,8 +113,8 @@ DEFAULT_TILE_SIZE = 1024
 class SlideCollection(object):
     """Initializes a slide collection, stores slide info and performs slide processing.
 
-    'Slide' is a class that initializes a slide collection and stores all relevant information so that processed
-    information can be reloaded at a later time.
+    `SlideCollection` is a class that initializes a collection of slides, stores relevant processing information,
+    and allows the execution of separate processing steps. Previously processed data can be reloaded.
 
     Attributes:
         name (str): Name of parent directory (i.e. name of tumorset).
@@ -123,22 +123,22 @@ class SlideCollection(object):
 
         dest_dir (str): Path to destination directory for results.
 
-        data_dir (str): Path to data directory, a subdirectory of dest_dir. The directory will be initiaded upon class
-            creation inside the dest_dir. Inside the data directory summaries of quantification results, dual antigen
+        data_dir (str): Path to data directory, a subdirectory of `dest_dir`. The directory will be initiaded upon class
+            creation inside the `dest_dir`. Inside the data directory summaries of quantification results, dual antigen
             expression results and triplet antigen expression results are stored as .CSV file.
-            The data_dir also contains the pickle_dir.
+            The data_dir also contains the `pickle_dir`.
 
-        pickle_dir (str): Path to pickle directory, a subdirectory of data_dir. Inside the pickle directory pickled
+        pickle_dir (str): Path to pickle directory, a subdirectory of `data_dir`. Inside the pickle directory pickled
             copies of the slide_collection, quantification results and antigen analysis are stored which will be
             automatically reloaded if a slide collection is (re-)initialized with the same output_dir.
 
-        tiles_dir (str): Path to tiles directory, a subdirectory of dest_dir. Inside the tiles directory the tile
+        tiles_dir (str): Path to tiles directory, a subdirectory of `dest_dir`. Inside the tiles directory the tile
             directories for each slide are stored.
 
-        colocalization_dir (str): Path to colocalization directory, a subdirectory of dest_dir. Inside the
+        colocalization_dir (str): Path to colocalization directory, a subdirectory of `dest_dir`. Inside the
             colocalization directory results of dual and triplet overlap analyses are stored.
 
-        reconstruct_dir (str): Path to reconstruct directory, a subdirectory of dest_dir. Inside the reconstruct
+        reconstruct_dir (str): Path to reconstruct directory, a subdirectory of `dest_dir`. Inside the reconstruct
             directory reconstructed slides are stored.
 
         collection_list (list of Slide): list containing all slide objects.
@@ -174,22 +174,28 @@ class SlideCollection(object):
 
             - Negative (%) (float): Percentage negatively stained pixels in the slide.
 
-            - Total Tissue (%) (float):
+            - Total Tissue (%) (float): Total amount of tissue in the slide.
 
             - Background / No Tissue (%) (float): Percentage of background and non-tissue regions in the slide.
 
-            - H-Score (float):
+            - Mask Area (%) (float): Area of the slide covered by the tumor mask.
 
-            - Score (str):
+            - Non-mask Area (%) (float): Area of the slide not covered by the tumor mask.
+
+            - H-Score (float): Established pathological score calculated based on the distribution of staining
+              intensities in the slide.
+
+            - Score (str): Additional overall score of the slide calculated from the average of scores for all tiles.
+              However, this score may be misleading, as it is an average over the entire slide. TODO necessary?
 
             - Total Processed Tiles (%) (float): Percentage of processed tiles.
 
-            - Total Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
+            - Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
+              Only the case for tile-level masking.
 
-            - Score (str): Overall score of the slide calculated from the average of scores for all tiles. However,
-              this score may be misleading, as it is an average over the entire slide. TODO necessary?
+            - Thresholds (list): List containing the thresholds applied during quantification.
 
-        dual_antigen_results (Dataframe): Dataframe containing a summary of the dual antigen expression results
+        dual_antigen_expressions (Dataframe): Dataframe containing a summary of the dual antigen expression results
             for all processed analyses:
 
             - Slide 1 (str): Name of the first slide.
@@ -361,11 +367,11 @@ class SlideCollection(object):
         )
 
         # Antigen Expression Variables
-        self.dual_antigen_results = pd.DataFrame(
-            columns=DUAL_ANTIGEN_RESULTS_COLUMN_NAMES
+        self.dual_antigen_expressions = pd.DataFrame(
+            columns=DUAL_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
         self.triplet_antigen_results = pd.DataFrame(
-            columns=TRIPLET_ANTIGEN_RESULTS_COLUMN_NAMES
+            columns=TRIPLET_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
 
         # Set destination directories
@@ -477,8 +483,8 @@ class SlideCollection(object):
     def load_previous_results(self, path=None):
         """Loads results from previous processing if they exist.
 
-        Tries to load results from previous processing. If no path is passed, the slide_collections pickle_dir is used.
-        Slide objects are based on OpenSlide which are C-type objects and cannot be stored as pickle. Therefore, each
+        Tries to load results from previous processing. If no path is passed, the collections `pickle_dir` is used.
+        Slide objects are based on `OpenSlid` which are C-type objects and cannot be stored as pickle. Therefore, each
         Slide is re-initialized in the init_slide_collection function. The function will try to load the following
         files:
 
@@ -486,15 +492,12 @@ class SlideCollection(object):
 
             - quantification_results.pickle: Load quantification results from previous processing.
 
-            - dual_overlap_results.pickle: Load dual antigen overlap results from previous processing.
+            - dual_antigen_expressions.pickle: Load dual antigen overlap results from previous processing.
 
             - triplet_overlap_results.pickle: Load triplet antigen overlap results from previous processing.
 
-            - slidename_processing_info.pickle: Load processing information for each slide in the collection from
-              previous processing.
-
         Args:
-            path (str, optional): Path to directory containing pickle files. Defaults to pickle_dir of the slide
+            path (str, optional): Path to directory containing pickle files. Defaults to `pickle_dir` of the slide
                 collection.
 
         """
@@ -536,7 +539,7 @@ class SlideCollection(object):
 
             # load dual overlap results
             if os.path.exists(path_dual_overlap_res):
-                self.dual_antigen_results = pickle.load(
+                self.dual_antigen_expressions = pickle.load(
                     open(path_dual_overlap_res, "rb")
                 )
                 self.logger.debug(
@@ -600,8 +603,9 @@ class SlideCollection(object):
         """Generates mask coordinates based on the mask slide.
 
         Generates a list containing of tiles coordinates that are part of the mask. This allows to only process tiles
-        that are part of the mask and thus contain tumor tissue. Previous mask coordinates will be overwritten and the
-        results will be stored as pickle in pickle_dir.
+        that are part of the mask and thus contain tumor tissue. Tiles with less than 10% tumor tissue are dropped due
+        to save runtime. Previous mask coordinates will be overwritten and the results will be stored as pickle in
+        `pickle_dir`.
 
         Args:
             save_img (bool): Boolean to determine if mask tiles shall be saved as image. Necessary if mask shall be
@@ -610,10 +614,6 @@ class SlideCollection(object):
         """
         # If no mask slide is provided, mask coordinates will contain all tiles of the slide.
         if self.mask is None:
-            # raise ValueError(
-            #     "Slide Collection does not have a mask slide. Please check if src_dir contains a mask slide. \
-            #         If not,please run 'segmentation.run_tumor_segmentation' to generate a mask slide."
-            # )
             mask_start_time = time()
             slide_tiles = self.slides[0].tiles
             self.mask_coordinates.clear()
@@ -635,7 +635,7 @@ class SlideCollection(object):
                     temp = xp.array(temp)
                     mean = xp.mean(temp)
 
-                    # If tile is mostly white, drop tile coordinate prev cutoff: 230 (10%) now 253 (1%)
+                    # If tile is mostly white, drop tile coordinate; cutoff: 230 (10%)
                     if mean < 230:
                         self.mask_coordinates.append((col, row))
                         if save_img:
@@ -699,17 +699,20 @@ class SlideCollection(object):
         """Quantifies all registered slides sequentially and stores results.
 
         Quantifies all slides that were instantiated sequentially with the exception of the reference_slide and the
-        mask_slide. Results are stored as .CSV into the data_dir. All previous quantification results in the
-        'quant_res_df' will be reset and the .CSV file overwritten.
+        mask_slide. Results are stored as .CSV into the `data_dir`. All previous quantification results in the
+        `quant_res_df` will be reset and the previous .CSV file overwritten.
 
         Args:
             save_imgs (bool): Boolean determining if tiles shall be saved as image during processing. This is necessary
-                if slides shall be reconstructed after processing. Note: storing tiles will require additional
-                storage. Defaults to False.
+                if slides shall be reconstructed after processing. Note: storing tiles may require substantial
+                additional storage. Defaults to False.
+
             masking_mode (str): Defines how the tumor mask is applied to tiles during quantification.
-                - 'tile-level' (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
                   Recommended when registration quality is lower (e.g. high median rTRE).
-                - 'pixel-level': Applies the mask precisely at pixel level - only masked pixels are included.
+
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
                   Offers finer quantification, but is more sensitive to registration errors.
         """
         if masking_mode not in ["tile-level", "pixel-level"]:
@@ -732,12 +735,12 @@ class SlideCollection(object):
     def quantify_single_slide(
         self, slide_name, save_img=False, masking_mode="tile-level"
     ):
-        """Calls quantify_slide for given slide_name and appends results to self.quant_res_df.
+        """Quantifies a single slide and appends the results to `quant_res_df`.
 
         This function quantifies staining intensities for all tiles of the given slide using multiprocessing. The slide
         matching the passed slide_name is retrieved from the collection_list and quantified using the quantify_slide
-        function of the Slide class. Results are appended to self.quant_res_df, which is then stored as .CSV in self.
-        data_dir and as .PICKLE in self.pickle_dir. Existing .CSV/.PICKLE files are overwritten.
+        function of the Slide class. Results are appended to `quant_res_df`, which is then stored as .CSV in self.
+        `data_dir` and as .PICKLE in `pickle_dir`. Existing .CSV/.PICKLE files are overwritten.
         For more information on quantification checkout Slide.quantify_slide() function in the slide.py.
 
         Args:
@@ -747,10 +750,12 @@ class SlideCollection(object):
                 reconstructed later on. However, storing images will require addition storage. Defaults to False.
 
             masking_mode (str): Defines how the tumor mask is applied to tiles during quantification.
-                - 'tile-level' (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
-                  Recommended when registration quality is lower (e.g. high median rTRE).
-                - 'pixel-level': Applies the mask precisely at pixel level - only masked pixels are included.
-                  Offers finer quantification, but is more sensitive to registration errors.
+
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+                   Recommended when registration quality is lower (e.g. high median rTRE).
+
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
+                   Offers finer quantification, but is more sensitive to registration errors.
         """
         if masking_mode not in ["tile-level", "pixel-level"]:
             raise ValueError(
@@ -822,7 +827,7 @@ class SlideCollection(object):
 
     def save_quantification_results(self, masking_mode):
         """
-        Stores quant_res_df as .CSV for analysis and .PICKLE for reloading in data_dir and pickle_dir, respectively.
+        Stores `quant_res_df` as .CSV for and .PICKLE in `data_dir` and `pickle_dir`, respectively.
 
         """
         if self.quantification_results.__len__() != 0:
@@ -851,14 +856,20 @@ class SlideCollection(object):
             )
 
     def get_dual_antigen_combinations(self, masking_mode="tile-level"):
-        """Creates antigen pairs and calls `compute_antigen_combinations` function for each pair.
+        """Creates all possible antigen pairs and analyzes antigen co-expression for all pairs. Results are stored
+        in `dual_antigen_expressions`.
 
-        Creates all possible combinations of pairs amongst all quantified slides and analyzes antigen expressions for
-        each pair, including antigen overlap. Results are stored in `self.dual_overlap_results`.
+        Args:
+            masking_mode (str): Determines the mode for mask application that was used for quantification.
 
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+                   Recommended when registration quality is lower (e.g. high median rTRE).
+
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
+                   Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
-        self.dual_antigen_results = pd.DataFrame(
-            columns=DUAL_ANTIGEN_RESULTS_COLUMN_NAMES
+        self.dual_antigen_expressions = pd.DataFrame(
+            columns=DUAL_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
         # Filter out mask and reference slides
         filtered_slides = [
@@ -877,14 +888,20 @@ class SlideCollection(object):
             )
 
     def get_triplet_antigen_combinations(self, masking_mode="tile-level"):
-        """Creates antigen triplets and calls `compute_antigen_combinations` function for each triplet.
+        """Creates all possible antigen triplets and analyzes antigen co-expression for all triplets. Results are stored
+        in `triplet_antigen_expressions`.
 
-        Creates all possible combinations of triplets amongst all quantified slides and analyzes antigen expressions
-        for each triplet, including antigen overlap. Results are stored in `self.triplet_overlap_results`.
+        Args:
+            masking_mode (str): Determines the mode for mask application that was used for quantification.
 
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+                   Recommended when registration quality is lower (e.g. high median rTRE).
+
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
+                   Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
         self.triplet_antigen_results = pd.DataFrame(
-            columns=TRIPLET_ANTIGEN_RESULTS_COLUMN_NAMES
+            columns=TRIPLET_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
         # Filter out mask and reference slides
         filtered_slides = [
@@ -905,38 +922,28 @@ class SlideCollection(object):
     def compute_dual_antigen_combination(
         self, slide1, slide2, save_img=False, masking_mode="tile-level"
     ):
-        """
-        Analyzes antigen expressions for each of tiles of the given pair of slides using Multiprocesing based on the
+        """Analyzes the antigen co-expression for a pair of two slides.
+
+        Analyzes antigen co-expressions for each tile for the given pair of slides using multiprocesing based on the
         antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
-        `self.dual_overlap_results` and saved as CSV in `self.data_dir` as well as PICKLE in `self.pickle_dir`.
+        `dual_antigen_expressions` and saved as CSV in `data_dir` as well as PICKLE in `pickle_dir`. For more detailed
+        explanation of the co-expression results see `SlideCollection.triplet_antigen_expressions`.
 
         Args:
-            slide1 (dict): Quantification results for slide 1
-            slide2 (dict): Quantification results for slide 2
+            slide1 (Slide): Slide Object for slide 1.
+
+            slide2 (Slide): Slide Object for slide 2.
+
             save_img (bool):  Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
-                reconstructed later on. However, storing images will require addition storage. Defaults to False.
+                reconstructed later on. However, storing images will require additional storage. Defaults to False.
 
-        _overlap_dict:
-            - Slide 1 (str): Name of the first slide
-            - Slide 2 (str): Name of the second slide
-            - Total Coverage (float): Combined coverage of the two slides
-            - Total Overlap (float): Overlap of antigen expression in the two slides
-            - Total Complement (float): Complementary antigen expressions in the two slides
-            - High Positive Overlap (float): Overlap of high positive pixels
-            - High Positive Complement (float):
-            - Medium Positive Overlap (float):
-            - Medium Positive Complement (float):
-            - Low Positice Overlap (float):
-            - Low Positive Complement (float):
-            - Negative Tissue(float): Total of Negative in the three slides
-            - Total Tissue (float):
-            - Background / No Tissue (float):
-            - Total Processed Tiles (float):
-            - Total Error (float): Percentage of tiles that were not processed due to insufficient tissue coverage
-            - Error 1 (float):
-            - Error 2 (float):
+            masking_mode (str): Determines the mode for mask application that was used for quantification.
 
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+                   Recommended when registration quality is lower (e.g. high median rTRE).
 
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
+                   Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
         # Create directory for pair of slides
         if save_img:
@@ -1009,38 +1016,30 @@ class SlideCollection(object):
     def compute_triplet_antigen_combinations(
         self, slide1, slide2, slide3, save_img=False, masking_mode="tile-level"
     ):
-        """
-        Analyzes antigenexpressions for each of tiles of the given triplet of slides using Multiprocessing based on the
-        antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
-        `self.triplet_overlap_results` and saved as CSV in `self.data_dir` as well as PICKLE in `self.pickle_dir`.
+        """Analyzes the antigen co-expression for a triplet of three slides.
+
+        Analyzes antigen co-expressions for each of tiles of the given triplet of slides using Multiprocessing based on
+        the antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
+        `triplet_antigen_expressions` and saved as CSV in `data_dir` as well as PICKLE in `pickle_dir`. For more
+        detailed explanation of the co-expression results see `SlideCollection.triplet_antigen_expressions`.
 
         Args:
-            slide1 (dict): Quantification results for slide 1
-            slide2 (dict): Quantification results for slide 2
-            slide3 (dict): Quantification results for slide 3
-            save_img (bool): Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
-                reconstructed later on. However, storing images will require addition storage. Defaults to False.
+            slide1 (Slide): Slide Object for slide 1.
 
-        overlap_dict:
-            - Slide 1 (str): Name of the first slide
-            - Slide 2 (str): Name of the second slide
-            - Slide 3 (str): Name of the third slide
-            - Total Coverage (float): Combined coverage of the three slides
-            - Total Overlap (float): Overlap of antigen expression in the three slides
-            - Total Complement (float): Complementary antigen expressions in the three slides
-            - High Positive Overlap (float): Overlap of high positive pixels
-            - High Positive Complement (float):
-            - Medium Positive Overlap (float):
-            - Medium Positive Complement (float):
-            - Low Positice Overlap (float):
-            - Low Positive Complement (float):
-            - Negative Tissue(float): Total of Negative in the three slides
-            - Total Tissue (float):
-            - Background / No Tissue (float):
-            - Total Processed Tiles (float):
-            - Total Error (float): Percentage of tiles that were not processed due to insufficient tissue coverage
-            - Error 1 (float):
-            - Error 2 (float):
+            slide2 (Slide): Slide Object for slide 2.
+
+            slide3 (Slide): Slide Object for slide 3.
+
+            save_img (bool):  Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
+                reconstructed later on. However, storing images will require additional storage. Defaults to False.
+
+            masking_mode (str): Determines the mode for mask application that was used for quantification.
+
+                - `tile-level` (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+                   Recommended when registration quality is lower (e.g. high median rTRE).
+
+                - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
+                   Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
 
         # Create directory for triplet of slides
@@ -1128,7 +1127,15 @@ class SlideCollection(object):
     def summarize_antigen_combinations(
         self, comparison_dict, slide_names, antigen_profiles
     ):
-        """ """
+        """Summarizes co-expression results of an antigen pair or triplet.
+
+        Args:
+            - comparison_dict (dict): Dictionary containing the co-expression results for each tile of the combination.
+
+            - slide_names (str): Names of all slides of the combination.
+
+            - antigen_profiles (list): List of all antigen profiles of the slides in the combination.
+        """
         processed_tiles = 0
         sum_total_coverage = 0.00
         sum_total_overlap = 0.00
@@ -1257,11 +1264,11 @@ class SlideCollection(object):
             ]
 
         if len(slide_names) == 2:
-            self.dual_antigen_results = pd.concat(
-                [self.dual_antigen_results, pd.DataFrame([overlap_dict])],
+            self.dual_antigen_expressions = pd.concat(
+                [self.dual_antigen_expressions, pd.DataFrame([overlap_dict])],
                 ignore_index=True,
             )
-            self.dual_antigen_results = self.dual_antigen_results.sort_values(
+            self.dual_antigen_expressions = self.dual_antigen_expressions.sort_values(
                 by="Total Coverage (%)", ascending=False
             )
         else:
@@ -1279,9 +1286,11 @@ class SlideCollection(object):
 
         Args:
             result_type (str): Type of antigen combination results to save. Can be "dual" or "triplet".
+
+            masking_mode (str): Mode of mask application for consistent file naming with the applied mode.
         """
         if result_type == "dual":
-            summary_df = self.dual_antigen_results
+            summary_df = self.dual_antigen_expressions
             csv_filename = f"{masking_mode}_dual_antigen_expressions.csv"
             pickle_filename = "dual_antigen_expressions.pickle"
         elif result_type == "triplet":

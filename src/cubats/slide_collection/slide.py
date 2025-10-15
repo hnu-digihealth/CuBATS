@@ -23,7 +23,7 @@ from cubats.slide_collection import tile_processing
 class Slide(object):
     """Slide Class.
 
-    'Slide' class instatiates a slide object containing all relevant information and results for a single slide. All
+    `Slide` class instatiates a slide object containing all relevant information and results for a single slide. All
      slide specific operations that can be performed on a single slide rather than on a collection of slides are
      implemented in this class. This includes quantification of staining intensities and reconstruction of a slide. The
      class is initialized with the name of the slide, the path to the slide file, as well as information on whether the
@@ -36,7 +36,7 @@ class Slide(object):
     Attributes:
         name (str): The name of the slide.
 
-        openslide_object (openslide.OpenSlide): The openslide object of the slide.
+        openslide_object (openslide.OpenSlide): The OpenSlide Object of the slide.
 
         tiles (openslide.deepzoom.DeepZoomGenerator): DeepZoom Generator containing the tiles of the slide.
 
