@@ -10,8 +10,11 @@ from PIL import Image
 from cubats.config import xp
 from cubats.cutils import to_numpy
 from cubats.slide_collection.tile_processing import (
-    calculate_percentage_and_score, calculate_pixel_intensity,
-    ihc_stain_separation, quantify_tile)
+    calculate_percentage_and_score,
+    calculate_pixel_intensity,
+    ihc_stain_separation,
+    quantify_tile,
+)
 
 
 class TestQuantifyTile(unittest.TestCase):
@@ -339,7 +342,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         expected_percentage = xp.concatenate([percentage_tissue, percentage_background])
 
         np.testing.assert_array_almost_equal(
-            percentage.get(), expected_percentage.get()
+            to_numpy(percentage), to_numpy(expected_percentage)
         )
 
         # Check pixel count
@@ -790,8 +793,9 @@ class TestTileProcessing(unittest.TestCase):
 
         # Call the function
         # CuBATS
-        from cubats.slide_collection.tile_processing import \
-            separate_stains_and_save__tiles_as_tif
+        from cubats.slide_collection.tile_processing import (
+            separate_stains_and_save__tiles_as_tif,
+        )
 
         separate_stains_and_save__tiles_as_tif(
             mock_deepzoom_object, 1, "/mock/target_directory"
