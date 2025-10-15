@@ -1,0 +1,32 @@
+[
+    {
+        "Name": "ADAM9",
+        "low_positive_threshold": 194,
+        "medium_positive_threshold": 154,
+        "high_positive_threshold": 92
+    },
+    {
+        "Name": "B7H3",
+        "low_positive_threshold": 194,
+        "medium_positive_threshold": 154,
+        "high_positive_threshold": 115
+    },
+    {
+        "Name": "GD2",
+        "low_positive_threshold": 154,
+        "medium_positive_threshold": 123,
+        "high_positive_threshold": 87
+    },
+    {
+        "Name": "PDPN",
+        "low_positive_threshold": 156,
+        "medium_positive_threshold": 120,
+        "high_positive_threshold": 79
+    },
+    {
+        "Name": "ROR2",
+        "low_positive_threshold": 108,
+        "medium_positive_threshold": 84,
+        "high_positive_threshold": 54
+    }
+]

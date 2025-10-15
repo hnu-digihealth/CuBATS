@@ -97,6 +97,32 @@ Install OpenSlide and OpenSlide Python using Homebrew:
     $ brew install openslide
     $ pip install openslide-python
 
+.. note::
+    If you encounter issues with the OpenSlide library not being found, you may need to set the `DYLD_FALLBACK_LIBRARY_PATH` environment variable to point to the OpenSlide library directory. You can do this
+    dynamically in your Python script or in your shell configuration file (e.g., `.bash_profile`, `.zshrc`, etc.):
+
+    .. code-block:: python
+
+        import os
+        path = os.environ.get('DYLD_FALLBACK_LIBRARY_PATH', '')
+        path += (':' if path else '') + '/opt/homebrew/lib'
+        os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = path
+        import openslide
+
+    Alternatively, you can set the `DYLD_LIBRARY_PATH` environment variable to point to the OpenSlide library directory:
+
+    .. code-block:: bash
+
+        export DYLD_FALLBACK_LIBRARY_PATH="/opt/homebrew/lib:${DYLD_FALLBACK_LIBRARY_PATH}"
+
+    After adding this line, reload your shell configuration:
+
+    .. code-block:: bash
+
+        $ source ~/.bash_profile
+        # or
+        $ source ~/.zshrc
+
 Ubuntu/Debian
 ~~~~~~~~~~~~~
 

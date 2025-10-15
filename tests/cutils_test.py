@@ -6,52 +6,53 @@ from unittest.mock import MagicMock
 from PIL import Image
 
 # CuBATS
-import cubats.Utils as Utils
+import cubats.cutils as cutils
 
 
 class TestUtils(unittest.TestCase):
 
     def test_get_name(self):
-        self.assertEqual(Utils.get_name("path/to/image.ome.tiff"), "image")
-        self.assertEqual(Utils.get_name("path/to/image.ome.tif"), "image")
-        self.assertEqual(Utils.get_name("path/to/image.jpg"), "image")
-        self.assertEqual(Utils.get_name(
+        self.assertEqual(cutils.get_name("path/to/image.ome.tiff"), "image")
+        self.assertEqual(cutils.get_name("path/to/image.ome.tif"), "image")
+        self.assertEqual(cutils.get_name("path/to/image.jpg"), "image")
+        self.assertEqual(cutils.get_name(
             "path/to/image_underscore.ome.tif"), "image_underscore")
         with self.assertRaises(ValueError):
-            Utils.get_name(123)
+            cutils.get_name(123)
 
         with self.assertRaises(ValueError):
-            Utils.get_name("")
+            cutils.get_name("")
 
     def test_get_score_name(self):
-        self.assertEqual(Utils.get_score_name([0, 1, 2, 3]), "Negative")
-        self.assertEqual(Utils.get_score_name([3, 2, 1, 0]), "High Positive")
-        self.assertEqual(Utils.get_score_name([1, 3, 2, 0]), "Positive")
-        self.assertEqual(Utils.get_score_name([2, 1, 3, 0]), "Low Positive")
+        self.assertEqual(cutils.get_score_name([0, 1, 2, 3]), "Negative")
+        self.assertEqual(cutils.get_score_name([3, 2, 1, 0]), "High Positive")
+        self.assertEqual(cutils.get_score_name([1, 3, 2, 0]), "Positive")
+        self.assertEqual(cutils.get_score_name([2, 1, 3, 0]), "Low Positive")
 
         # Score list usually contains 5 elements but 5th is irrelevant for score name
-        self.assertEqual(Utils.get_score_name([0, 1, 2, 3, 5]), "Negative")
-        self.assertEqual(Utils.get_score_name(
+        self.assertEqual(cutils.get_score_name([0, 1, 2, 3, 5]), "Negative")
+        self.assertEqual(cutils.get_score_name(
             [3, 2, 1, 0, 5]), "High Positive")
-        self.assertEqual(Utils.get_score_name([1, 3, 2, 0, 5]), "Positive")
-        self.assertEqual(Utils.get_score_name([2, 1, 3, 0, 5]), "Low Positive")
+        self.assertEqual(cutils.get_score_name([1, 3, 2, 0, 5]), "Positive")
+        self.assertEqual(cutils.get_score_name(
+            [2, 1, 3, 0, 5]), "Low Positive")
 
         with self.assertRaises(ValueError):
-            Utils.get_score_name("not a list")
+            cutils.get_score_name("not a list")
 
         with self.assertRaises(ValueError):
-            Utils.get_score_name([])
+            cutils.get_score_name([])
 
         with self.assertRaises(ValueError):
-            Utils.get_score_name([1, 2, "three", 4])
+            cutils.get_score_name([1, 2, "three", 4])
         with self.assertRaises(ValueError):
-            Utils.get_score_name([1, 2, 3])
+            cutils.get_score_name([1, 2, 3])
 
         with self.assertRaises(ValueError):
-            Utils.get_score_name([1, -2, 3, 4])
+            cutils.get_score_name([1, -2, 3, 4])
 
         with self.assertRaises(ValueError):
-            Utils.get_score_name([-1, -2, -3, -4, -5])
+            cutils.get_score_name([-1, -2, -3, -4, -5])
 
     def test_downsample_Openslide_to_PIL(self):
         # Mock the Openslide object
@@ -63,7 +64,7 @@ class TestUtils(unittest.TestCase):
         mock_openslide.read_region.return_value = mock_image
 
         # Test downsampling with a factor of 10
-        img, old_w, old_h, new_w, new_h = Utils.downsample_Openslide_to_PIL(
+        img, old_w, old_h, new_w, new_h = cutils.downsample_Openslide_to_PIL(
             mock_openslide, 10)
 
         self.assertEqual(old_w, 10000)
@@ -74,7 +75,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(img.size, (1000, 1000))
 
         # Test downsampling with a factor of 1 (no downsampling)
-        img, old_w, old_h, new_w, new_h = Utils.downsample_Openslide_to_PIL(
+        img, old_w, old_h, new_w, new_h = cutils.downsample_Openslide_to_PIL(
             mock_openslide, 1)
 
         self.assertEqual(old_w, 10000)
@@ -85,7 +86,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(img.size, (10000, 10000))
 
         # Test downsampling with a factor larger than the image dimensions
-        img, old_w, old_h, new_w, new_h = Utils.downsample_Openslide_to_PIL(
+        img, old_w, old_h, new_w, new_h = cutils.downsample_Openslide_to_PIL(
             mock_openslide, 10000)
 
         self.assertEqual(old_w, 10000)
@@ -97,14 +98,14 @@ class TestUtils(unittest.TestCase):
 
         # Test invalid downsampling factor (zero or negative)
         with self.assertRaises(ValueError):
-            Utils.downsample_Openslide_to_PIL(mock_openslide, 0)
+            cutils.downsample_Openslide_to_PIL(mock_openslide, 0)
 
         with self.assertRaises(ValueError):
-            Utils.downsample_Openslide_to_PIL(mock_openslide, -1)
+            cutils.downsample_Openslide_to_PIL(mock_openslide, -1)
 
         # Test invalid Openslide object
         with self.assertRaises(ValueError):
-            Utils.downsample_Openslide_to_PIL(None, 10)
+            cutils.downsample_Openslide_to_PIL(None, 10)
 
 
 if __name__ == '__main__':

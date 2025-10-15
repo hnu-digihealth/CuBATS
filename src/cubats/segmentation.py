@@ -3,7 +3,7 @@
 # TODO add multi processing
 
 # Standard Library
-import logging
+import logging.config
 import os
 from os import listdir, path
 from time import time
@@ -28,7 +28,7 @@ from tqdm import tqdm
 
 # CuBATS
 import cubats.logging_config as log_config
-from cubats import Utils as utils
+from cubats import cutils as cutils
 
 # Initialize logging
 logging.config.dictConfig(log_config.LOGGING)
@@ -39,6 +39,9 @@ logging.getLogger("pyvips").setLevel(logging.ERROR)
 # Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used
 # TODO add support for a heatmap output (optional or alternative)
 # TODO fix tile_size logic -> deepzoom gnerator only takes quadratic tiles, maybe change to int overall?
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(torch.cuda.is_available())
+# logger.info(f"Using device: {device}")
 
 
 def run_tumor_segmentation(
@@ -62,11 +65,11 @@ def run_tumor_segmentation(
         model_path (str): The path to the ONNX model file.
         tile_size (Tuple[int, int]): The size of each tile for segmentation.
         output_path (Union[str, None], optional): The path to the output directory. If not provided, the output will be
-        saved in the same directory as the input. Defaults to None.
+            saved in the same directory as the input. Defaults to None.
         normalization (bool, optional): Whether to normalize the input tiles. Depends on the model provided. Defaults
-        to False.
+            to False.
         inversion (bool, optional): Whether to invert the segmentation output. Depends on the model provided. Defaults
-        to False.
+            to False.
         plot_results (bool, optional): Whether to plot the segmentation results. Defaults to False.
 
     Raises:
@@ -114,8 +117,7 @@ def run_tumor_segmentation(
     else:
         if not path.exists(output_path):
             logger.error(f"Output path {output_path} does not exist.")
-            raise FileNotFoundError(
-                f"Output path {output_path} does not exist.")
+            raise FileNotFoundError(f"Output path {output_path} does not exist.")
         if not path.isdir(output_path):
             logger.error(f"Output path {output_path} is not a directory.")
             raise ValueError(f"Output path {output_path} is not a directory.")
@@ -139,9 +141,27 @@ def run_tumor_segmentation(
 
     try:
         model = convert(model)
+        # model.to(device)
     except Exception as e:
         logger.error(f"Error converting model {model_path}: {e}")
         raise RuntimeError(f"Error converting model {model_path}: {e}")
+    # try:
+    #     session_options = ort.SessionOptions()
+    #     session_options.execution_mode = ort.ExecutionMode.ORT_PARALLEL
+    #     session_options.graph_optimization_level = (
+    #         ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    #     )
+    #     providers = (
+    #         ["CUDAExecutionProvider"]
+    #         if ort.get_device() == "GPU"
+    #         else ["CPUExecutionProvider"]
+    #     )
+    #     ort_session = ort.InferenceSession(
+    #         model_path, sess_options=session_options, providers=providers
+    #     )
+    # except Exception as e:
+    #     logger.error(f"Error creating ONNX Runtime session: {e}")
+    #     raise RuntimeError(f"Error creating ONNX Runtime session: {e}")
 
     # Suppress Pillow warning because of the large WSI
     Image.MAX_IMAGE_PIXELS = None
@@ -179,6 +199,7 @@ def run_tumor_segmentation(
     logger.info(
         f"Segmentation of {input_path} completed in {(end_time_segmentation - start_time_segmentation)/60:.2f} Minutes."
     )
+
 
 # TODO refactor mask-WSI creation logic
 
@@ -230,8 +251,7 @@ def _segment_file(
         return
 
     # Initialize the normalizer. Reference image is provided in assets folder
-    normalizer = _init_normalizer(
-        "assets/ref_norm.png")  # former name 21585.png
+    normalizer = _init_normalizer("assets/ref_norm.png")  # former name 21585.png
 
     # Calculate if there is an overhang for the final tile at the right and bottom edge
     has_right_overhang = (
@@ -274,8 +294,7 @@ def _segment_file(
                 )
                 tile = Image.new("RGB", tile_size, (255, 255, 255))
                 tile.paste(raw_tile, (0, 0))
-                logger.debug(
-                    f"Tile at row {row}, column {column} required padding")
+                logger.debug(f"Tile at row {row}, column {column} required padding")
             else:
                 tile = slide_generator.get_tile(
                     slide_generator.level_count - 1, (column, row)
@@ -289,25 +308,38 @@ def _segment_file(
 
                 normalized_tile = normalizer.normalize(tile_tensor)
                 # Recreate tensor with correct shape, including batch dimension
-                tile_tensor = normalized_tile.cpu().permute(2, 0, 1).unsqueeze(0).float()
+                tile_tensor = (
+                    normalized_tile.cpu().permute(2, 0, 1).unsqueeze(0).float()
+                )
 
                 if tile_size != model_input_size[2:]:
                     resizing = True
                     # Resize the tile to the model input size if needed using torch
                     tile_tensor = F.interpolate(
-                        tile_tensor, size=model_input_size[2:], mode="bilinear", align_corners=False)
+                        tile_tensor,
+                        size=model_input_size[2:],
+                        mode="bilinear",
+                        align_corners=False,
+                    )
                 else:
                     resizing = False
             else:
                 # Resize the tile to the model input size if needed using numpy.
-                # Note: For model used during developement numpy conversion was necessary as torch resulted in false results.
+                # Note: Model used during developement needed numpy conversion as torch resulted in false results.
                 if tile_size != model_input_size[2:]:
                     resizing = True
-                    rescaled_tile = resize(np.asarray(
-                        tile), (model_input_size[2], model_input_size[3]), anti_aliasing=True)
+                    rescaled_tile = resize(
+                        np.asarray(tile),
+                        (model_input_size[2], model_input_size[3]),
+                        anti_aliasing=True,
+                    )
                     # Convert the tile to a tensor
-                    tile_tensor = torch.from_numpy(rescaled_tile).type(
-                        torch.float32).permute(2, 0, 1).unsqueeze(0)
+                    tile_tensor = (
+                        torch.from_numpy(rescaled_tile)
+                        .type(torch.float32)
+                        .permute(2, 0, 1)
+                        .unsqueeze(0)
+                    )
                 else:
                     resizing = False
                     # Convert the tile to a tensor and add batch dimension
@@ -315,6 +347,7 @@ def _segment_file(
                     tile_tensor = transform(tile).float() * 255
                     tile_tensor.unsqueeze_(0)
 
+            # tile_tensor = tile_tensor.to(device)
             # Segment the tile
             segmented_tile = _segment_tile(
                 tile_tensor, model, resizing, inversion, tile_size
@@ -326,12 +359,11 @@ def _segment_file(
 
     logger.debug("Constructing segmented WSI")
     segmented_wsi = concatenate(row_array, axis=0)
-    segmented_wsi = VipsImage.new_from_array(
-        segmented_wsi).cast(BandFormat.INT)
+    segmented_wsi = VipsImage.new_from_array(segmented_wsi).cast(BandFormat.INT)
 
     # Extract the base name and file type
     base_name, file_type = path.splitext(file_path)
-    wsi_name = utils.get_name(base_name)
+    wsi_name = cutils.get_name(base_name)
 
     # Construct output paths for the mask and thumbnail
     mask_out = path.join(output_path, f"{wsi_name}_mask{file_type}")
@@ -354,7 +386,9 @@ def _segment_file(
     logger.info(f"Finished segmentation for file: {file_path}")
 
 
-def _segment_tile(tile: torch.Tensor, model, resizing: bool, inversion: bool, original_size) -> Image:
+def _segment_tile(
+    tile: torch.Tensor, model, resizing: bool, inversion: bool, original_size
+) -> Image:
     """
     Segments a given tile using a pre-trained model and returns the segmented tile as a PIL Image.
 
@@ -369,6 +403,17 @@ def _segment_tile(tile: torch.Tensor, model, resizing: bool, inversion: bool, or
     Returns:
         Image: The segmented tile as a binary mask in PIL Image format.
     """
+    # tile_np = tile.cpu().numpy
+    # ort_inputs = {ort_session.get_inputs()[0].name: tile_np}
+    # print(f" name: {ort_session.get_inputs()[0].name}")
+    # # print(f"tile shape: {tile_np.shape}")
+
+    # try:
+    #     ort_outs = ort_session.run(None, ort_inputs)
+    # except Exception as e:
+    #     print(f"Error during ONNX runtime inference: {e}")
+    # segmentation = ort_outs[0]
+    # segmentation = 1 / (1 + np.exp(-segmentation))  # sigmoid
     # Start segmentation
     with torch.no_grad():
         segmentation = model(tile)
@@ -380,13 +425,11 @@ def _segment_tile(tile: torch.Tensor, model, resizing: bool, inversion: bool, or
         # Remove single color channel dimension
         segmentation = segmentation.squeeze(1)
 
-    segmentation = segmentation.squeeze(
-        0).cpu().numpy()  # Remove batch dimension
+    segmentation = segmentation.squeeze(0).cpu().numpy()  # Remove batch dimension
 
     # Rescale to original size if necessary
     if resizing:
-        segmented_tile = resize(
-            segmentation, original_size, anti_aliasing=True)
+        segmented_tile = resize(segmentation, original_size, anti_aliasing=True)
     else:
         segmented_tile = segmentation
 
@@ -431,8 +474,7 @@ def _get_model_input_size(model):
         tuple: The expected input size for the model in the format (1, C, H, W).
     """
     input_tensor = model.graph.input[0]
-    input_shape = [
-        dim.dim_value for dim in input_tensor.type.tensor_type.shape.dim]
+    input_shape = [dim.dim_value for dim in input_tensor.type.tensor_type.shape.dim]
     # Ensure the batch size is set to 1
     input_shape[0] = 1
     logger.debug(f"Model input size: {input_shape}")
@@ -447,9 +489,7 @@ def _save_segmented_wsi(segmented_wsi, tile_size, output_path):
     """
     logger.info(f"Saving segmented WSI to {output_path}")
     try:
-        segmented_wsi.crop(
-            0, 0, segmented_wsi.width, segmented_wsi.height
-        ).tiffsave(
+        segmented_wsi.crop(0, 0, segmented_wsi.width, segmented_wsi.height).tiffsave(
             output_path,
             tile=True,
             compression="jpeg",
@@ -538,8 +578,7 @@ def _plot_segmentation_on_tissue(file_path, output_path):
 
     # Composite the slide and mask
     logger.info("Compositing slide and mask")
-    combined = Image.alpha_composite(
-        slide_thumbnail.convert("RGBA"), mask_thumbnail)
+    combined = Image.alpha_composite(slide_thumbnail.convert("RGBA"), mask_thumbnail)
 
     png_name, _ = path.splitext(file_path)
     png_name = path.splitext(png_name)[0] + "_mask" + ".png"
@@ -547,5 +586,4 @@ def _plot_segmentation_on_tissue(file_path, output_path):
     combined.save(path.join(output_path, png_name))
 
     end_time = time()
-    logger.debug(
-        f"Thumbnail creation took {end_time - start_time:.2f} seconds.")
+    logger.debug(f"Thumbnail creation took {end_time - start_time:.2f} seconds.")

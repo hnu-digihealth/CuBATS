@@ -2,381 +2,1798 @@
 import numpy as np
 from PIL import Image
 
+# CuBATS
+from cubats.config import xp
+from cubats.cutils import to_numpy
 
-def compute_dual_antigen_colocalization(iterable):
+# Define color schemes for each tile
+COLOR_OVERLAP = [255, 0, 0]  # Strong Red
+COLOR_TILE1 = [[0, 255, 0], [102, 255, 102], [153, 255, 153]]  # Green shades
+COLOR_TILE2 = [[0, 0, 204], [102, 204, 255], [153, 204, 255]]  # Blue shades
+COLOR_TILE3 = [[255, 165, 0], [255, 200, 102], [255, 225, 153]]  # Orange shades
+COLOR_NEGATIVE = [255, 255, 255]  # White
+COLOR_BACKGROUND = [192, 192, 192]  # Gray
+COLOR_NON_MASK = [128, 128, 128]  # Darker Gray
+
+
+def analyze_dual_antigen_colocalization(iterable):
     """
-    This function processes the information for the same tile from 2 different WSIs, analyzes these images for antigen
-    coverage and calculates how much tissue is covered by these different antigen combinations, as well as how much of
-    the tissue is covered by more than one image and how much tissure is only covered by one of the 2 images. The
-    results are then saved in a dictionary and returned. Additionally an image containing the results can be saved in
-    the passed directory.
+    This function analyzes antigen co-expression of the same tile from two different antigen slides and returns the
+    results as dictionary.
+
+    The function performs pixel-wise comparison across two images to evaluate combined total coverage, antigen overlap,
+    and complementary expression. The intensity levels are divided into five categories based on their intensity values.
+    Intensity values are defined for each tile by the passed antigen profile which can be defined when initializing the
+    SlideCollection. If not antigen profiles are defined, intensity values will fall back to default thresholds:
+    high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+    and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
+    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+    during quantification: `tile-level` or `pixel-level`.
 
     Args:
+        iterable (iterable): An iterable containing the following elements:
 
-        iterable (iterable): Contains the 2 Tiles(iterable[0:2]) that are to be compared and analyzed for antigen
-            coverage as well as the output directory:
-                - iterable[0]: img1
-                - iterable[1]: img2
-                - iterable[2]: output path
+            - `tile1`: the first tile to be compared and analyzed for antigen coverage.
+
+            - `tile2`: the second tile to be compared and analyzed for antigen coverage.
+
+            - `Antigen-specific profiles`: 'profile1', 'profile2', and 'profile3' containing antigen-specific thresholds
+              for tile1, tile2, and tile 3respectively.
+
+            - `output path`: the directory where the output image should be saved.
+
+            - `save_img`: a flag indicating whether to save the output image.
+
+            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.
 
     Returns:
-        dict: returns a dictionary containing the results of the analysis:
+        dict: A dictionary containing the results of the analysis:
             - Tilename: Name of the tile
-            - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable; (-1): all tiles not containing tissue)
-            - Coverage: Amount of pixels (in %) that both tiles cover combined in respect to actual tissue in images. (Only if Flag == 1)
-            - Overlap: Overlap of postitive pixels: Amount of the same pixels (in %) that are covered by both images. (Only if Flag == 1)
-            - Complement: Amount of positive pixels (in %) that are only covered by one of the 2 images. (Only if Flag == 1)
-            - Negative: Amount of negative pixels (in %) that are not covered either image. (Only if Flag == 1)
+            - Flag: Flag indicating if the tile was processed or not. (1: processed; -1: not processed due to both
+              tiles not being processable; -2: one of the tiles was not processable due to wrong shape)
+            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by both tiles combined,
+              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Total Overlap: Percentage of positive pixels that are positive in both images combined, with respect to
+              the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Total Complement: Percentage of positive pixels that are only covered by one of the two images, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - High Positive Overlap: Percentage of highly positive pixels covered by both tiles combined, with respect
+              to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - High Positive Complement: Percentage of highly positive pixels covered by only one of the two tiles, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Medium Positive Overlap: Percentage of medium positive pixels covered by both tiles combined, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Medium Positive Complement: Percentage of medium positive pixels covered by only one of the two tiles,
+              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Low Positive Overlap: Percentage of low positive pixels covered by both tiles combined, with respect to
+              the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Low Positive Complement: Percentage of low positive pixels covered by only one of the two tiles, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Negative: Percentage of negative pixels not covered by either of the two tiles, with respect to the
+              tumor mask in the images (!=255). (Only if Flag == 1)
+            - Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images
+              (!=255). (Only if Flag == 1)
+            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+              respect to the total pixel count of the tile. (Only if Flag == 1)
+            - Mask Area: Percentage of the tile that is covered by the tumor mask.
+            - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
+              respect to total pixels in the image (1024 x 1024 = 1048576).
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory. The
+        coloring scheme is as follows:
+
+            - Overlapping pixels (positive in both tiles):
+                - Highly positive: Red ([255, 0, 0])
+                - Medium positive: Red ([255, 0, 0])
+                - Low positive: Red ([255, 0, 0])
+            - Complementary pixels (positive in only one tile):
+                - Tile1 highly positive: Green ([0, 255, 0])
+                - Tile1 medium positive: Light Green ([153, 238, 153])
+                - Tile1 low positive: Very Light Green ([204, 255, 204])
+                - Tile2 highly positive: Blue ([0, 0, 204])
+                - Tile2 medium positive: Light Blue ([102, 204, 255])
+                - Tile2 low positive: Very Light Blue ([153, 204, 255])
+            - Negative pixels (both tiles negative): White ([255, 255, 255])
+            - Background pixels (no tissue): Gray ([192, 192, 192])
+            - Non-mask pixels: Dark Gray ([128, 128, 128])
     """
 
-    img1 = iterable[0]
-    img2 = iterable[1]
-    dir = iterable[2]
-    save_img = iterable[3]
+    tile1 = iterable[0]
+    tile2 = iterable[1]
+    profile1, profile2 = iterable[2]
+    dir = iterable[3]
+    save_img = iterable[4]
+    masking_mode = iterable[5]
 
-    tilename = img1["Tilename"]
-    colocal_dict = {}
-    colocal_dict["Tilename"] = tilename
-    # Check if both Images contain tissue. If one doesn't: Flag = 0, if both dont: Flag = -1
-    if img1["Flag"] == 0 or img2["Flag"] == 0:
-        if img1["Flag"] == 0 and img2["Flag"] == 0:
-            colocal_dict["Flag"] = -1
-        else:
-            colocal_dict["Flag"] = 0
-    # Check if Images have the correct shape
-    elif img1["Image Array"].shape != (1024, 1024) or img2["Image Array"].shape != (
+    tilename = tile1["Tilename"]
+    colocal_dict = {"Tilename": tilename}
+
+    # Check if both Images contain tissue.If both dont: Flag = -1
+    if tile1["Flag"] == 0 and tile2["Flag"] == 0:
+        colocal_dict["Flag"] = -1
+        return colocal_dict
+    # If tile2 contains tissue and tile1 doesn't: Process tile2 only. If save_img is True, coloring for tile2 is blue.
+    elif tile1["Flag"] == 0:
+        colocal_dict["Flag"] = 1
+        (
+            high_complement,
+            med_complement,
+            low_complement,
+            negative,
+            background,
+            masked_pixels,
+        ) = _process_single_tile(
+            tile2, dir, save_img, COLOR_TILE2, antigen_profile=profile2
+        )
+        high_overlap, med_overlap, low_overlap = (0, 0, 0)
+    # If tile1 contains tissue and tile2 doesn't: Process tile1 only. If save_img is True, coloring for tile1 is green.
+    elif tile2["Flag"] == 0:
+        colocal_dict["Flag"] = 1
+        (
+            high_complement,
+            med_complement,
+            low_complement,
+            negative,
+            background,
+            masked_pixels,
+        ) = _process_single_tile(
+            tile1, dir, save_img, COLOR_TILE1, antigen_profile=profile1
+        )
+        high_overlap, med_overlap, low_overlap = (0, 0, 0)
+    # Check if tiles have the correct shape. If one doesn't: Flag = -2 TODO Padding
+    elif tile1["Image Array"].shape != (1024, 1024) or tile2["Image Array"].shape != (
         1024,
         1024,
     ):
         colocal_dict["Flag"] = -2
+        return colocal_dict
+    # If both contain tissue: Process both tiles
     else:
         colocal_dict["Flag"] = 1
-        # init
         (
             high_overlap,
-            pos_overlap,
+            med_overlap,
             low_overlap,
             high_complement,
-            pos_complement,
+            med_complement,
             low_complement,
             negative,
             background,
-        ) = (0, 0, 0, 0, 0, 0, 0, 0)
-        # TODO check if shape is the same for both images
-        h, w = img1["Image Array"].shape
-        # output img
-        img = None
-        if save_img:
-            """
-            If save_img is True, in addition to the numerical analysis an image containing the results of the analysis will be created and saved in passed directory.
-            Else only numerical analysis will be performed.
-            """
-            # Init color image in grey displaying background
-            img = np.full((h, w, 3), 192, dtype="uint8")
-            for y in range(h):
-                for x in range(w):
-                    pixel1 = img1["Image Array"][x, y]
-                    pixel2 = img2["Image Array"][x, y]
-
-                    # Check if both pixels are positive
-                    if pixel1 < 181 and pixel2 < 181:
-                        if pixel1 < 61 and pixel2 < 61:
-                            high_overlap += 1
-                            # Color strong red where both are highly positive
-                            img[x, y] = [255, 0, 0]
-                        elif pixel1 < 121 and pixel2 < 121:
-                            pos_overlap += 1
-                            # Color strong red where both are positive
-                            img[x, y] = [255, 0, 0]
-                        else:
-                            low_overlap += 1
-                            # Color light red where both are low positive
-                            img[x, y] = [255, 0, 0]
-                    # Check if pixel1 is positive and pixel2 is not
-                    elif pixel1 < 181 and pixel2 > 180:
-                        if pixel1 < 61:
-                            high_complement += 1
-                            # Color strong green if img1 is highly positive
-                            img[x, y] = [0, 255, 0]
-                        elif pixel1 < 121:
-                            pos_complement += 1
-                            # Color bright green if img1 is positive
-                            img[x, y] = [153, 238, 153]
-                        else:
-                            low_complement += 1
-                            # Color light green if img1 is low positive
-                            img[x, y] = [204, 255, 204]
-                    # Check if pixel2 is positive and pixel1 is not
-                    elif pixel1 > 180 and pixel2 < 181:
-                        if pixel2 < 61:
-                            high_complement += 1
-                            # Color strong blue if img2 is highly positive
-                            img[x, y] = [0, 0, 204]
-                        elif pixel2 < 121:
-                            pos_complement += 1
-                            # Color bright blue if img2 is positive
-                            img[x, y] = [102, 204, 255]
-                        else:
-                            low_complement += 1
-                            # Color light blue if img2 is low positive
-                            img[x, y] = [153, 204, 255]
-                    elif pixel1 < 235 or pixel2 < 235:
-                        negative += 1
-                        # Color white where both are negative
-                        img[x, y] = [255, 255, 255]
-                    else:
-                        # Background Pixels stay gray
-                        background += 1
-
-            img = Image.fromarray(img.astype("uint8"))
-            out = f"{dir}/{tilename}.tif"
-            img.save(out)
-        else:
-            for y in range(h):
-                for x in range(w):
-                    pixel_values = [img1["Image Array"]
-                                    [x, y], img2["Image Array"][x, y]]
-                    sum_high = sum(1 for value in pixel_values if value < 61)
-                    sum_pos = sum(1 for value in pixel_values if value < 121)
-                    sum_low = sum(1 for value in pixel_values if value < 181)
-
-                    if sum_high >= 2:
-                        high_overlap += 1
-                    elif sum_pos >= 2:
-                        pos_overlap += 1
-                    elif sum_low >= 2:
-                        low_overlap += 1
-                    elif sum_high == 1:
-                        high_complement += 1
-                    elif sum_pos == 1:
-                        pos_complement += 1
-                    elif sum_low == 1:
-                        low_complement += 1
-                    elif any(value < 235 for value in pixel_values):
-                        negative += 1
-                    else:
-                        background += 1
-
-        coverage = (
-            high_overlap
-            + pos_overlap
-            + low_overlap
-            + high_complement
-            + pos_complement
-            + low_complement
+            masked_pixels,
+        ) = _process_two_tiles(
+            tile1,
+            tile2,
+            dir,
+            save_img,
+            [COLOR_TILE1, COLOR_TILE2],
+            antigen_profiles=[profile1, profile2],
         )
-        total_overlap = high_overlap + pos_overlap + low_overlap
-        total_complement = high_complement + pos_complement + low_complement
-        tissue_count = coverage + negative
 
-        # Vals in % for overlap, complement, negative in respect to entire image
-        coverage = round((coverage / tissue_count) * 100, 4)
+    non_mask = 1048576 - masked_pixels
+
+    # Sum up the results
+    coverage = (
+        high_overlap
+        + med_overlap
+        + low_overlap
+        + high_complement
+        + med_complement
+        + low_complement
+    )
+    total_overlap = high_overlap + med_overlap + low_overlap
+    total_complement = high_complement + med_complement + low_complement
+    tissue_count = coverage + negative
+
+    if masking_mode == "pixel-level":
+        if masked_pixels > 0:
+            total_coverage = round((coverage / masked_pixels) * 100, 4)
+            total_overlap = round((total_overlap / masked_pixels) * 100, 4)
+            total_complement = round((total_complement / masked_pixels) * 100, 4)
+            high_overlap = round((high_overlap / masked_pixels) * 100, 4)
+            high_complement = round((high_complement / masked_pixels) * 100, 4)
+            med_overlap = round((med_overlap / masked_pixels) * 100, 4)
+            med_complement = round((med_complement / masked_pixels) * 100, 4)
+            low_overlap = round((low_overlap / masked_pixels) * 100, 4)
+            low_complement = round((low_complement / masked_pixels) * 100, 4)
+            negative = round((negative / masked_pixels) * 100, 4)
+            tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+            background = round((background / masked_pixels) * 100, 4)
+            mask = round((masked_pixels / 1048576) * 100, 4)
+            if non_mask > 0:
+                non_mask = round((non_mask / 1048576) * 100, 4)
+            else:
+                non_mask = 0.00
+        else:
+            total_coverage = 0.00
+            total_overlap = 0.00
+            total_complement = 0.00
+            high_overlap = 0.00
+            high_complement = 0.00
+            med_overlap = 0.00
+            med_complement = 0.00
+            low_overlap = 0.00
+            low_complement = 0.00
+            negative = 0.00
+            tissue_count = 0.00
+            background = 0.00
+            mask = 0.00
+            non_mask = round((non_mask / 1048576) * 100, 4)
+    elif masking_mode == "tile-level":
+        total_coverage = round((coverage / tissue_count) * 100, 4)
         total_overlap = round((total_overlap / tissue_count) * 100, 4)
         total_complement = round((total_complement / tissue_count) * 100, 4)
         high_overlap = round((high_overlap / tissue_count) * 100, 4)
         high_complement = round((high_complement / tissue_count) * 100, 4)
-        pos_overlap = round((pos_overlap / tissue_count) * 100, 4)
-        pos_complement = round((pos_complement / tissue_count) * 100, 4)
+        med_overlap = round((med_overlap / tissue_count) * 100, 4)
+        med_complement = round((med_complement / tissue_count) * 100, 4)
         low_overlap = round((low_overlap / tissue_count) * 100, 4)
         low_complement = round((low_complement / tissue_count) * 100, 4)
         negative = round((negative / tissue_count) * 100, 4)
-        background = round((background / tissue_count) * 100, 4)
+        tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+        background = round((background / masked_pixels) * 100, 4)
+        mask = round((masked_pixels / 1048576) * 100, 4)
+        if non_mask > 0:
+            non_mask = round((non_mask / 1048576) * 100, 4)
+        else:
+            non_mask = 0.00
 
-        # set dict
-        colocal_dict["Total Coverage"] = coverage
-        colocal_dict["Total Overlap"] = total_overlap
-        colocal_dict["Total Complement"] = total_complement
-        colocal_dict["High Positive Overlap"] = high_overlap
-        colocal_dict["High Positive Complement"] = high_complement
-        colocal_dict["Positive Overlap"] = pos_overlap
-        colocal_dict["Positive Complement"] = pos_complement
-        colocal_dict["Low Positive Overlap"] = low_overlap
-        colocal_dict["Low Positive Complement"] = low_complement
-        colocal_dict["Negative"] = negative
-        colocal_dict["Background/No Tissue"] = background
-
+    # Build dict
+    colocal_dict["Total Coverage"] = total_coverage
+    colocal_dict["Total Overlap"] = total_overlap
+    colocal_dict["Total Complement"] = total_complement
+    colocal_dict["High Positive Overlap"] = high_overlap
+    colocal_dict["High Positive Complement"] = high_complement
+    colocal_dict["Medium Positive Overlap"] = med_overlap
+    colocal_dict["Medium Positive Complement"] = med_complement
+    colocal_dict["Low Positive Overlap"] = low_overlap
+    colocal_dict["Low Positive Complement"] = low_complement
+    colocal_dict["Negative"] = negative
+    colocal_dict["Tissue"] = tissue_count
+    colocal_dict["Background / No Tissue"] = background
+    colocal_dict["Mask Area"] = mask
+    colocal_dict["Non-mask Area"] = non_mask
     return colocal_dict
 
 
-def compute_triplet_antigen_colocalization(iterable):
+def analyze_triplet_antigen_colocalization(iterable):
     """
-    This function receives the same tile from 3 different WSIs, analyzes these images for antigen coverage and calculates how much
-    tissue is covered by these different antigen combinations, as well as how much of the tissue is covered by more than one image
-    and how much tissure is only covered by one of the 3 images.The results are then saved in a dictionary and returned. Additionally
-    an image containing the results is saved in the passed directory.
+    This function analyzes antigen co-expression of the same tile from 3 different antigen slides and returns the
+    results as dictionary.
 
+    The function performs pixel-wise comparison across three images to evaluate combined total coverage, antigen
+    overlap, and complementary expression. The intensity levels are divided into five categories based on their
+    intensity values. Intensity values are defined for each tile by the passed antigen profile which can be defined
+    when initializing the `SlideCollection`. If not antigen profiles are defined, intensity values will fall back to
+    default thresholds: high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+    and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
+    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+    during quantification: `tile-level` or `pixel-level`.
 
     Args:
-        iterable (iterable): Contains the 3 Tiles(iterable[0:3]) that are to be compared and analyzed for antigen coverage as well as the output directory
-        - iterable[0]: img1
-        - iterable[1]: img2
-        - iterable[2]: img3
-        - iterable[3]: output path
+        iterable (iterable): An iterable containing the following elements:
+
+            - `tile1`: the first tile to be compared and analyzed for antigen coverage.
+
+            - `tile2`: the second tile to be compared and analyzed for antigen coverage.
+
+            - `tile3`: the third tile to be compared and analyzed for antigen coverage.
+
+            - `Antigen-specific profiles`: 'profile1', 'profile2', and 'profile3' containing antigen-specific thresholds
+              for tile1, tile2, and tile 3respectively.
+
+            - `output path`: the directory where the output image should be saved.
+
+            - `save_img`: a flag indicating whether to save the output image.
+
+            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.
 
     Returns:
+        dict: A dictionary containing the results of the analysis:
+            - Tilename: Name of the tile
+            - Flag: Flag indicating if the tile was processed or not. (1: processed; 0: not processed due both tiles
+              not being processable; -1: all tiles not containing tissue)
+            - Total Coverage: Percentage of positive pixels (intensity values < 181), covered by all three tiles
+              combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Total Overlap: Percentage of positive pixels that are positive in at least two or all three images
+              combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Total Complement: Percentage of positive pixels that are only covered by one of the three images, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - High Positive Overlap: Percentage of highly positive pixels covered by all three tiles combined, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - High Positive Complement: Percentage of highly positive pixels covered by only one of the three tiles,
+              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Medium Positive Overlap: Percentage of medium positive pixels covered by all three tiles combined, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Medium Positive Complement: Percentage of medium positive pixels covered by only one of the three tiles.
+              (Only if Flag == 1)
+            - Low Positive Overlap: Percentage of low positive pixels covered by all three tiles combined, with respect
+              to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Low Positive Complement: Percentage of low positive pixels covered by only one of the three tiles, with
+              respect to the tumor mask in the images (!=255). (Only if Flag == 1)
+            - Negative: Percentage of negative pixels not covered by any of the three tiles, with respect to actual
+              tissue in the images.(Only if Flag == 1)
+            - Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images
+              (!=255). (Only if Flag == 1)
+            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+              respect to the total pixel count of the tile. (Only if Flag == 1)
+            - Mask Area: Percentage of the tile that is covered by the tumor mask.
+            - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
+              respect to total pixels in the image (1024 x 1024 = 1048576).
 
-        colocal_dict (Dictionary): returns a dictionary containing the results of the analysis
-         - Tilename: Name of the tile
-         - Flag: Flag indicating if the tile was processed or not. ((1): processed; (0): not processed due to one or two tiles not being processable;
-                (-1): all tiles not containing tissue)
-         - Coverage: Amount of pixels (in %) that all 3 tiles cover combined in respect to actual tissue in images.  (Only if Flag == 1)
-         - Overlap: Overlap of postitive pixels: Amount of positive pixels (in %) that are covered by at least 2 or all 3 images combined  (Only if Flag == 1)
-         - Complement: Amount of positive pixels (in %) that are only covered by one of the 3 images (Only if Flag == 1)
-         - Negative: Amount of negative pixels (in %) that are not covered by any of the 3 images  (Only if Flag == 1)
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory. The
+        coloring scheme is as follows:
 
+            - Overlapping pixels (positive in both tiles):
+                - Highly positive: Red ([255, 0, 0])
+                - Medium Positive: Red ([255, 0, 0])
+                - Low positive: Red ([255, 0, 0])
+            - Complementary pixels (positive in only one tile):
+                - Tile1 highly positive: Green ([0, 255, 0])
+                - Tile1 medium positive: Light Green ([153, 238, 153])
+                - Tile1 low positive: Very Light Green ([204, 255, 204])
+                - Tile2 highly positive: Blue ([0, 0, 204])
+                - Tile2 medium positive: Light Blue ([102, 204, 255])
+                - Tile2 low positive: Very Light Blue ([153, 204, 255])
+                - Tile3 highly positive: Orange ([255, 165, 0])
+                - Tile3 medium positive: Light Orange ([255, 200, 102])
+                - Tile3 low positive: Very Light Orange ([255, 225, 153])
+            - Negative pixels (both tiles negative): White ([255, 255, 255])
+            - Background pixels (no tissue): Gray ([192, 192, 192])
+            - Non-mask pixels: Dark Gray ([128, 128, 128])
     """
 
-    img1 = iterable[0]
-    img2 = iterable[1]
-    img3 = iterable[2]
-    dir = iterable[3]
-    save_img = iterable[4]
+    tile1 = iterable[0]
+    tile2 = iterable[1]
+    tile3 = iterable[2]
+    profile1, profile2, profile3 = iterable[3]
+    dir = iterable[4]
+    save_img = iterable[5]
+    masking_mode = iterable[6]
 
-    tilename = img1["Tilename"]
-    colocal_dict = {}
-    colocal_dict["Tilename"] = tilename
+    tilename = tile1["Tilename"]
+    colocal_dict = {"Tilename": tilename}
 
-    # Check if all Images contain tissue. If all dont: Flag = -1, if one or two dont: Flag = 0
-    if img1["Flag"] == 0 or img2["Flag"] == 0 or img3["Flag"] == 0:
-        if img1["Flag"] == 0 and img2["Flag"] == 0 and img3["Flag"] == 0:
-            colocal_dict["Flag"] = -1
-        else:
-            colocal_dict["Flag"] = 0
-    # Check for Error 3: Flag = -1: One of images doesn't have the correct shape # TODO Think about padding images to correct shape
+    # Count the number of images with Flag=0
+    flag_count = sum([tile1["Flag"] == 0, tile2["Flag"] == 0, tile3["Flag"] == 0])
+
+    # Check if all Images contain tissue. If all dont: Flag = -1
+    if flag_count == 3:
+        colocal_dict["Flag"] = -1
+        return colocal_dict
+    # Check if two images have Flag=0 and process the remaining image
+    elif flag_count == 2:
+        colocal_dict["Flag"] = 1
+        # If only tile1 processable, process tile1 with color green
+        if tile1["Flag"] != 0:
+            (
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_single_tile(
+                tile1, dir, save_img, COLOR_TILE1, antigen_profile=profile1
+            )
+
+        # If only tile2 processable, process tile2 with color blue
+        elif tile2["Flag"] != 0:
+            (
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_single_tile(
+                tile2, dir, save_img, COLOR_TILE2, antigen_profile=profile2
+            )
+
+        # If only tile3 processable, process tile3 with color orange
+        elif tile3["Flag"] != 0:
+            (
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_single_tile(
+                tile3, dir, save_img, COLOR_TILE3, antigen_profile=profile3
+            )
+
+        high_overlap, med_overlap, low_overlap = (0, 0, 0)
+
+    # Check if only one tile has Flag=0 and process the remaining two tiles
+    elif flag_count == 1:
+        colocal_dict["Flag"] = 1
+        if tile1["Flag"] == 0:
+            (
+                high_overlap,
+                med_overlap,
+                low_overlap,
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_two_tiles(
+                tile2,
+                tile3,
+                dir,
+                save_img,
+                [COLOR_TILE2, COLOR_TILE3],
+                antigen_profiles=[profile2, profile3],
+            )
+
+        elif tile2["Flag"] == 0:
+            (
+                high_overlap,
+                med_overlap,
+                low_overlap,
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_two_tiles(
+                tile1,
+                tile3,
+                dir,
+                save_img,
+                [COLOR_TILE1, COLOR_TILE3],
+                antigen_profiles=[profile1, profile3],
+            )
+
+        elif tile3["Flag"] == 0:
+            (
+                high_overlap,
+                med_overlap,
+                low_overlap,
+                high_complement,
+                med_complement,
+                low_complement,
+                negative,
+                background,
+                masked_pixels,
+            ) = _process_two_tiles(
+                tile1,
+                tile2,
+                dir,
+                save_img,
+                [COLOR_TILE1, COLOR_TILE2],
+                antigen_profiles=[profile1, profile2],
+            )
+
+    # Check for Error 2: Flag = -2: One of images doesn't have the correct shape
+    # TODO Think about padding images to correct shape
     elif (
-        img1["Image Array"].shape != (1024, 1024)
-        or img2["Image Array"].shape != (1024, 1024)
-        or img3["Image Array"].shape != (1024, 1024)
+        tile1["Image Array"].shape != (1024, 1024)
+        or tile2["Image Array"].shape != (1024, 1024)
+        or tile3["Image Array"].shape != (1024, 1024)
     ):
         colocal_dict["Flag"] = -2
-    # Otherwise calculate overlap: Flag = 1
+        return colocal_dict
+
+    # Otherwise process all three images
     else:
         colocal_dict["Flag"] = 1
-        # init
         (
             high_overlap,
-            pos_overlap,
+            med_overlap,
             low_overlap,
             high_complement,
-            pos_complement,
+            med_complement,
             low_complement,
             negative,
             background,
-        ) = (0, 0, 0, 0, 0, 0, 0, 0)
+            masked_pixels,
+        ) = _process_three_tiles(
+            tile1,
+            tile2,
+            tile3,
+            dir,
+            save_img,
+            antigen_profiles=[profile1, profile2, profile3],
+        )
 
-        # output img
-        h, w = img1["Image Array"].shape
-        img = None
+    non_mask = 1048576 - masked_pixels
 
-        if save_img:
-            """
-            If save_img is True, in addition to the numerical analysis an image containing the results of the analysis will be created and saved in passed directory.
-            Else only numerical analysis will be performed.
-            """
-            img = np.full((h, w, 3), 255, dtype="uint8")
-            for y in range(h):
-                for x in range(w):
-                    pixel_values = [img["Image Array"][x, y]
-                                    for img in [img1, img2, img3]]
-                    sum_high = sum(1 for val in pixel_values if val < 61)
-                    sum_pos = sum(1 for val in pixel_values if val < 121)
-                    sum_low = sum(1 for val in pixel_values if val < 181)
+    coverage = (
+        high_overlap
+        + med_overlap
+        + low_overlap
+        + high_complement
+        + med_complement
+        + low_complement
+    )
+    total_overlap = high_overlap + med_overlap + low_overlap
+    total_complement = high_complement + med_complement + low_complement
+    tissue_count = coverage + negative
 
+    if masking_mode == "pixel-level":
+        if masked_pixels > 0:
+            total_coverage = round((coverage / masked_pixels) * 100, 4)
+            total_overlap = round((total_overlap / masked_pixels) * 100, 4)
+            total_complement = round((total_complement / masked_pixels) * 100, 4)
+            high_overlap = round((high_overlap / masked_pixels) * 100, 4)
+            high_complement = round((high_complement / masked_pixels) * 100, 4)
+            med_overlap = round((med_overlap / masked_pixels) * 100, 4)
+            med_complement = round((med_complement / masked_pixels) * 100, 4)
+            low_overlap = round((low_overlap / masked_pixels) * 100, 4)
+            low_complement = round((low_complement / masked_pixels) * 100, 4)
+            negative = round((negative / masked_pixels) * 100, 4)
+            tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+            background = round((background / masked_pixels) * 100, 4)
+            mask = round((masked_pixels / 1048576) * 100, 4)
+            if non_mask > 0:
+                non_mask = round((non_mask / 1048576) * 100, 4)
+            else:
+                non_mask = 0.00
+        else:
+            total_coverage = 0.00
+            total_overlap = 0.00
+            total_complement = 0.00
+            high_overlap = 0.00
+            high_complement = 0.00
+            med_overlap = 0.00
+            med_complement = 0.00
+            low_overlap = 0.00
+            low_complement = 0.00
+            negative = 0.00
+            tissue_count = 0.00
+            background = 0.00
+            mask = 0.00
+            non_mask = round((non_mask / 1048576) * 100, 4)
+    elif masking_mode == "tile-level":
+        total_coverage = round((coverage / tissue_count) * 100, 4)
+        total_overlap = round((total_overlap / tissue_count) * 100, 4)
+        total_complement = round((total_complement / tissue_count) * 100, 4)
+        high_overlap = round((high_overlap / tissue_count) * 100, 4)
+        high_complement = round((high_complement / tissue_count) * 100, 4)
+        med_overlap = round((med_overlap / tissue_count) * 100, 4)
+        med_complement = round((med_complement / tissue_count) * 100, 4)
+        low_overlap = round((low_overlap / tissue_count) * 100, 4)
+        low_complement = round((low_complement / tissue_count) * 100, 4)
+        negative = round((negative / tissue_count) * 100, 4)
+        tissue_count = round((tissue_count / masked_pixels) * 100, 4)
+        background = round((background / masked_pixels) * 100, 4)
+        mask = round((masked_pixels / 1048576) * 100, 4)
+        if non_mask > 0:
+            non_mask = round((non_mask / 1048576) * 100, 4)
+        else:
+            non_mask = 0.00
+
+    # Build dict using Python floats
+    colocal_dict["Total Coverage"] = total_coverage
+    colocal_dict["Total Overlap"] = total_overlap
+    colocal_dict["Total Complement"] = total_complement
+    colocal_dict["High Positive Overlap"] = high_overlap
+    colocal_dict["High Positive Complement"] = high_complement
+    colocal_dict["Medium Positive Overlap"] = med_overlap
+    colocal_dict["Medium Positive Complement"] = med_complement
+    colocal_dict["Low Positive Overlap"] = low_overlap
+    colocal_dict["Low Positive Complement"] = low_complement
+    colocal_dict["Negative"] = negative
+    colocal_dict["Tissue"] = tissue_count
+    colocal_dict["Background / No Tissue"] = background
+    colocal_dict["Mask Area"] = mask
+    colocal_dict["Non-mask Area"] = non_mask
+    return colocal_dict
+
+
+def _process_single_tile_old(tile, dir, save_img, color):
+    """
+    Processes a single image tile by iterating across the tile. It categorizes pixels into different complement levels,
+    negative tissue, and background. Optionally saves the processed image to specified directory if save_img is True.
+
+    Args:
+        tile (dict): A dictionary containing the image under the key "Image Array".
+        save_img (bool): A flag indicating whether to create a colored image and save it.
+        dir (str): The directory where the image should be saved if save_img is True.
+        color (list): A list of RGB color values to be used for different complement levels.
+
+    Returns:
+        tuple: A tuple containing counts of pixels in the following order:
+            - high_complement (int): Count of pixels with values less than 61.
+            - pos_complement (int): Count of pixels with values between 61-120.
+            - low_complement (int): Count of pixels with values between 121-180.
+            - negative (int): Count of pixels with values between 181-234.
+            - background (int): Count of pixels with values 235 and above.
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the analyze_dual_antigen_colocalization or analyze_triplet_antigen_colocalization
+        functions.
+    """
+    high_complement = 0
+    med_complement = 0
+    low_complement = 0
+    negative = 0
+    background = 0
+    h, w = tile["Image Array"].shape
+
+    if save_img:
+        tilename = tile["Tilename"]
+        img_out = np.full((h, w, 3), COLOR_BACKGROUND, dtype="uint8")
+        for y in range(h):
+            for x in range(w):
+                pixel = tile["Image Array"][x, y]
+                if pixel < 61:
+                    high_complement += 1
+                    img_out[x, y] = color[0]
+                elif pixel < 121:
+                    med_complement += 1
+                    img_out[x, y] = color[1]
+                elif pixel < 181:
+                    low_complement += 1
+                    img_out[x, y] = color[2]
+                elif pixel < 235:
+                    negative += 1
+                    img_out[x, y] = COLOR_NEGATIVE
+                else:
+                    background += 1
+        img_out = Image.fromarray(img_out.astype("uint8"))
+        out = f"{dir}/{tilename}.tif"
+        img_out.save(out)
+    else:
+        for y in range(h):
+            for x in range(w):
+                pixel = tile["Image Array"][x, y]
+                if pixel < 61:
+                    high_complement += 1
+                elif pixel < 121:
+                    med_complement += 1
+                elif pixel < 181:
+                    low_complement += 1
+                elif pixel < 235:
+                    negative += 1
+                else:
+                    background += 1
+
+    return high_complement, med_complement, low_complement, negative, background
+
+
+def _process_single_tile(tile, dir, save_img, color, antigen_profile):
+    """
+    Processes antigen expression for a single tile.
+
+    Processes a single image tile using vectorization and automatic backend detection for GPU acceleration. It
+    categorizes pixels into different complement levels, negative tissue, and background based on the passed antigen
+    profile. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
+
+    Args:
+        tile (dict): A dictionary containing the image under the key `Image Array` and masks under the key `Masks`.
+
+        save_img (bool): A flag indicating whether to create a colored image and save it.
+
+        dir (str): The directory where the image should be saved if save_img is True.
+
+        color (list): A list of RGB color values to be used for different complement levels.
+
+        antigen_profile (dict): Antigen profile for the tile, specifying the thresholds applied during processing.
+
+    Returns:
+        tuple: A tuple containing counts of pixels in the following order:
+
+            - high_complement (int): Sum of pixels with values below `high_positive_threshold` of `antigen profile`.
+
+            - med_complement (int): Sum of pixels with values between `high_positive_threshold` and
+              'medium_positive_threshold` of `antigen_profile`.
+
+            - low_complement (int): Sum of pixels with values between `medium_positive_threshold` and
+              `low_positive_threshold` of `antigen_profile`.
+
+            - negative (int): Sum of pixels with values between `low_positive_threshold` and 234 of `antigen_profile`.
+
+            - background (int): Sum of pixels above 235 and below 255.
+
+    Optional Image Saving:
+        If `save_img` is True, an image containing the colored results will be saved in the specified directory.
+        The coloring scheme depends on the color parameter and is specified by the calling function.
+    """
+    # Convert image arrays to CuPy arrays
+    img1 = xp.array(tile["Image Array"], dtype=xp.float32)
+
+    tumor_mask = ~xp.isnan(img1)
+    # Get thresholds from antigen_profile
+    high_thresh = antigen_profile["high_positive_threshold"]
+    medium_thresh = antigen_profile["medium_positive_threshold"]
+    low_thresh = antigen_profile["low_positive_threshold"]
+
+    # Create masks for different intensity zones for tile1
+    high_positive_mask = (img1 < high_thresh) & tumor_mask
+    medium_positive_mask = (img1 >= high_thresh) & (img1 < medium_thresh) & tumor_mask
+    low_positive_mask = (img1 >= medium_thresh) & (img1 < low_thresh) & tumor_mask
+    negative_mask = (img1 >= low_thresh) & (img1 < 235) & tumor_mask
+    background_mask = (img1 >= 235) & tumor_mask
+
+    # Calculate counts for each zone
+    high_complement = xp.sum(high_positive_mask)
+    med_complement = xp.sum(medium_positive_mask)
+    low_complement = xp.sum(low_positive_mask)
+    negative = xp.sum(negative_mask)
+    background = xp.sum(background_mask)
+
+    masked_pixels = xp.sum(tumor_mask)
+
+    # Save image if required
+    if save_img:
+        colored_img = xp.full(
+            (high_positive_mask.shape[0], high_positive_mask.shape[1], 3),
+            xp.array(COLOR_NON_MASK, dtype=xp.uint8),
+            dtype=xp.uint8,
+        )
+        colored_img[high_positive_mask] = color[0]  # High complement color
+        colored_img[medium_positive_mask] = color[1]  # Positive complement color
+        colored_img[low_positive_mask] = color[2]  # Low complement color
+        colored_img[negative_mask] = COLOR_NEGATIVE  # White for negative
+        colored_img[background_mask] = COLOR_BACKGROUND  # Gray for background
+
+        colored_img = to_numpy(colored_img)
+        img = Image.fromarray(colored_img)
+        img.save(f"{dir}/{tile['Tilename']}.tif")
+
+    return (
+        int(high_complement),
+        int(med_complement),
+        int(low_complement),
+        int(negative),
+        int(background),
+        int(masked_pixels),
+    )
+
+
+def _process_two_tiles_old(tile1, tile2, dir, save_img, colors):
+    """
+    Processes two image tiles by iterating across the tile. It categorizes pixels into overlap, different complement
+    levels, negative tissue, and background. Optionally saves the processed image to the specified directory if
+    save_img is True. This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
+
+    Args:
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array".
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key "Image Array".
+        dir (str): The directory where the output image should be saved if save_img is True.
+        save_img (bool): A flag indicating whether to save the output image.
+        colors (list): A list of RGB color values to be used for different complement levels.
+
+    Returns:
+        tuple: A tuple containing the counts of:
+            - high_overlap (int): Number of pixels where both tiles are highly positive.
+            - med_overlap (int): Number of pixels where both tiles are medium positive.
+            - low_overlap (int): Number of pixels where both tiles are low positive.
+            - high_complement (int): Number of pixels where one tile is highly positive and the other is not.
+            - med_complement (int): Number of pixels where one tile is medium positive and the other is not.
+            - low_complement (int): Number of pixels where one tile is low positive and the other is not.
+            - negative (int): Number of pixels where either tile is negative.
+            - background (int): Number of background pixels.
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
+        functions.
+    """
+
+    high_overlap = 0
+    med_overlap = 0
+    low_overlap = 0
+    high_complement = 0
+    med_complement = 0
+    low_complement = 0
+    negative = 0
+    background = 0
+    h, w = tile1["Image Array"].shape
+
+    if save_img:
+        tilename = tile1["Tilename"]
+        img_out = np.full((h, w, 3), COLOR_BACKGROUND, dtype="uint8")
+        for y in range(h):
+            for x in range(w):
+                pixel1 = tile1["Image Array"][x, y]
+                pixel2 = tile2["Image Array"][x, y]
+
+                # Check if both pixels are positive
+                if pixel1 < 181 and pixel2 < 181:
+                    if pixel1 < 61 and pixel2 < 61:
+                        high_overlap += 1
+                        # Color strong red where both are highly positive
+                        img_out[x, y] = COLOR_OVERLAP
+                    elif pixel1 < 121 and pixel2 < 121:
+                        med_overlap += 1
+                        # Color strong red where both are positive
+                        img_out[x, y] = COLOR_OVERLAP
+                    else:
+                        low_overlap += 1
+                        # Color light red where both are low positive
+                        img_out[x, y] = COLOR_OVERLAP
+                # Check if pixel1 is positive and pixel2 is not
+                elif pixel1 < 181 and pixel2 > 180:
+                    if pixel1 < 61:
+                        high_complement += 1
+                        # Color scheme for tile1 (strong)
+                        img_out[x, y] = colors[0][0]
+                    elif pixel1 < 121:
+                        med_complement += 1
+                        # Color scheme for tile1 (bright)
+                        img_out[x, y] = colors[0][1]
+                    else:
+                        low_complement += 1
+                        # Color scheme for tile1 (light)
+                        img_out[x, y] = colors[0][2]
+                elif pixel1 > 180 and pixel2 < 181:
+                    if pixel2 < 61:
+                        high_complement += 1
+                        # Color scheme for tile2 (strong)
+                        img_out[x, y] = colors[1][0]
+                    elif pixel2 < 121:
+                        med_complement += 1
+                        # Color scheme for tile2 (bright)
+                        img_out[x, y] = colors[1][1]
+                    else:
+                        low_complement += 1
+                        # Color scheme for tile2 (light)
+                        img_out[x, y] = colors[1][2]
+                elif pixel1 < 235 or pixel2 < 235:
+                    negative += 1
+                    # Color white where either are negative
+                    img_out[x, y] = COLOR_NEGATIVE
+                else:
+                    # Background Pixels stay gray
+                    background += 1
+
+        img_out = Image.fromarray(img_out.astype("uint8"))
+        out = f"{dir}/{tilename}.tif"
+        img_out.save(out)
+    else:
+        for y in range(h):
+            for x in range(w):
+                pixel1 = tile1["Image Array"][x, y]
+                pixel2 = tile2["Image Array"][x, y]
+
+                # Check if both pixels are positive
+                if pixel1 < 181 and pixel2 < 181:
+                    if pixel1 < 61 and pixel2 < 61:
+                        high_overlap += 1
+                    elif pixel1 < 121 and pixel2 < 121:
+                        med_overlap += 1
+                    else:
+                        low_overlap += 1
+                # Check if one pixel is positive and the other is not
+                elif (pixel1 < 181 and pixel2 > 180) or (pixel1 > 180 and pixel2 < 181):
+                    if (pixel1 < 61 and pixel2 > 180) or (pixel2 < 61 and pixel1 > 180):
+                        high_complement += 1
+                    elif (pixel1 < 121 and pixel2 > 180) or (
+                        pixel2 < 121 and pixel1 > 180
+                    ):
+                        med_complement += 1
+                    else:
+                        low_complement += 1
+                elif pixel1 < 235 or pixel2 < 235:
+                    negative += 1
+                else:
+                    background += 1
+
+    return (
+        high_overlap,
+        med_overlap,
+        low_overlap,
+        high_complement,
+        med_complement,
+        low_complement,
+        negative,
+        background,
+    )
+
+
+def _process_two_tiles(tile1, tile2, dir, save_img, colors, antigen_profiles):
+    """
+    Processes antigen co-expression for two single tiles.
+
+    Processes two image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+    pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
+    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
+    This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
+
+    Args:
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key `Image Array`.
+
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key `Image Array`.
+
+        dir (str): The directory where the output image should be saved if `save_img` is True.
+
+        save_img (bool): A flag indicating whether to save the output image.
+
+        colors (list): A list of RGB color values to be used for different complement levels.
+
+        antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.
+
+    Returns:
+        tuple: A tuple containing the counts of:
+
+            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.
+
+            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.
+
+            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.
+
+            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of
+              `antigen profiles`.
+
+            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and
+              `medium_positive_threshold` of `antigen_profiles`.
+
+            - low_complement (int): Sum of pixels with only one tile is between 'medium_positive_threshold' and
+              'low_positive_threshold' of 'antigen_profiles'.
+
+            - negative (int): Sum of pixels with values between 'low_positive_threshold' and 235 of 'antigen_profile'.
+
+            - background (int): Sum of pixels above 235 and below 255.
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
+        functions.
+    """
+    # Convert image arrays to CuPy arrays
+    img1 = xp.array(tile1["Image Array"], dtype=xp.float32)
+    img2 = xp.array(tile2["Image Array"], dtype=xp.float32)
+
+    # Define tumor mask (pixels < 255 in either image, or same mask applied)
+    # tumor_mask = (img1 < 255) & (img2 < 255)
+    tumor_mask1 = ~xp.isnan(img1)
+    tumor_mask2 = ~xp.isnan(img2)
+    tumor_mask = tumor_mask1 & tumor_mask2
+    assert xp.array_equal(
+        tumor_mask1, tumor_mask2
+    ), "Tumor masks differ between the two tiles!"
+
+    # Get thresholds from antigen_profile
+    high_thresh1 = antigen_profiles[0]["high_positive_threshold"]
+    medium_thresh1 = antigen_profiles[0]["medium_positive_threshold"]
+    low_thresh1 = antigen_profiles[0]["low_positive_threshold"]
+
+    high_thresh2 = antigen_profiles[1]["high_positive_threshold"]
+    medium_thresh2 = antigen_profiles[1]["medium_positive_threshold"]
+    low_thresh2 = antigen_profiles[1]["low_positive_threshold"]
+
+    # Create masks for different intensity zones for tile1
+    high_positive_mask1 = (img1 < high_thresh1) & tumor_mask
+    medium_positive_mask1 = (
+        (img1 >= high_thresh1) & (img1 < medium_thresh1) & tumor_mask
+    )
+    low_positive_mask1 = (img1 >= medium_thresh1) & (img1 < low_thresh1) & tumor_mask
+    negative_mask1 = (img1 >= low_thresh1) & (img1 < 235) & tumor_mask
+    background_mask1 = (img1 >= 235) & tumor_mask
+
+    # Create masks for different intensity zones for tile2
+    high_positive_mask2 = (img2 < high_thresh2) & tumor_mask
+    medium_positive_mask2 = (
+        (img2 >= high_thresh2) & (img2 < medium_thresh2) & tumor_mask
+    )
+    low_positive_mask2 = (img2 >= medium_thresh2) & (img2 < low_thresh2) & tumor_mask
+    negative_mask2 = (img2 >= low_thresh2) & (img2 < 235) & tumor_mask
+    background_mask2 = (img2 >= 235) & tumor_mask
+
+    # Calculate overlap and complement counts
+    high_overlap = xp.sum(high_positive_mask1 & high_positive_mask2)
+    med_overlap = xp.sum(
+        (high_positive_mask1 & medium_positive_mask2)
+        | (medium_positive_mask1 & high_positive_mask2)
+        | (medium_positive_mask1 & medium_positive_mask2)
+    )
+    low_overlap = xp.sum(
+        (high_positive_mask1 & low_positive_mask2)
+        | (medium_positive_mask1 & low_positive_mask2)
+        | (low_positive_mask1 & high_positive_mask2)
+        | (low_positive_mask1 & medium_positive_mask2)
+        | (low_positive_mask1 & low_positive_mask2)
+    )
+    high_complement = xp.sum(
+        high_positive_mask1
+        & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+    ) + xp.sum(
+        ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+        & high_positive_mask2
+    )
+    med_complement = xp.sum(
+        medium_positive_mask1
+        & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+    ) + xp.sum(
+        ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+        & medium_positive_mask2
+    )
+    low_complement = xp.sum(
+        low_positive_mask1
+        & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+    ) + xp.sum(
+        ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+        & low_positive_mask2
+    )
+    negative = xp.sum(
+        (negative_mask1 & negative_mask2)
+        | (negative_mask1 & background_mask2)
+        | (background_mask1 & negative_mask2)
+    )
+    background = xp.sum(background_mask1 & background_mask2)
+
+    masked_pixels = xp.sum(tumor_mask)
+
+    # Save image if required
+    if save_img:
+        colored_img = xp.full(
+            (high_positive_mask1.shape[0], high_positive_mask1.shape[1], 3),
+            xp.array(COLOR_NON_MASK, dtype=xp.uint8),
+            dtype=xp.uint8,
+        )
+        colored_img[high_positive_mask1 & high_positive_mask2] = (
+            COLOR_OVERLAP  # High overlap color
+        )
+        colored_img[
+            (high_positive_mask1 & medium_positive_mask2)
+            | (medium_positive_mask1 & high_positive_mask2)
+            | (medium_positive_mask1 & medium_positive_mask2)
+        ] = COLOR_OVERLAP  # Positive overlap color
+        colored_img[
+            (high_positive_mask1 & low_positive_mask2)
+            | (medium_positive_mask1 & low_positive_mask2)
+            | (low_positive_mask1 & high_positive_mask2)
+            | (low_positive_mask1 & medium_positive_mask2)
+            | (low_positive_mask1 & low_positive_mask2)
+        ] = COLOR_OVERLAP  # Low overlap color
+        colored_img[
+            high_positive_mask1
+            & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+        ] = colors[0][
+            0
+        ]  # High complement color for tile1
+        colored_img[
+            ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+            & high_positive_mask2
+        ] = colors[1][
+            0
+        ]  # High complement color for tile2
+        colored_img[
+            medium_positive_mask1
+            & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+        ] = colors[0][
+            1
+        ]  # Positive complement color for tile1
+        colored_img[
+            ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+            & medium_positive_mask2
+        ] = colors[1][
+            1
+        ]  # Positive complement color for tile2
+        colored_img[
+            low_positive_mask1
+            & ~(high_positive_mask2 | medium_positive_mask2 | low_positive_mask2)
+        ] = colors[0][
+            2
+        ]  # Low complement color for tile1
+        colored_img[
+            ~(high_positive_mask1 | medium_positive_mask1 | low_positive_mask1)
+            & low_positive_mask2
+        ] = colors[1][
+            2
+        ]  # Low complement color for tile2
+        # Negative tissue
+        colored_img[negative_mask1 & negative_mask2] = (
+            COLOR_NEGATIVE  # White for negative
+        )
+        # In-mask Background
+        colored_img[background_mask1 & background_mask2] = (
+            COLOR_BACKGROUND  # Gray for background
+        )
+
+        colored_img = to_numpy(colored_img)
+        img = Image.fromarray(colored_img)
+        img.save(f"{dir}/{tile1['Tilename']}.tif")
+
+    return (
+        int(high_overlap),
+        int(med_overlap),
+        int(low_overlap),
+        int(high_complement),
+        int(med_complement),
+        int(low_complement),
+        int(negative),
+        int(background),
+        int(masked_pixels),
+    )
+
+
+def _process_three_tiles_old(tile1, tile2, tile3, dir, save_img):
+    """
+    Processes three tiles by iterating across the tiles. It categorizes pixels into overlap, different complement
+    levels, negative tissue and background. Optionally saves the processed image into dir if save_img is True. This
+    function is only called by analyze_triplet_antigen_colocalization.
+
+    Args:
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key "Image Array"
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key "Image Array"
+        tile3 (dict): A dictionary containing tile3's data. The image can be accessed using the key "Image Array".
+        dir (str): The directory where the output image should be saved if save_img is True.
+        save_img (bool): A flag indicating whether to save the output image.
+
+    Returns:
+        tuple: A tuple containing the counts of:
+            - high_overlap (int): Number of pixels where all three tiles are highly positive.
+            - med_overlap (int): Number of pixels where all three tiles are medium positive.
+            - low_overlap (int): Number of pixels where all three tiles are low positive.
+            - high_complement (int): Number of pixels where one tile is highly positive and the others are not.
+            - med_complement (int): Number of pixels where one tile is medium positive and the others are not.
+            - low_complement (int): Number of pixels where one tile is low positive and the others are not.
+            - negative (int): Number of pixels where any tile is negative.
+            - background (int): Number of background pixels.
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        For the coloring scheme, see the description of analyze_triplet_antigen_combinations().
+
+    """
+    high_overlap = 0
+    med_overlap = 0
+    low_overlap = 0
+    high_complement = 0
+    med_complement = 0
+    low_complement = 0
+    negative = 0
+    background = 0
+    h, w = tile1["Image Array"].shape
+
+    if save_img:
+        # If save_img is True, in addition to the numerical analysis an image containing the results of the analysis
+        # will be created and saved in passed directory. Else only numerical analysis will be performed.
+        tilename = tile1["Tilename"]
+        img_out = np.full((h, w, 3), COLOR_BACKGROUND, dtype="uint8")
+        for y in range(h):
+            for x in range(w):
+                pixel_values = [
+                    tile["Image Array"][x, y] for tile in [tile1, tile2, tile3]
+                ]
+                sum_high = sum(1 for val in pixel_values if val < 61)
+                sum_med = sum(1 for val in pixel_values if val < 121)
+                sum_low = sum(1 for val in pixel_values if val < 181)
+                sum_neg = sum(1 for val in pixel_values if val < 235)
+
+                # Check if 2 or all 3 pixels are positive
+                if sum_low >= 2:
+                    # Check if 2 or all 3 pixels are highly positive
                     if sum_high >= 2:
                         high_overlap += 1
                         # Color strong red where all are highly positive
-                        img[x, y] = [255, 0, 0]
-                    elif sum_high == 1:
+                        img_out[x, y] = COLOR_OVERLAP
+                    # Check if 2 or all 3 pixels are positive
+                    elif sum_med >= 2:
+                        med_overlap += 1
+                        # Color strong red where all are positive
+                        img_out[x, y] = COLOR_OVERLAP
+                    # Else 2 or all 3 pixels are low positive
+                    else:
+                        low_overlap += 1
+                        # Color strong red where all are low positive
+                        img_out[x, y] = COLOR_OVERLAP
+                # Check if 1 pixel is positive while the other 2 are not
+                elif sum_low == 1:
+                    # Check if the pixel is highly positive
+                    if sum_high == 1:
                         idx = pixel_values.index(min(pixel_values))
                         high_complement += 1
-                        # Color
-                        img[x, y] = [[0, 255, 0], [
-                            0, 0, 255], [255, 165, 0]][idx]
-                    elif sum_pos >= 2:
-                        pos_overlap += 1
-                        img[x, y] = [255, 102, 102]
-                    elif sum_pos == 1:
+                        # Colors: tile1: Strong Green, tile2: Strong Blue, tile3: Strong Orange
+                        img_out[x, y] = [
+                            COLOR_TILE1[0],
+                            COLOR_TILE2[0],
+                            COLOR_TILE3[0],
+                        ][idx]
+                    # Check if the pixel is positive
+                    elif sum_med == 1:
                         idx = pixel_values.index(min(pixel_values))
-                        pos_complement += 1
-                        img[x, y] = [[102, 255, 102], [
-                            102, 102, 255], [255, 200, 102]][idx]
-                    elif sum_low >= 2:
-                        low_overlap += 1
-                        img[x, y] = [255, 153, 153]
-                    elif sum_low == 1:
+                        med_complement += 1
+                        # Colors: tile1: Bright Green, tile2: Bright Blue, tile3: Bright Orange
+                        img_out[x, y] = [
+                            COLOR_TILE1[1],
+                            COLOR_TILE2[1],
+                            COLOR_TILE3[1],
+                        ][idx]
+                    # Else the pixel is low positive
+                    else:
                         idx = pixel_values.index(min(pixel_values))
                         low_complement += 1
-                        img[x, y] = [[153, 255, 153],
-                                     [153, 153, 255], [255, 225, 153]][idx]
-                    elif any(val < 235 for val in pixel_values):
-                        negative += 1
-                        img[x, y] = [255, 255, 255]
-                    else:
-                        background += 1
+                        # Colors: tile1: Light Green, tile2: Light Blue, tile3: Light Orange
+                        img_out[x, y] = [
+                            COLOR_TILE1[2],
+                            COLOR_TILE2[2],
+                            COLOR_TILE3[2],
+                        ][idx]
+                # Check if any of the pixels are negative
+                elif sum_neg > 0:
+                    negative += 1
+                    # Color white where either are negative
+                    img_out[x, y] = COLOR_NEGATIVE
+                else:
+                    # Else pixel is background: stay gray
+                    background += 1
 
-            img = Image.fromarray(img.astype("uint8"))
-            out = f"{dir}/{tilename}.tif"
-            img.save(out)
-        else:
-            # TODO simplify. However simpler version before somehow didn't return correct results
-            for y in range(h):
-                for x in range(w):
-                    pixel_values = [img["Image Array"][x, y]
-                                    for img in [img1, img2, img3]]
+        img_out = Image.fromarray(img_out.astype("uint8"))
+        out = f"{dir}/{tilename}.tif"
+        img_out.save(out)
+    else:
+        for y in range(h):
+            for x in range(w):
+                pixel_values = [
+                    img["Image Array"][x, y] for img in [tile1, tile2, tile3]
+                ]
+                sum_high = sum(1 for val in pixel_values if val < 61)
+                sum_med = sum(1 for val in pixel_values if val < 121)
+                sum_low = sum(1 for val in pixel_values if val < 181)
+                sum_neg = sum(1 for val in pixel_values if val < 235)
 
-                    if sum(1 for val in pixel_values if val < 61) >= 2:
+                # Check if 2 or all 3 pixels are positive
+                if sum_low >= 2:
+                    # Check if 2 or all 3 pixels are highly positive
+                    if sum_high >= 2:
                         high_overlap += 1
-                    elif any(val < 61 for val in pixel_values):
-                        high_complement += 1
-                    elif sum(1 for val in pixel_values if val < 121) >= 2:
-                        pos_overlap += 1
-                    elif any(val < 121 for val in pixel_values):
-                        pos_complement += 1
-                    elif sum(1 for val in pixel_values if val < 181) >= 2:
-                        low_overlap += 1
-                    elif any(val < 181 for val in pixel_values):
-                        low_complement += 1
-                    elif any(val < 235 for val in pixel_values):
-                        negative += 1
+                    # Check if 2 or all 3 pixels are positive
+                    elif sum_med >= 2:
+                        med_overlap += 1
+                    # Else 2 or all 3 pixels are low positive
                     else:
-                        background += 1
+                        low_overlap += 1
+                # Check if 1 pixel is positive while the other 2 are not
+                elif sum_low == 1:
+                    # Check if the pixel is highly positive
+                    if sum_high == 1:
+                        high_complement += 1
+                    # Check if the pixel is positive
+                    elif sum_med == 1:
+                        med_complement += 1
+                    # Else the pixel is low positive
+                    else:
+                        low_complement += 1
+                # Check if any of the pixels are negative
+                elif sum_neg > 0:
+                    negative += 1
+                else:
+                    # Else pixel is background
+                    background += 1
 
-        coverage = (
-            high_overlap
-            + pos_overlap
-            + low_overlap
-            + high_complement
-            + pos_complement
-            + low_complement
+    total_pixel_count = tile1["Image Array"].size
+    total_count = (
+        high_overlap
+        + med_overlap
+        + low_overlap
+        + high_complement
+        + med_complement
+        + low_complement
+        + negative
+        + background
+    )
+    assert (
+        total_count == total_pixel_count
+    ), f"Total count {total_count} does not match total pixel count {total_pixel_count}"
+
+    return (
+        high_overlap,
+        med_overlap,
+        low_overlap,
+        high_complement,
+        med_complement,
+        low_complement,
+        negative,
+        background,
+    )
+
+
+def _process_three_tiles(tile1, tile2, tile3, dir, save_img, antigen_profiles):
+    """
+    Processes antigen expression for three tiles.
+
+    Processes three image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+    pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
+    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.
+    This function is typically called by `analyze_dual_antigen_colocalization` or
+    `analyze_triplet_antigen_colocalization` when two of the three tiles contain tissue.
+
+    Args:
+        tile1 (dict): A dictionary containing tile1's data. The image can be accessed using the key `Image Array`.
+
+        tile2 (dict): A dictionary containing tile2's data. The image can be accessed using the key `Image Array`.
+
+        tile3 (dict): A dictionary containing tile3's data. The image can be accessed using the key `Image Array`.
+
+        dir (str): The directory where the output image should be saved if `save_img` is True.
+
+        save_img (bool): A flag indicating whether to save the output image.
+
+        colors (list): A list of RGB color values to be used for different complement levels.
+
+        antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.
+
+    Returns:
+        tuple: A tuple containing the counts of:
+
+            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.
+
+            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.
+
+            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.
+
+            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of
+              `antigen profiles`.
+
+            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and
+              `medium_positive_threshold` of `antigen_profiles`.
+
+            - low_complement (int): Sum of pixels with only one tile is between 'medium_positive_threshold' and
+              'low_positive_threshold' of 'antigen_profiles'.
+
+            - negative (int): Sum of pixels with values between 'low_positive_threshold' and 235 of 'antigen_profile'.
+
+            - background (int): Sum of pixels above 235 and below 255.
+
+    Optional Image Saving:
+        If save_img is True, an image containing the colored results will be saved in the specified directory.
+        The coloring scheme depends on the color parameter and is specified by the calling function. For more
+        information, refer to the `analyze_dual_antigen_colocalization` or `analyze_triplet_antigen_colocalization`
+        functions.
+    """
+    # Convert image arrays to CuPy arrays
+    img1 = xp.array(tile1["Image Array"], dtype=xp.float32)
+    img2 = xp.array(tile2["Image Array"], dtype=xp.float32)
+    img3 = xp.array(tile3["Image Array"], dtype=xp.float32)
+
+    tumor_mask1 = ~xp.isnan(img1)
+    tumor_mask2 = ~xp.isnan(img2)
+    tumor_mask3 = ~xp.isnan(img3)
+    tumor_mask = tumor_mask1 & tumor_mask2 & tumor_mask3
+    assert xp.all(tumor_mask1 == tumor_mask2) and xp.all(tumor_mask2 == tumor_mask3)
+    # Get thresholds from antigen_profile
+    high_thresh1 = antigen_profiles[0]["high_positive_threshold"]
+    medium_thresh1 = antigen_profiles[0]["medium_positive_threshold"]
+    low_thresh1 = antigen_profiles[0]["low_positive_threshold"]
+
+    high_thresh2 = antigen_profiles[1]["high_positive_threshold"]
+    medium_thresh2 = antigen_profiles[1]["medium_positive_threshold"]
+    low_thresh2 = antigen_profiles[1]["low_positive_threshold"]
+
+    high_thresh3 = antigen_profiles[2]["high_positive_threshold"]
+    medium_thresh3 = antigen_profiles[2]["medium_positive_threshold"]
+    low_thresh3 = antigen_profiles[2]["low_positive_threshold"]
+
+    # Create masks for different intensity zones for tile1
+    high_positive_mask1 = (img1 < high_thresh1) & tumor_mask
+    medium_positive_mask1 = (
+        (img1 >= high_thresh1) & (img1 < medium_thresh1) & tumor_mask
+    )
+    low_positive_mask1 = (img1 >= medium_thresh1) & (img1 < low_thresh1) & tumor_mask
+    negative_mask1 = (img1 >= low_thresh1) & (img1 < 235) & tumor_mask
+    background_mask1 = (img1 >= 235) & tumor_mask
+
+    # Create masks for different intensity zones for tile2
+    high_positive_mask2 = (img2 < high_thresh2) & tumor_mask
+    medium_positive_mask2 = (
+        (img2 >= high_thresh2) & (img2 < medium_thresh2) & tumor_mask
+    )
+    low_positive_mask2 = (img2 >= medium_thresh2) & (img2 < low_thresh2) & tumor_mask
+    negative_mask2 = (img2 >= low_thresh2) & (img2 < 235) & tumor_mask
+    background_mask2 = (img2 >= 235) & tumor_mask
+
+    # Create masks for different intensity zones for tile3
+    high_positive_mask3 = (img3 < high_thresh3) & tumor_mask
+    medium_positive_mask3 = (
+        (img3 >= high_thresh3) & (img3 < medium_thresh3) & tumor_mask
+    )
+    low_positive_mask3 = (img3 >= medium_thresh3) & (img3 < low_thresh3) & tumor_mask
+    negative_mask3 = (img3 >= low_thresh3) & (img3 < 235) & tumor_mask
+    background_mask3 = (img3 >= 235) & tumor_mask
+
+    # Calculate overlap and complement counts
+    # High overlap if all 3 or 2/3 pixels are high positive, regardless of the 3rd
+    high_overlap = xp.sum(
+        (high_positive_mask1 & high_positive_mask2 & high_positive_mask3)
+        | (high_positive_mask1 & high_positive_mask2 & ~high_positive_mask3)
+        | (high_positive_mask1 & high_positive_mask3 & ~high_positive_mask2)
+        | (high_positive_mask2 & high_positive_mask3 & ~high_positive_mask1)
+    )
+    # Positive overlap if at least 2/3 pixels are positive or if 2 below 121 and not high overlap
+    med_overlap = xp.sum(
+        (medium_positive_mask1 & medium_positive_mask2 & medium_positive_mask3)
+        | (medium_positive_mask1 & medium_positive_mask2 & ~medium_positive_mask3)
+        | (medium_positive_mask1 & medium_positive_mask3 & ~medium_positive_mask2)
+        | (medium_positive_mask2 & medium_positive_mask3 & ~medium_positive_mask1)
+        | (
+            medium_positive_mask1
+            & high_positive_mask2
+            & ~high_positive_mask3
+            & ~medium_positive_mask3
         )
-        total_overlap = high_overlap + pos_overlap + low_overlap
-        total_complement = high_complement + pos_complement + low_complement
-        tissue_count = coverage + negative
+        | (
+            medium_positive_mask1
+            & high_positive_mask3
+            & ~high_positive_mask2
+            & ~medium_positive_mask2
+        )
+        | (
+            high_positive_mask1
+            & medium_positive_mask2
+            & ~high_positive_mask3
+            & ~medium_positive_mask3
+        )
+        | (
+            high_positive_mask1
+            & medium_positive_mask3
+            & ~high_positive_mask2
+            & ~medium_positive_mask2
+        )
+        | (
+            medium_positive_mask2
+            & high_positive_mask3
+            & ~high_positive_mask1
+            & ~medium_positive_mask1
+        )
+        | (
+            medium_positive_mask3
+            & high_positive_mask2
+            & ~high_positive_mask1
+            & ~medium_positive_mask1
+        )
+    )
+    # Low positive overlap if 2/3 pixels are low positive or 2 pixel <181 if not (high-) positive overlap
+    low_overlap = xp.sum(
+        (low_positive_mask1 & low_positive_mask2 & low_positive_mask3)
+        | (low_positive_mask1 & low_positive_mask2 & ~low_positive_mask3)
+        | (low_positive_mask1 & low_positive_mask3 & ~low_positive_mask2)
+        | (low_positive_mask2 & low_positive_mask3 & ~low_positive_mask1)
+        | (
+            low_positive_mask1
+            & medium_positive_mask2
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask1
+            & high_positive_mask2
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask1
+            & medium_positive_mask3
+            & (negative_mask2 | background_mask2)
+        )
+        | (
+            low_positive_mask1
+            & high_positive_mask3
+            & (negative_mask2 | background_mask2)
+        )
+        | (
+            low_positive_mask2
+            & medium_positive_mask3
+            & (negative_mask1 | background_mask1)
+        )
+        | (
+            low_positive_mask2
+            & high_positive_mask3
+            & (negative_mask1 | background_mask1)
+        )
+        | (
+            low_positive_mask2
+            & medium_positive_mask1
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask2
+            & high_positive_mask1
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask3
+            & medium_positive_mask1
+            & (negative_mask2 | background_mask2)
+        )
+        | (
+            low_positive_mask3
+            & high_positive_mask1
+            & (negative_mask2 | background_mask2)
+        )
+        | (
+            low_positive_mask3
+            & medium_positive_mask2
+            & (negative_mask1 | background_mask1)
+        )
+        | (
+            low_positive_mask3
+            & high_positive_mask2
+            & (negative_mask1 | background_mask1)
+        )
+    )
+    # High complement if only 1 pixel <61 while the other 2 >= 181
+    high_complement = xp.sum(
+        (
+            high_positive_mask1
+            & (negative_mask2 | background_mask2)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            high_positive_mask2
+            & (negative_mask1 | background_mask1)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            high_positive_mask3
+            & (negative_mask1 | background_mask1)
+            & (negative_mask2 | background_mask2)
+        )
+    )
+    # Positive complement if only 1 pixel <121 while the other 2 >= 181
+    med_complement = xp.sum(
+        (
+            medium_positive_mask1
+            & (negative_mask2 | background_mask2)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            medium_positive_mask2
+            & (negative_mask1 | background_mask1)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            medium_positive_mask3
+            & (negative_mask1 | background_mask1)
+            & (negative_mask2 | background_mask2)
+        )
+    )
+    # Positive complement if only 1 pixel <181 while the other 2 >= 181
+    low_complement = xp.sum(
+        (
+            low_positive_mask1
+            & (negative_mask2 | background_mask2)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask2
+            & (negative_mask1 | background_mask1)
+            & (negative_mask3 | background_mask3)
+        )
+        | (
+            low_positive_mask3
+            & (negative_mask1 | background_mask1)
+            & (negative_mask2 | background_mask2)
+        )
+    )
+    # Negative if at least 1/3 pixels >180 and <235 while no other pixel <181
+    negative = xp.sum(
+        negative_mask1 & negative_mask2 & negative_mask3
+        | negative_mask1 & negative_mask2 & background_mask3
+        | negative_mask1 & background_mask2 & negative_mask3
+        | background_mask1 & negative_mask2 & negative_mask3
+        | negative_mask1 & background_mask2 & background_mask3
+        | background_mask1 & negative_mask2 & background_mask3
+        | background_mask1 & background_mask2 & negative_mask3
+    )
+    # Background only if all 3 pixels are background
+    background = xp.sum(background_mask1 & background_mask2 & background_mask3)
 
-        # Vals in % for overlap, complement, negative in respect to entire image
-        coverage = round((coverage / tissue_count) * 100, 4)
-        total_overlap = round((total_overlap / tissue_count) * 100, 4)
-        total_complement = round((total_complement / tissue_count) * 100, 4)
-        high_overlap = round((high_overlap / tissue_count) * 100, 4)
-        high_complement = round((high_complement / tissue_count) * 100, 4)
-        pos_overlap = round((pos_overlap / tissue_count) * 100, 4)
-        pos_complement = round((pos_complement / tissue_count) * 100, 4)
-        low_overlap = round((low_overlap / tissue_count) * 100, 4)
-        low_complement = round((low_complement / tissue_count) * 100, 4)
-        negative = round((negative / tissue_count) * 100, 4)
-        background = round((background / tissue_count) * 100, 4)
+    masked_pixels = xp.sum(tumor_mask)
+    # Save image if required
+    if save_img:
+        colored_img = xp.full(
+            (high_positive_mask1.shape[0], high_positive_mask1.shape[1], 3),
+            xp.array(COLOR_NON_MASK, dtype=xp.uint8),
+            dtype=xp.uint8,
+        )
+        # High overlap color
+        colored_img[
+            (high_positive_mask1 & high_positive_mask2 & high_positive_mask3)
+            | (high_positive_mask1 & high_positive_mask2 & ~high_positive_mask3)
+            | (high_positive_mask1 & high_positive_mask3 & ~high_positive_mask2)
+            | (high_positive_mask2 & high_positive_mask3 & ~high_positive_mask1)
+        ] = COLOR_OVERLAP
 
-        # set dict
-        colocal_dict["Total Coverage"] = coverage
-        colocal_dict["Total Overlap"] = total_overlap
-        colocal_dict["Total Complement"] = total_complement
-        colocal_dict["High Positive Overlap"] = high_overlap
-        colocal_dict["High Positive Complement"] = high_complement
-        colocal_dict["Positive Overlap"] = pos_overlap
-        colocal_dict["Positive Complement"] = pos_complement
-        colocal_dict["Low Positive Overlap"] = low_overlap
-        colocal_dict["Low Positive Complement"] = low_complement
-        colocal_dict["Negative"] = negative
-        colocal_dict["Background/No Tissue"] = background
+        # Positive overlap color
+        colored_img[
+            (medium_positive_mask1 & medium_positive_mask2 & medium_positive_mask3)
+            | (medium_positive_mask1 & medium_positive_mask2 & ~medium_positive_mask3)
+            | (medium_positive_mask1 & medium_positive_mask3 & ~medium_positive_mask2)
+            | (medium_positive_mask2 & medium_positive_mask3 & ~medium_positive_mask1)
+            | (
+                medium_positive_mask1
+                & high_positive_mask2
+                & ~high_positive_mask3
+                & ~medium_positive_mask3
+            )
+            | (
+                medium_positive_mask1
+                & high_positive_mask3
+                & ~high_positive_mask2
+                & ~medium_positive_mask2
+            )
+            | (
+                high_positive_mask1
+                & medium_positive_mask2
+                & ~high_positive_mask3
+                & ~medium_positive_mask3
+            )
+            | (
+                high_positive_mask1
+                & medium_positive_mask3
+                & ~high_positive_mask2
+                & ~medium_positive_mask2
+            )
+            | (
+                medium_positive_mask2
+                & high_positive_mask3
+                & ~high_positive_mask1
+                & ~medium_positive_mask1
+            )
+            | (
+                medium_positive_mask3
+                & high_positive_mask2
+                & ~high_positive_mask1
+                & ~medium_positive_mask1
+            )
+        ] = COLOR_OVERLAP
 
-    return colocal_dict
+        # Low overlap color
+        colored_img[
+            (low_positive_mask1 & low_positive_mask2 & low_positive_mask3)
+            | (low_positive_mask1 & low_positive_mask2 & ~low_positive_mask3)
+            | (low_positive_mask1 & low_positive_mask3 & ~low_positive_mask2)
+            | (low_positive_mask2 & low_positive_mask3 & ~low_positive_mask1)
+            | (
+                low_positive_mask1
+                & medium_positive_mask2
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask1
+                & high_positive_mask2
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask1
+                & medium_positive_mask3
+                & (negative_mask2 | background_mask2)
+            )
+            | (
+                low_positive_mask1
+                & high_positive_mask3
+                & (negative_mask2 | background_mask2)
+            )
+            | (
+                low_positive_mask2
+                & medium_positive_mask3
+                & (negative_mask1 | background_mask1)
+            )
+            | (
+                low_positive_mask2
+                & high_positive_mask3
+                & (negative_mask1 | background_mask1)
+            )
+            | (
+                low_positive_mask2
+                & medium_positive_mask1
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask2
+                & high_positive_mask1
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask3
+                & medium_positive_mask1
+                & (negative_mask2 | background_mask2)
+            )
+            | (
+                low_positive_mask3
+                & high_positive_mask1
+                & (negative_mask2 | background_mask2)
+            )
+            | (
+                low_positive_mask3
+                & medium_positive_mask2
+                & (negative_mask1 | background_mask1)
+            )
+            | (
+                low_positive_mask3
+                & high_positive_mask2
+                & (negative_mask1 | background_mask1)
+            )
+        ] = COLOR_OVERLAP
+
+        # High complement color
+        colored_img[
+            (
+                high_positive_mask1
+                & (negative_mask2 | background_mask2)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                high_positive_mask2
+                & (negative_mask1 | background_mask1)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                high_positive_mask3
+                & (negative_mask1 | background_mask1)
+                & (negative_mask2 | background_mask2)
+            )
+        ] = COLOR_TILE1[0]
+
+        # Positive complement color
+        colored_img[
+            (
+                medium_positive_mask1
+                & (negative_mask2 | background_mask2)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                medium_positive_mask2
+                & (negative_mask1 | background_mask1)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                medium_positive_mask3
+                & (negative_mask1 | background_mask1)
+                & (negative_mask2 | background_mask2)
+            )
+        ] = COLOR_TILE1[1]
+
+        # Low complement color
+        colored_img[
+            (
+                low_positive_mask1
+                & (negative_mask2 | background_mask2)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask2
+                & (negative_mask1 | background_mask1)
+                & (negative_mask3 | background_mask3)
+            )
+            | (
+                low_positive_mask3
+                & (negative_mask1 | background_mask1)
+                & (negative_mask2 | background_mask2)
+            )
+        ] = COLOR_TILE1[2]
+
+        # Negative color
+        colored_img[
+            negative_mask1 & negative_mask2 & negative_mask3
+            | negative_mask1 & negative_mask2 & background_mask3
+            | negative_mask1 & background_mask2 & negative_mask3
+            | background_mask1 & negative_mask2 & negative_mask3
+            | negative_mask1 & background_mask2 & background_mask3
+            | background_mask1 & negative_mask2 & background_mask3
+            | background_mask1 & background_mask2 & negative_mask3
+        ] = COLOR_NEGATIVE
+
+        # Background color
+        colored_img[background_mask1 & background_mask2 & background_mask3] = (
+            COLOR_BACKGROUND
+        )
+
+        colored_img = to_numpy(colored_img)
+        img = Image.fromarray(colored_img)
+        img.save(f"{dir}/{tile1['Tilename']}.tif")
+
+    return (
+        int(high_overlap),
+        int(med_overlap),
+        int(low_overlap),
+        int(high_complement),
+        int(med_complement),
+        int(low_complement),
+        int(negative),
+        int(background),
+        int(masked_pixels),
+    )

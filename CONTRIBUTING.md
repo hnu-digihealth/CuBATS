@@ -23,6 +23,9 @@ If a package is only required during development use `pdm add -dG testing <packa
 - `pdm apply_sort`
     - runs isort on `tests` and `src`
     - updates imports as required
+- `pdm run build-docs`
+    - runs make clean and make htm on `docs`
+    - opens build/html/index.html
 
 ### Virtual Environment
 The virtual environment is created as part of pdm. It can be activated using `source .venv/bin/activate`.<br>
