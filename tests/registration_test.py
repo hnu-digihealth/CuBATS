@@ -5,16 +5,15 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 if platform.system() == "Darwin":  # macOS
-    path = os.environ.get('DYLD_FALLBACK_LIBRARY_PATH', '')
-    path += (':' if path else '') + '/opt/homebrew/lib'
-    os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = path
+    path = os.environ.get("DYLD_FALLBACK_LIBRARY_PATH", "")
+    path += (":" if path else "") + "/opt/homebrew/lib"
+    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = path
 elif platform.system() == "Windows":  # Windows
     OPENSLIDE_PATH = r"C:\\Users\\mlser\\openslide-bin-4.0.0.6-windows-x64\\openslide-bin-4.0.0.6-windows-x64\\bin"
     if hasattr(os, "add_dll_directory"):
-        with os.add_dll_directory(OPENSLIDE_PATH):
-            pass
+        _openslide_dll_handle = os.add_dll_directory(str(OPENSLIDE_PATH))
     else:
-        os.environ['PATH'] += f";{OPENSLIDE_PATH}"
+        os.environ["PATH"] += os.pathsep + str(OPENSLIDE_PATH)
 
 # Third Party
 try:
@@ -35,8 +34,7 @@ class TestRegistration(unittest.TestCase):
         _ = openslide
         # Common mocks
         self.mock_registrar = MagicMock()
-        self.mock_path_exists = patch(
-            "cubats.registration.os.path.exists").start()
+        self.mock_path_exists = patch("cubats.registration.os.path.exists").start()
         self.mock_listdir = patch("cubats.registration.os.listdir").start()
         self.mock_path_join = patch("cubats.registration.os.path.join").start()
         self.mock_mkdir = patch("pathlib.Path.mkdir").start()
@@ -50,7 +48,10 @@ class TestRegistration(unittest.TestCase):
 
         # Mock return values for registrar.register()
         self.mock_registrar.register.return_value = (
-            MagicMock(), MagicMock(), MagicMock())
+            MagicMock(),
+            MagicMock(),
+            MagicMock(),
+        )
 
     def tearDown(self):
         # Stop all patches
@@ -140,15 +141,12 @@ class TestRegistration(unittest.TestCase):
             register_with_ref(
                 "/dummy/src", 123, "reference_slide", microregistration=False
             )
-        self.assertEqual(str(context.exception),
-                         "Invalid destination directory")
+        self.assertEqual(str(context.exception), "Invalid destination directory")
 
     def test_invalid_reference_slide(self):
         self.mock_paths(["/dummy/src", "/dummy/dst"])
         with self.assertRaises(ValueError) as context:
-            register_with_ref(
-                "/dummy/src", "/dummy/dst", 123, microregistration=False
-            )
+            register_with_ref("/dummy/src", "/dummy/dst", 123, microregistration=False)
         self.assertEqual(
             str(context.exception), "Invalid or non-existent reference slide"
         )
@@ -162,9 +160,7 @@ class TestRegistration(unittest.TestCase):
                 "reference_slide",
                 microregistration="not_a_bool",
             )
-        self.assertEqual(
-            str(context.exception), "microregistration must be a boolean"
-        )
+        self.assertEqual(str(context.exception), "microregistration must be a boolean")
 
     def test_invalid_max_non_rigid_registartion_dim_px(self):
         self.mock_paths(["/dummy/src", "/dummy/dst", "reference_slide"])

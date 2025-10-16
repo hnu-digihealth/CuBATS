@@ -5,7 +5,7 @@ import os
 project_root = os.path.dirname(os.path.abspath(__file__))
 
 # Ensure the logs directory exists
-logs_dir = os.path.join(project_root, 'logs')
+logs_dir = os.path.join(project_root, "logs")
 os.makedirs(logs_dir, exist_ok=True)
 
 LOGGING = {
@@ -40,7 +40,8 @@ LOGGING = {
             "filename": os.path.join(logs_dir, "cubats.log"),
             "maxBytes": 10485760,
             "backupCount": 3,
-        }
+            "delay": True,
+        },
     },
     "loggers": {
         "": {

@@ -37,22 +37,27 @@ from cubats.cutils import to_numpy
 
 
 def quantify_tile(iterable):
-    """ This function processes a single input tile and returns a dictionary.
+    """This function quantifies a single input tile and returns a dictionary.
 
-    If the tile contains tissue (mean pixel value < 230 and standard deviation > 15), it will undergo stain separation
-    and pixel intensity calculations. The results will be returned in the dictionary. The flag will be set to 1. If
-    save_img is True the DAB image will additionally be saved in the specified directory.
-    If the tile is mostly white (mean pixel value >= 230 or standard deviation <= 15), it will not be processed
-    further. The returned dictionary will contain the tile name and a flag set to 0.
+    The function offers two masking modes: tile-level masking and pixel-level masking. In tile-level masking tiles that
+    contain sufficient tissue (mean pixel value < 230 and standard deviation > 15), will undergo stain separation and
+    quantification. The results will be returned in the dictionary. The 'flag' will be set to 1. If 'save_img' is True
+    the DAB image will additionally be saved in the specified directory. If the tile does not contain sufficient tissue
+    it will not be processed and the returned dictionary will only contain the tile name and a 'flag' set to 0.
+    In pixel-level masking the mask will be applied to the tile prior to quantification to receive a merged tile which
+    will then be quantified. Non-mask pixels will be set to 255.
+
 
     Args:
         iterable (iterable): Iterable containing the following Information on passed tile:
 
-            - index 0: Column, necessary for naming
-            - index 1: Row, necessary for naming
-            - index 2: Tile itself, necessary since processes cannot access shared memory
-            - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory
-            - save_img: Boolean, if True, DAB image will be saved in specified directory
+            - index 0: Column, necessary for naming.
+            - index 1: Row, necessary for naming.
+            - index 2: Tile itself, necessary since processes cannot access shared memory.
+            - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory.
+            - save_img: Boolean, if True, DAB image will be saved in specified directory.
+            - antigen_profile: Antigen-specific thresholds used during quantification.
+            - masking_mode: Masking mode for quantification.
 
     Returns:
         dict: Dictionary containing tile results:
@@ -63,7 +68,7 @@ def quantify_tile(iterable):
             - Zones (ndarray): Number of pixels in each intensity zone.
             - Percentage (ndarray): Percentage of pixels in each zone.
             - Score (ndarray): Score for the tile.
-            - Px_count (int): Total number of pixels in the tile.
+            - Tissue Count (int): Total number of tissue pixels in the tile.
             - Flag (int): Processing flag (1 if processed, 0 if not).
             - Image Array (ndarray): Array of pixel values for positive pixels.
 
@@ -73,11 +78,15 @@ def quantify_tile(iterable):
     # Assign local variables for better readability
     col = iterable[0]
     row = iterable[1]
-    tile = iterable[2]
+    tile = iterable[2][0]
+    mask = iterable[2][1]
     DAB_TILE_DIR = iterable[3]
     save_img = iterable[4]
+    antigen_profile = iterable[5]
+    # masking_mode = iterable[6]
 
     tile_name = str(col) + "_" + str(row)
+
     # Initialize Dictionary for single tile
     single_tile_dict = {}
     single_tile_dict["Tilename"] = tile_name
@@ -90,14 +99,23 @@ def quantify_tile(iterable):
     mean = xp.mean(temp)
     std = xp.std(temp)
 
-    # Only process tiles that are mostly covered and not blank to save runtime and space
-    if mean < 230 and std > 15:
+    process_tile = False
+    # Masking mode
+    if mask is None:
+        if mean < 230 and std > 15:
+            process_tile = True
+        else:
+            single_tile_dict["Flag"] = 0
+    else:
+        process_tile = True
+
+    if process_tile:
         # Separate stains
         DAB, H, E = ihc_stain_separation(temp)
 
         # Calculate pixel intensity
-        (hist, hist_centers, zones, percentage, score, pixel_count, img_analysis) = (
-            calculate_pixel_intensity(DAB)
+        (hist, hist_centers, zones, percentage, score, mask_count, img_analysis) = (
+            calculate_pixel_intensity(DAB, antigen_profile, mask)
         )
 
         # Save image as tif in passed directory if wanted.
@@ -117,11 +135,9 @@ def quantify_tile(iterable):
         single_tile_dict["Zones"] = zones
         single_tile_dict["Percentage"] = percentage
         single_tile_dict["Score"] = score
-        single_tile_dict["Px_count"] = pixel_count
+        single_tile_dict["Mask Count"] = mask_count
         single_tile_dict["Image Array"] = img_analysis
         single_tile_dict["Flag"] = 1
-    else:
-        single_tile_dict["Flag"] = 0
 
     return single_tile_dict
 
@@ -154,8 +170,7 @@ def ihc_stain_separation(
     # Separate Hematoxylin stain
     ihc_h = (
         img_as_ubyte(
-            hed2rgb(to_numpy(
-                xp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
+            hed2rgb(to_numpy(xp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
         )
         if hematoxylin
         else None
@@ -163,49 +178,44 @@ def ihc_stain_separation(
     # Separate Eosin stain
     ihc_e = (
         img_as_ubyte(
-            hed2rgb(to_numpy(
-                xp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
+            hed2rgb(to_numpy(xp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
         )
         if eosin
         else None
     )
     # Separate DAB stain
     ihc_d = img_as_ubyte(
-        hed2rgb(to_numpy(
-            xp.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
+        hed2rgb(to_numpy(xp.stack((null, null, ihc_hed[:, :, 2]), axis=-1)))
     )
 
     return ihc_d, ihc_h, ihc_e
 
 
-def calculate_pixel_intensity(image):
+def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
     """
     Calculates pixel intensity of each pixel in the input image and separates them into 5 different zones based on
     their intensity. The image is converted to grayscale format, resulting in a distribution of intensity values
     between 0-255. Intensities above 235 are predominantly background or fatty tissues and do not contribute to
-    pathological scoring:
-
-        - Zone 1: High positive (intensity: 0-60)
-        - Zone 2: Positive (intensity: 61-120)
-        - Zone 3: Low positive (intensity: 121-180)
-        - Zone 4: Negative (intensity: 181-235)
-        - Zone 5: Background or fatty tissues (intensity: 236-255)
-
-    After calculating pixel intensities this function calculates percentage contribution of each of the zones as well
-    as the a pathology score.
+    pathological scoring. Thresholds for high-positive, medium-positive, low-positive and negative pixels are defined
+    by the passed antigen profile. If 'masking_mode' is 'pixel-level', pixels with an intensity value of 255 will be
+    excluded as they mark non-mask areas.
+    After calculating pixel intensities this function calculates percentage contribution of each of the zones with
+    respect to the mask tissue in the tile, as well as the a pathology score.
 
     Args:
-        image (numpy.ndarray): Input image.
+        image (xp.ndarray): Input image.
+        antigen_profile (dict): Dictionary with threshold values.
+        tumor_mask (xp.ndarray). Boolean tumor mask for pixel-level, None for tile-level masking.
 
     Returns:
         tuple: A tuple containing:
             - hist (ndarray): Histogram of the image.
             - hist_centers (ndarray): Centers of histogram bins.
-            - zones (xp.ndarray): Number of pixels in each intensity zone.
-            - percentage (xp.ndarray): Percentage of pixels in each intensity zone.
+            - zones (xp.ndarray): Number of pixels in each intensity zone with respect to the tumor mask.
+            - percentage (xp.ndarray): Percentage of pixels in each intensity zone with respect to the tumor mask.
             - score (str): Overall score of the tile.
-            - pixelcount (int): Tissue count of the tile.
-            - img_analysis (xp.ndarray): Array of pixel values colocalization.
+            - maskcount (int): Tissue count for tile-level masking. Count of masked pixels for pixel-level.
+            - img_analysis (xp.ndarray): Array of pixel values for multi-antigen evaluation.
     """
 
     # Conversion to gray-scale-ubyte image
@@ -220,34 +230,63 @@ def calculate_pixel_intensity(image):
     w, h = gray_scale_ubyte.shape
 
     # Initilize arrays for analysis
-    img_analysis = xp.full((w, h), 255, dtype="uint8")
+    img_analysis = xp.full((w, h), 255, dtype="float32")
+
     zones = xp.zeros(5, dtype=xp.int32)
 
+    # Get thresholds from antigen_profile
+    high_thresh = antigen_profile["high_positive_threshold"]
+    medium_thresh = antigen_profile["medium_positive_threshold"]
+    low_thresh = antigen_profile["low_positive_threshold"]
+
     # Define intensity masks
-    high_positive_mask = gray_scale_ubyte < 61
-    positive_mask = (gray_scale_ubyte >= 61) & (gray_scale_ubyte < 121)
-    low_positive_mask = (gray_scale_ubyte >= 121) & (gray_scale_ubyte < 181)
-    negative_mask = (gray_scale_ubyte >= 181) & (gray_scale_ubyte < 235)
+    high_positive_mask = gray_scale_ubyte < high_thresh
+    positive_mask = (gray_scale_ubyte >= high_thresh) & (
+        gray_scale_ubyte < medium_thresh
+    )
+    low_positive_mask = (gray_scale_ubyte >= medium_thresh) & (
+        gray_scale_ubyte < low_thresh
+    )
+    negative_mask = (gray_scale_ubyte >= low_thresh) & (gray_scale_ubyte < 235)
     background_mask = gray_scale_ubyte >= 235
 
-    # Update img_analysis with pixel values based on intensity masks
+    if tumor_mask is not None:
+        tumor_mask = xp.array(tumor_mask, dtype=bool)  # ensure boolean
+        high_positive_mask &= tumor_mask
+        positive_mask &= tumor_mask
+        low_positive_mask &= tumor_mask
+        negative_mask &= tumor_mask
+        background_mask &= tumor_mask
+
+    # Update img_analysis with pixel values based on intensity masks also containing background
     img_analysis[high_positive_mask] = gray_scale_ubyte[high_positive_mask]
     img_analysis[positive_mask] = gray_scale_ubyte[positive_mask]
     img_analysis[low_positive_mask] = gray_scale_ubyte[low_positive_mask]
     img_analysis[negative_mask] = gray_scale_ubyte[negative_mask]
+    img_analysis[background_mask] = gray_scale_ubyte[background_mask]
 
-    # Calculate zones
+    if tumor_mask is not None:
+        img_analysis[~tumor_mask] = xp.nan
+    # Calculate zones except non-mask
     zones[0] = xp.sum(high_positive_mask)
     zones[1] = xp.sum(positive_mask)
     zones[2] = xp.sum(low_positive_mask)
     zones[3] = xp.sum(negative_mask)
     zones[4] = xp.sum(background_mask)
 
-    # Calculate pixel count and percentage
     tissue_count = xp.sum(zones[:4])
-    percentage, score = calculate_percentage_and_score(
-        zones, tissue_count
-    )
+    if tumor_mask is not None:
+        mask_count = xp.sum(tumor_mask)
+    else:
+        mask_count = tissue_count
+    # Calculate pixel count and percentage
+
+    if xp.sum(zones[:4]) == 0:
+        percentage = xp.zeros(5, dtype=xp.int32)
+        percentage[4] = 100
+        score = "Background"
+    else:
+        percentage, score = calculate_percentage_and_score(zones)
 
     return (
         hist,
@@ -255,16 +294,16 @@ def calculate_pixel_intensity(image):
         zones,
         percentage,
         score,
-        int(tissue_count),
-        img_analysis,
+        int(mask_count),
+        to_numpy(img_analysis),
     )
 
 
-def calculate_percentage_and_score(zones, tissue_count):
+def calculate_percentage_and_score(zones):
     """
-    Calculates the percentage of pixels in each zone relative to the total pixel count and computes a score for each
-    zone. If more than 66.6% of the total pixels are attributed to a single zone, that zone's score is assigned. Else,
-    the score for each zone is calculated using this formula:
+    Calculates the percentage of pixels in each zone relative to the tissue count (Positive tissues) and total mask
+    count (Background) and computes a score for each zone. If more than 66.6% of the total pixels are attributed to
+    a single zone, that zone's score is assigned. Else, the score for each zone is calculated using this formula:
 
     .. math::
 
@@ -276,7 +315,6 @@ def calculate_percentage_and_score(zones, tissue_count):
 
     Args:
         zones (xp.ndarray): Array containing amount of pixels from each zone
-        tissue_count (int): Tissue count of the tile.
 
     Returns:
         tuple: A tuple containing:
@@ -284,18 +322,19 @@ def calculate_percentage_and_score(zones, tissue_count):
             - score (str): Name of the zone if it exceeds 66.6%, otherwise the name of the zone with the highest score.
 
     Raises:
-        ZeroDivisionError: If pixel count is zero.
         ValueError: If all zones have zero pixels.
     """
-
-    if tissue_count == 0:
-        raise ZeroDivisionError("Count cannot be zero")
 
     if xp.sum(zones) == 0:
         raise ValueError("All zones have zero pixels")
 
+    tissue_count = xp.sum(zones[:4])
+    total_pixels = xp.sum(zones)
+
     # Calculate percentage of pixels in each zone
-    percentage = (zones / tissue_count) * 100
+    percentage_tissue = (zones[:4] / tissue_count) * 100
+    percentage_background = (zones[4:] / total_pixels) * 100
+    percentage = xp.concatenate([percentage_tissue, percentage_background])
     zone_names = [
         "High Positive",
         "Positive",
@@ -335,16 +374,26 @@ def mask_tile(tile, mask):
 
     if len(mask_np.shape) == 3:
         mask_np = cv2.cvtColor(mask_np, cv2.COLOR_RGB2GRAY)
+    # Resize mask to tile size if needed
+    if mask_np.shape != tile_np.shape[:2]:
+        mask_np = cv2.resize(
+            mask_np,
+            (tile_np.shape[1], tile_np.shape[0]),
+            interpolation=cv2.INTER_NEAREST,
+        )
+
     _, binary_mask = cv2.threshold(mask_np, 127, 255, cv2.THRESH_BINARY)
+
+    tumor_mask = binary_mask == 0
+
     binary_mask_inv = cv2.bitwise_not(binary_mask)
-    binary_mask_inv_3ch = cv2.merge(
-        (binary_mask_inv, binary_mask_inv, binary_mask_inv))
+    binary_mask_inv_3ch = cv2.merge((binary_mask_inv, binary_mask_inv, binary_mask_inv))
 
     masked_tile = cv2.bitwise_and(tile_np, binary_mask_inv_3ch)
     white_bg = np.ones_like(tile_np) * 255
     masked_tile = np.where(binary_mask_inv_3ch == 0, white_bg, masked_tile)
 
-    return Image.fromarray(masked_tile.astype(np.uint8))
+    return Image.fromarray(masked_tile.astype(np.uint8)), tumor_mask
 
 
 def separate_stains_and_save__tiles_as_tif(openslide_deepzoom, deepzoom_level, out_dir):
@@ -378,8 +427,7 @@ def separate_stains_and_save__tiles_as_tif(openslide_deepzoom, deepzoom_level, o
             temp_rgb = temp.convert("RGB")
             temp_np = np.array(temp_rgb)
 
-            tiff.imsave(ORIGINAL_TILES_DIR + "/"
-                        + tile_name + "_original.tif", temp_np)
+            tiff.imsave(ORIGINAL_TILES_DIR + "/" + tile_name + "_original.tif", temp_np)
 
             # Now only process tiles that are mostly covered tiles
             if temp_np.mean() < 230 and temp_np.std() > 15:
