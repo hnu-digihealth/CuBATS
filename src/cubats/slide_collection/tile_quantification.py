@@ -1,35 +1,16 @@
 """
-This module contains functions for processing and analyzing tiles from whole slide images (WSIs), including color
-deconvolution and quantification.
-
-Credits:
-
-- The `ihc_stain_separation` function is adapted from the work of A. C. Ruifrok and D. A. Johnston in their paper
-  “Quantification of histochemical staining by color deconvolution,” Analytical and quantitative cytology and
-  histology / the International Academy of Cytology [and] American Society of Cytology, vol. 23, no. 4, pp. 291-9, Aug.
-  2001. PMID: 11531144. Source: \
-    https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_ihc_color_separation.html
-
-- The `calculate_pixel_intensity` and `calculate_percentage_and_score` function are inspired by the work of Varghese et
-  al. (2014) "IHC Profiler: An Open Source Plugin for the Quantitative Evaluation and Automated Scoring of
-  Immunohistochemistry Images of Human Tissue Samples."
-
-
-Last Modified: 2023-10-05
+This module performs tile-level quantification of IHC tiles, including color deconvolution, quantification of staining
+intensities, H-score and the IHC-Profiler score calculation, all based on antigen-specific thresholds, and masking of
+tumor-tissue areas.
 """
-
-# Standard Library
-import os
 
 # Third Party
 import cv2
 import numpy as np
-import tifffile as tiff
 from PIL import Image
 from skimage import img_as_ubyte
 from skimage.color import hed2rgb, rgb2gray, rgb2hed
 from skimage.exposure import histogram
-from tqdm import tqdm
 
 # CuBATS
 from cubats.config import xp
@@ -111,11 +92,11 @@ def quantify_tile(iterable):
 
     if process_tile:
         # Separate stains
-        DAB, H, E = ihc_stain_separation(temp)
+        DAB, H, E = color_deconvolution(temp)
 
         # Calculate pixel intensity
         (hist, hist_centers, zones, percentage, score, mask_count, img_analysis) = (
-            calculate_pixel_intensity(DAB, antigen_profile, mask)
+            evaluate_staining_intensities(DAB, antigen_profile, mask)
         )
 
         # Save image as tif in passed directory if wanted.
@@ -142,7 +123,7 @@ def quantify_tile(iterable):
     return single_tile_dict
 
 
-def ihc_stain_separation(
+def color_deconvolution(
     ihc_rgb,
     hematoxylin=False,
     eosin=False,
@@ -170,7 +151,8 @@ def ihc_stain_separation(
     # Separate Hematoxylin stain
     ihc_h = (
         img_as_ubyte(
-            hed2rgb(to_numpy(xp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
+            hed2rgb(
+                to_numpy(xp.stack((ihc_hed[:, :, 0], null, null), axis=-1)))
         )
         if hematoxylin
         else None
@@ -178,7 +160,8 @@ def ihc_stain_separation(
     # Separate Eosin stain
     ihc_e = (
         img_as_ubyte(
-            hed2rgb(to_numpy(xp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
+            hed2rgb(
+                to_numpy(xp.stack((null, ihc_hed[:, :, 1], null), axis=-1)))
         )
         if eosin
         else None
@@ -191,7 +174,7 @@ def ihc_stain_separation(
     return ihc_d, ihc_h, ihc_e
 
 
-def calculate_pixel_intensity(image, antigen_profile, tumor_mask=None):
+def evaluate_staining_intensities(image, antigen_profile, tumor_mask=None):
     """
     Calculates pixel intensity of each pixel in the input image and separates them into 5 different zones based on
     their intensity. The image is converted to grayscale format, resulting in a distribution of intensity values
@@ -337,7 +320,7 @@ def calculate_percentage_and_score(zones):
     percentage = xp.concatenate([percentage_tissue, percentage_background])
     zone_names = [
         "High Positive",
-        "Positive",
+        "Medium Positive",
         "Low Positive",
         "Negative",
         "Background",
@@ -387,56 +370,11 @@ def mask_tile(tile, mask):
     tumor_mask = binary_mask == 0
 
     binary_mask_inv = cv2.bitwise_not(binary_mask)
-    binary_mask_inv_3ch = cv2.merge((binary_mask_inv, binary_mask_inv, binary_mask_inv))
+    binary_mask_inv_3ch = cv2.merge(
+        (binary_mask_inv, binary_mask_inv, binary_mask_inv))
 
     masked_tile = cv2.bitwise_and(tile_np, binary_mask_inv_3ch)
     white_bg = np.ones_like(tile_np) * 255
     masked_tile = np.where(binary_mask_inv_3ch == 0, white_bg, masked_tile)
 
     return Image.fromarray(masked_tile.astype(np.uint8)), tumor_mask
-
-
-def separate_stains_and_save__tiles_as_tif(openslide_deepzoom, deepzoom_level, out_dir):
-    """
-    Iterates over an `openslide.DeepZoomGenerator` at the given `deepzoom_level` and separates hematoxylin, eosin and
-    DAB stains for the from the original tile. The original tile and separated stains are saved as tif images in the
-    specified `out_dir`.
-
-    Args:
-        openslide_deepzoom (DeepZoomGenerator): DeepZoomGenerator.
-        deepzoom_level (int): Desired Deep Zoom level to iterate through.
-        out_dir (str): Target directory in which tiles and separated stains are stored.
-    """
-    # Create directories for original tiles, hematoxylin stain, eosin stain
-    # and DAB stain
-    ORIGINAL_TILES_DIR = out_dir + "/original_tiles"
-    os.makedirs(ORIGINAL_TILES_DIR, exist_ok=True)
-    DAB_TILE_DIR = out_dir + "/DAB_tiles"
-    os.makedirs(DAB_TILE_DIR, exist_ok=True)
-    H_TILE_DIR = out_dir + "/H_tiles"
-    os.makedirs(H_TILE_DIR, exist_ok=True)
-    E_TILE_DIR = out_dir + "/E_tiles"
-    os.makedirs(E_TILE_DIR, exist_ok=True)
-
-    cols, rows = openslide_deepzoom.level_tiles[deepzoom_level - 1]
-    for row in tqdm(range(rows)):
-        for col in range(cols):
-            tile_name = str(col) + "_" + str(row)
-
-            temp = openslide_deepzoom.get_tile(deepzoom_level - 1, (col, row))
-            temp_rgb = temp.convert("RGB")
-            temp_np = np.array(temp_rgb)
-
-            tiff.imsave(ORIGINAL_TILES_DIR + "/" + tile_name + "_original.tif", temp_np)
-
-            # Now only process tiles that are mostly covered tiles
-            if temp_np.mean() < 230 and temp_np.std() > 15:
-                # print("Separating color for tile: ", tile_name)
-                DAB, H, E = ihc_stain_separation(temp_np, True, True)
-
-                # saving DAB,H,E in subdirectories
-                tiff.imsave(DAB_TILE_DIR + "/" + tile_name + "_DAB.tif", DAB)
-                tiff.imsave(H_TILE_DIR + "/" + tile_name + "_H.tif", H)
-                tiff.imsave(E_TILE_DIR + "/" + tile_name + "_E.tif", E)
-            else:
-                pass

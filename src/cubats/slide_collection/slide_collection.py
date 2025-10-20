@@ -15,13 +15,19 @@ from tqdm import tqdm
 # CuBATS
 import cubats.cutils as cutils
 import cubats.logging_config as log_config
-import cubats.slide_collection.colocalization as colocalization
 from cubats.config import get_backend_info, xp
+from cubats.slide_collection.registration import (
+    register_slides, register_slides_high_resolution,
+    register_slides_with_reference)
+from cubats.slide_collection.segmentation import run_tumor_segmentation
 from cubats.slide_collection.slide import Slide
+from cubats.slide_collection.tile_colocalization import (
+    evaluate_antigen_pair_tile, evaluate_antigen_triplet_tile)
 
 # Constants
 # Destination directories
 RESULT_DATA_DIR = "data"
+REGISTRATION_DIR = "registration"
 TILES_DIR = "tiles"
 COLOCALIZATION = "colocalization"
 ORIGINAL_TILES_DIR = "original"  # TODO: remove if no further use
@@ -40,6 +46,7 @@ SLIDE_COLLECTION_COLUMN_NAMES = [
     "Level Dimensions",
     "Tile Count",
 ]
+SUPPORTED_IMAGE_FORMATS = [".tif", ".tiff", ".mrxs", ".svs"]
 # Define column names and data types
 QUANTIFICATION_RESULTS_COLUMN_NAMES = {
     "Name": str,
@@ -342,6 +349,7 @@ class SlideCollection(object):
         # Directories
         self.src_dir = src_dir
         self.dest_dir = dest_dir
+        self.registration_dir = None
         self.data_dir = None
         self.pickle_dir = None
         self.tiles_dir = None
@@ -375,6 +383,15 @@ class SlideCollection(object):
             columns=TRIPLET_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
 
+        self.status = {
+            "initialized": False,
+            "registered": False,
+            "segmented": False,
+            "quantified": False,
+            "dual_antigen_expression": False,
+            "triple_antigen_expression": False,
+        }
+
         # Set destination directories
         self.set_dst_dir()
 
@@ -383,8 +400,8 @@ class SlideCollection(object):
 
         # Load previous results if exist
         self.load_previous_results()
-        if not self.mask_coordinates:
-            self.generate_mask()
+        # if not self.mask_coordinates:
+        #    self.extract_mask_tile_coordinates()
 
         if path_antigen_profiles is not None:
             self.add_antigen_profiles(path_antigen_profiles)
@@ -423,16 +440,15 @@ class SlideCollection(object):
         init_start_time = time()
         for file in os.listdir(self.src_dir):
             if os.path.isfile(os.path.join(self.src_dir, file)):
-                if not file.startswith(".") and (
-                    file.endswith(".tiff") or file.endswith(".tif")
-                ):
+                file_ext = os.path.splitext(file)[-1].lower()
+                if not file.startswith(".") and file_ext in SUPPORTED_IMAGE_FORMATS:
                     filename = cutils.get_name(file)
                     mask = False
                     ref = False
                     # Look for mask and reference slide. If no reference selected HE slide will be selected
-                    if re.search("_mask", filename):
-                        mask = True
-                    elif re.search("HE", filename) or filename == self.reference_slide:
+                    # if re.search("_mask", filename):
+                    #    mask = True
+                    if re.search("HE", filename) or filename == self.reference_slide:
                         ref = True
 
                     slide = Slide(
@@ -447,8 +463,8 @@ class SlideCollection(object):
                     )
                     if ref and not self.reference_slide:
                         self.reference_slide = slide
-                    elif mask:
-                        self.mask = slide
+                    # elif mask:
+                    #    self.mask = slide
 
         self.collection_info.to_csv(
             os.path.join(self.data_dir, "collection_info.csv"),
@@ -457,6 +473,8 @@ class SlideCollection(object):
             header=True,
             encoding="utf-8",
         )
+        self.status["initialized"] = True
+
         init_end_time = time()
         self.logger.debug(
             f"Slide collection initialized in {round((init_end_time - init_start_time),2)} seconds"
@@ -476,7 +494,7 @@ class SlideCollection(object):
 
             - dual_antigen_expressions.pickle: Load dual antigen overlap results from previous processing.
 
-            - triplet_overlap_results.pickle: Load triplet antigen overlap results from previous processing.
+            - triplet_antigen_expressions.pickle: Load triplet antigen overlap results from previous processing.
 
         Args:
             path (str, optional): Path to directory containing pickle files. Defaults to `pickle_dir` of the slide
@@ -485,6 +503,24 @@ class SlideCollection(object):
         """
         prev_res_start_time = time()
         self.logger.info("Searching for previous results")
+
+        reg_dir = os.path.join(self.dest_dir, REGISTRATION_DIR)
+        if os.path.isdir(reg_dir) and os.listdir(reg_dir):
+            self.registration_dir = reg_dir
+            try:
+                # update Slide objects to point to registered images
+                self._update_slide_paths_after_registration()
+                self.status["registered"] = True
+                self.logger.debug(
+                    f"Found existing registration directory at {reg_dir}; updated slide paths to registered images."
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to update slide paths from existing registration directory: {e}"
+                )
+
+            self.add_mask_to_collection(reg_dir)
+
         if self.quantification_results.__len__() == 0:
             if path is None:
                 path = self.pickle_dir
@@ -502,8 +538,9 @@ class SlideCollection(object):
             if os.path.exists(path_mask_coord):
                 self.mask_coordinates = pickle.load(
                     open(path_mask_coord, "rb"))
+                self.status["segmented"] = True
                 self.logger.debug(
-                    f"Successfully loaded mask for {self.collection_name}"
+                    f"Successfully loaded mask coordinates for {self.collection_name}"
                 )
             else:
                 self.logger.debug(
@@ -514,6 +551,7 @@ class SlideCollection(object):
             if os.path.exists(path_quant_res):
                 self.quantification_results = pickle.load(
                     open(path_quant_res, "rb"))
+                self.status["quantified"] = True
                 self.logger.debug(
                     f"Sucessfully loaded quantification results for {self.collection_name}"
                 )
@@ -527,12 +565,13 @@ class SlideCollection(object):
                 self.dual_antigen_expressions = pickle.load(
                     open(path_dual_overlap_res, "rb")
                 )
+                self.status["dual_antigen_expression"] = True
                 self.logger.debug(
-                    f"Successfully loaded dual overlap results for {self.collection_name}"
+                    f"Successfully loaded dual_antigen_expression results for {self.collection_name}"
                 )
             else:
                 self.logger.debug(
-                    f"No previous dual overlap results found for {self.collection_name}"
+                    f"No previous dual_antigen_expression results found for {self.collection_name}"
                 )
 
             # load triplet overlap results
@@ -540,12 +579,13 @@ class SlideCollection(object):
                 self.triplet_antigen_results = pickle.load(
                     open(path_triplet_overlap_res, "rb")
                 )
+                self.status["triplet_antigen_expression"] = True
                 self.logger.debug(
-                    f"Successfully loaded triplet overlap results for {self.collection_name}"
+                    f"Successfully loaded triplet_antigen_expression results for {self.collection_name}"
                 )
             else:
                 self.logger.debug(
-                    f"No previous triplet overlap results found for {self.collection_name}"
+                    f"No previous triplet_antigen_expression results found for {self.collection_name}"
                 )
 
             # Load processing info for each slide TODO load into slide object
@@ -585,8 +625,56 @@ class SlideCollection(object):
                 {round((prev_res_end_time - prev_res_start_time), 2 )} seconds"
         )
 
-    def generate_mask(self, save_img=False):
-        """Generates mask coordinates based on the mask slide.
+    def add_mask_to_collection(self, dir):
+        """Adds a mask slide to the slide collection.
+
+        Args:
+            dir (str): Path to directory the mask is in.
+
+        """
+        if not dir or not os.path.isdir(dir):
+            self.logger.debug(
+                f"Registration directory {dir} does not exist yet. Please run registration first.")
+        try:
+            for fname in os.listdir(dir):
+                if re.search(r"_mask", fname, re.IGNORECASE):
+                    ext = os.path.splitext(fname)[1].lower()
+                    if ext not in SUPPORTED_IMAGE_FORMATS:
+                        continue
+                    mask_name = cutils.get_name(fname)
+                    mask_path = os.path.join(dir, fname)
+                    existing = [s for s in self.slides if s.name == mask_name]
+                    if existing:
+                        existing[0].is_mask = True
+                        try:
+                            existing[0].update_slide(mask_path)
+                        except Exception:
+                            self.logger.debug(
+                                f"Could not update existing mask slide path for {mask_name}")
+                        self.mask = existing[0]
+                    else:
+                        try:
+                            new_mask = Slide(
+                                mask_name, mask_path, is_mask=True)
+                            self.slides.append(new_mask)
+                            try:
+                                self.collection_info.loc[len(self.collection_info)] = (
+                                    new_mask.properties.values()
+                                )
+                            except Exception:
+                                self.logger.debug(
+                                    "Could not append new mask slide to collection_info")
+                            self.mask = new_mask
+                        except Exception as e:
+                            self.logger.warning(
+                                f"Found mask Slide but failed to load it: {mask_path}: {e}")
+                    self.logger.info(
+                        f"Loaded mask slide from directory: {mask_path}")
+        except Exception as e:
+            self.logger.debug(f"Error while scanning {dir} for mask: {e}")
+
+    def extract_mask_tile_coordinates(self, save_img=False):
+        """Extracts mask coordinates from the mask slide.
 
         Generates a list containing of tiles coordinates that are part of the mask. This allows to only process tiles
         that are part of the mask and thus contain tumor tissue. Tiles with less than 10% tumor tissue are dropped due
@@ -609,16 +697,16 @@ class SlideCollection(object):
             slide_tiles = self.slides[0].tiles
             self.mask_coordinates.clear()
             cols, rows = slide_tiles.level_tiles[slide_tiles.level_count - 1]
-            for col in tqdm(range(cols), desc="Initializing Mask"):
+            for col in tqdm(range(cols), desc="Extracting mask tiles"):
                 for row in range(rows):
                     self.mask_coordinates.append((col, row))
         else:
             mask_start_time = time()
-            self.logger.debug("Generating mask coordinates")
+            self.logger.debug("Extracting Mask Tile Coordinates")
             mask_tiles = self.mask.tiles
             self.mask_coordinates.clear()
             cols, rows = mask_tiles.level_tiles[mask_tiles.level_count - 1]
-            for col in tqdm(range(cols), desc="Initializing Mask"):
+            for col in tqdm(range(cols), desc="Extracting mask tiles"):
                 for row in range(rows):
                     temp = mask_tiles.get_tile(
                         mask_tiles.level_count - 1, (col, row))
@@ -656,9 +744,171 @@ class SlideCollection(object):
                         protocol=pickle.HIGHEST_PROTOCOL)
         # pickle.dump(self.mask_coordinates, open(out, "wb"))
         self.logger.debug(f"Successfully saved mask coordinates to {out}")
-        self.logger.info("Finished Mask Generation")
+        self.logger.info("Finished Mask Tile Extraction")
+
+    def register_slides(
+            self,
+            reference_slide=None,
+            microregistration=True,
+            max_non_rigid_registration_dim_px=2000,
+            crop=None,
+            high_res_alignement=False,
+            high_res_fraction=None,
+    ):
+        """Registers all WSIs in the collection using Valis.
+
+        Registers all WSIs in the collection and aligns them. Registration can be performed towards a selected
+        referenceWSI or automatically towards a WSI chosen by VALIS. Registration includes rigid and non-rigid
+        registration steps. Optional `microregistration` can be applied to further improve registration quality.
+        The registered slides are saved in the `registration` directory. Intermediate results are stored in the
+        `intermediate_registration_results` directory. Further configuration options such as
+        `max_non_rigid_registration_dim_px` and cropping methods are available.
+        Lastly, an additional, customizable high-resolution alignment can be performed if specified, which allows
+        tailoring the alignment resolution via the `high_res_fraction` parameter.
+
+        Args:
+            reference_slide (str): Path to reference slide. If None, the first slide in the collection will be used.
+                Defaults to None.
+
+            microregistration (bool): Boolean determining if microregistration shall be used. Defaults to True.
+
+            max_non_rigid_registration_dim_px (int): Maximum size of non-rigid registration dimension in pixels.
+                Defaults to 2000.
+
+            crop (str): Crop method to be used. Defaults to None which results cropping to reference slide if one is
+                provided. If no reference slide is provided, the default crop method is 'overlap'.
+
+            high_res_alignment (bool): Boolean determining if customizable high-resolution alignment shall be
+                performed. Defaults to False.
+
+            high_res_fraction (float): Fraction of the image to be used for high resolution alignment. Defaults to None.
+        """
+        registration_begin_time = time()
+
+        self.registration_dir = os.path.join(self.dest_dir, REGISTRATION_DIR)
+        os.makedirs(self.registration_dir, exist_ok=True)
+
+        self.intermediate_registration_dir = os.path.join(self.data_dir,
+                                                          "intermediate_registration_results")
+        os.makedirs(self.intermediate_registration_dir, exist_ok=True)
+
+        if reference_slide:
+            self.logger.info(
+                f"Registering slides with reference slide {reference_slide}")
+            register_slides_with_reference(
+                slide_src_dir=self.src_dir,
+                results_dst_dir=self.intermediate_registration_dir,
+                reference_slide=self.registration_dir,
+                microregistration=microregistration,
+                max_non_rigid_registration_dim_px=max_non_rigid_registration_dim_px,
+                crop=crop,
+            )
+        elif high_res_alignement:
+            self.logger.info(
+                f"Performing high resolution alignment with {high_res_fraction} fraction")
+            register_slides_high_resolution(
+                slide_src_dir=self.src_dir,
+                results_dst_dir=self.intermediate_registration_dir,
+                registered_slides_dst=self.registration_dir,
+                micro_reg_fraction=high_res_fraction,
+            )
+        else:
+            self.logger.info("Registering slides without reference slide")
+            register_slides(
+                slide_src_dir=self.src_dir,
+                results_dst_dir=self.intermediate_registration_dir,
+                registered_slides_dst=self.registration_dir,
+                microregistration=microregistration,
+                max_non_rigid_registration_dim_px=max_non_rigid_registration_dim_px,
+                crop=crop,
+            )
+
+        registration_end_time = time()
+        self.status["registered"] = True
+        self.logger.info(
+            f"Finished image registration of {self.collection_name} in \
+                {round((registration_end_time - registration_begin_time)/60,2)} minutes."
+        )
+        self._update_slide_paths_after_registration()
+
+    def _update_slide_paths_after_registration(self):
+        """Update Slide objects to use registered slide files saved in self.registration_dir.
+        Uses original basename to look for the registered file (registration preserves filenames)."""
+        if not self.registration_dir or not os.path.isdir(self.registration_dir):
+            self.logger.debug(
+                "Registration directory not set or missing; skipping _update_slide_paths_after_registration.")
+            return
+
+        for slide in self.slides:
+            base = os.path.basename(slide.orig_path)
+            reg_path = os.path.join(self.registration_dir, base)
+            if os.path.exists(reg_path):
+                try:
+                    slide.update_slide(reg_path)
+                    self.logger.debug(
+                        f"Updated slide {slide.name} to registered path {reg_path}")
+                except Exception as e:
+                    self.logger.warning(
+                        f"Could not update slide {slide.name} to {reg_path}: {e}")
+
+    def tumor_segmentation(
+            self,
+            model_path,
+            reference_slide=None,
+            tile_size=[1024, 1024],
+            output_path=None,
+            normalization=False,
+            inversion=False,
+            plot_results=False,
+    ):
+        """Performs tumor segmentation on the HE WSI in the SlideCollection.
+
+        Performs tumor segmentation on either a specified reference WSI or the reference WSI selected by the
+        SlideCollection. The segmentation model needs to be passed. By default, segmentation results are saved into the
+        `registration_dir` of the SlideCollection, an optional ouput path can be provided. Model-specific parameters
+        such as `normalization`, or `inversion` can also be passed. Lastly, segmentation_results can be plotted onto
+        the tissue if `plot_results` is set to True.
+
+        Args:
+            model_path (str): Path to segmentation model.
+
+            reference_slide (str, optional): Path to reference slide. If None, the reference slide of the
+                SlideCollection is used. Defaults to None.
+
+            tile_size (list, optional): Tile size to be used for segmentation. Defaults to [1024, 1024].
+
+            output_path (str, optional): Output path for segmentation results. If None, the `registration_dir` of the
+                SlideCollection is used. Defaults to None.
+
+            normalization (bool, optional): Boolean determining if stain normalization shall be applied. Defaults to
+                False.
+
+            inversion (bool, optional): Boolean determining if color inversion shall be applied. Defaults to False.
+
+            plot_results (bool, optional): Boolean determining if segmentation results shall be plotted onto the tissue.
+                Defaults to False.
+
+        Returns:
+            None
+        """
+
+        if reference_slide is None:
+            reference_slide = self.reference_slide.registered_path
+
+        if output_path is None:
+            output_path = self.registration_dir
+
+        run_tumor_segmentation(reference_slide, model_path, tile_size,
+                               output_path, normalization, inversion, plot_results)
+        self.add_mask_to_collection(output_path)
+        self.status["segmented"] = True
 
     def add_antigen_profiles(self, profile_path):
+        """Adds antigen profiles to slides in the collection based on matching names.
+
+        Args:
+            profile_path (str): Path to antigen profile file. Supported formats are CSV and JSON.
+        """
         if profile_path.endswith(".csv"):
             profiles_df = pd.read_csv(profile_path)
         elif profile_path.endswith(".json"):
@@ -712,7 +962,9 @@ class SlideCollection(object):
             raise ValueError(
                 f"masking_mode must either be 'tile-level' or 'pixel-level'. {masking_mode} is not supported."
             )
-
+        start_quant_time = time()
+        self.logger.info(
+            f"Starting quantification of all slides, save_imgs: {save_imgs}, masking_mode: {masking_mode}")
         if self.quantification_results.__len__() != 0:
             self.quantification_results = self.quantification_results.iloc[0:0]
         # Counter variable for progress tracking
@@ -724,6 +976,12 @@ class SlideCollection(object):
                 )
                 self.quantify_single_slide(slide.name, save_imgs, masking_mode)
                 c += 1
+        end_quant_time = time()
+        self.logger.info(
+            f"Finished quantification for {self.name} in \
+                {round((end_quant_time - start_quant_time)/60,2)} minutes."
+        )
+        self.status["quantified"] = True
 
     def quantify_single_slide(
         self, slide_name, save_img=False, masking_mode="tile-level"
@@ -754,6 +1012,21 @@ class SlideCollection(object):
             raise ValueError(
                 f"masking_mode must either be 'tile-level' or 'pixel-level'. {masking_mode} is not supported."
             )
+        if self.status["registered"] is False:
+            raise RuntimeError(
+                "Slides must be registered before quantification. Please call register_slides() before quantification."
+            )
+        if self.status["segmented"] is False:
+            raise RuntimeError(
+                "Tumor segmentation must be performed before quantification.\
+                      Please call tumor_segmentation() before quantification."
+            )
+
+        if not self.mask_coordinates:
+            self.logger.info(
+                "Extracting mask coordinates before quantification"
+            )
+            self.extract_mask_tile_coordinates()
 
         slide = [slide for slide in self.slides if slide.name == slide_name][0]
 
@@ -822,7 +1095,6 @@ class SlideCollection(object):
     def save_quantification_results(self, masking_mode):
         """
         Stores `quant_res_df` as .CSV for and .PICKLE in `data_dir` and `pickle_dir`, respectively.
-
         """
         if self.quantification_results.__len__() != 0:
             save_start_time = time()
@@ -850,7 +1122,7 @@ class SlideCollection(object):
                     in this slide collection or call quantify_single_slide() to quantify a single slide."
             )
 
-    def get_dual_antigen_combinations(self, masking_mode="tile-level"):
+    def generate_antigen_pair_combinations(self, masking_mode="tile-level"):
         """Creates all possible antigen pairs and analyzes antigen co-expression for all pairs. Results are stored
         in `dual_antigen_expressions`.
 
@@ -863,6 +1135,7 @@ class SlideCollection(object):
                 - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
                    Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
+        dual_expression_time_start = time()
         self.dual_antigen_expressions = pd.DataFrame(
             columns=DUAL_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
@@ -878,11 +1151,17 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_dual_antigen_combination method
         for combo in slide_combinations:
-            self.compute_dual_antigen_combination(
+            self.evaluate_antigen_pair(
                 combo[0], combo[1], masking_mode=masking_mode
             )
+        dual_expression_time_end = time()
+        self.logger.info(
+            f"Finished dual antigen expression analysis in \
+                {round((dual_expression_time_end - dual_expression_time_start)/60,2)} minutes."
+        )
+        self.status["dual_antigen_expression"] = True
 
-    def get_triplet_antigen_combinations(self, masking_mode="tile-level"):
+    def generate_antigen_triplet_combinations(self, masking_mode="tile-level"):
         """Creates all possible antigen triplets and analyzes antigen co-expression for all triplets. Results are stored
         in `triplet_antigen_expressions`.
 
@@ -895,6 +1174,7 @@ class SlideCollection(object):
                 - `pixel-level`: Applies the mask precisely at pixel level - only masked pixels are included.
                    Offers finer co-expression evaluation, but is more sensitive to registration errors.
         """
+        triplet_expression_time_start = time()
         self.triplet_antigen_results = pd.DataFrame(
             columns=TRIPLET_ANTIGEN_EXPRESSIONS_COLUMN_NAMES
         )
@@ -910,11 +1190,17 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_triplet_antigen_combinations method
         for combo in slide_combinations:
-            self.compute_triplet_antigen_combinations(
+            self.evaluate_antigen_triplet(
                 combo[0], combo[1], combo[2], masking_mode=masking_mode
             )
+        triplet_expression_time_end = time()
+        self.logger.info(
+            f"Finished triplet antigen expression analysis in \
+                {round((triplet_expression_time_end - triplet_expression_time_start)/60,2)} minutes."
+        )
+        self.status["triplet_antigen_expression"] = True
 
-    def compute_dual_antigen_combination(
+    def evaluate_antigen_pair(
         self, slide1, slide2, save_img=False, masking_mode="tile-level"
     ):
         """Analyzes the antigen co-expression for a pair of two slides.
@@ -985,7 +1271,7 @@ class SlideCollection(object):
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
                 exe.map(
-                    colocalization.analyze_dual_antigen_colocalization,
+                    evaluate_antigen_pair_tile,
                     iterable,
                 ),
                 total=len(iterable),
@@ -1015,7 +1301,7 @@ class SlideCollection(object):
         self.save_antigen_combinations(
             result_type="dual", masking_mode=masking_mode)
 
-    def compute_triplet_antigen_combinations(
+    def evaluate_antigen_triplet(
         self, slide1, slide2, slide3, save_img=False, masking_mode="tile-level"
     ):
         """Analyzes the antigen co-expression for a triplet of three slides.
@@ -1098,7 +1384,7 @@ class SlideCollection(object):
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
                 exe.map(
-                    colocalization.analyze_triplet_antigen_colocalization, iterable
+                    evaluate_antigen_triplet_tile, iterable
                 ),
                 total=len(iterable),
                 desc="Calculating Coverage of Slides "

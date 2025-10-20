@@ -17,7 +17,8 @@ from tqdm import tqdm
 # CuBATS
 import cubats.logging_config as log_config
 from cubats.config import xp
-from cubats.slide_collection import tile_processing
+from cubats.slide_collection.tile_quantification import (mask_tile,
+                                                         quantify_tile)
 
 
 class Slide(object):
@@ -108,6 +109,8 @@ class Slide(object):
         self.logger = logging.getLogger(__name__)
 
         self.name = name
+        self.orig_path = path  # TODO also path after reference
+        self.registered_path = None
         self.openslide_object = openslide.OpenSlide(path)
         self.tiles = DeepZoomGenerator(
             self.openslide_object, tile_size=1024, overlap=0, limit_bounds=True
@@ -164,15 +167,19 @@ class Slide(object):
         staining intensity (0-255) is quantified based on the thresholds defined in `self.antigen_profile`. If no
         specific antigen_profile was provided the default profile will be used. Results are stored in
         `self.detailed_quantification_results` and summarized in `self.quantification_summary`. Both are saved as
-         PICKLE files in `save_dir`.
+        PICKLE files in `save_dir`.
 
         Args:
             mask_coordinates (list): List of xy-coordinates from the maskslide where the mask is positive.
+
             save_dir (str): Directory to save the results. Usually the slides pickle directory.
+
             save_img (bool, optional): Whether to save the tiles after color deconvolution. Defaults to False.
                 Necessary for reconstruction of the slide.
+
             img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
                 None.
+
             mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
                 mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
                 might result in larger inaccuracies for WSI with low congruence.
@@ -195,8 +202,10 @@ class Slide(object):
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
-                self.logger.error("img_dir must be provided if save_img is True.")
-                raise ValueError("img_dir must be provided if save_img is True.")
+                self.logger.error(
+                    "img_dir must be provided if save_img is True.")
+                raise ValueError(
+                    "img_dir must be provided if save_img is True.")
             self.dab_tile_dir = img_dir
             os.makedirs(self.dab_tile_dir, exist_ok=True)
 
@@ -207,7 +216,7 @@ class Slide(object):
                 x,
                 y,
                 (
-                    tile_processing.mask_tile(
+                    mask_tile(
                         self.tiles.get_tile(self.level_count - 1, (x, y)),
                         mask.get_tile(self.level_count - 1, (x, y)),
                     )
@@ -244,7 +253,7 @@ class Slide(object):
         # Multiprocessing using concurrent.futures, gathering results and adding them to dictionary in linear manner.
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
-                exe.map(tile_processing.quantify_tile, iterable),
+                exe.map(quantify_tile, iterable),
                 total=len(iterable),
                 desc="Processing slide: " + self.name,
             )
@@ -269,7 +278,8 @@ class Slide(object):
         # Save dictionary as pickle
         start_time_save = time()
         f_out = os.path.join(save_dir, f"{self.name}_processing_info.pickle")
-        self.logger.info(f"Saving quantification results for {self.name} to {f_out}")
+        self.logger.info(
+            f"Saving quantification results for {self.name} to {f_out}")
         with open(f_out, "wb") as f:
             pickle.dump(
                 self.detailed_quantification_results,
@@ -312,10 +322,13 @@ class Slide(object):
             ValueError: If the slide is a mask slide or a reference slide.
         """
         start_time_summarize = time()
-        self.logger.info(f"Summarizing quantification results for slide: {self.name}")
+        self.logger.info(
+            f"Summarizing quantification results for slide: {self.name}")
         if self.is_mask:
-            self.logger.error("Cannot summarize quantification results for mask slide.")
-            raise ValueError("Cannot summarize quantification results for mask slide.")
+            self.logger.error(
+                "Cannot summarize quantification results for mask slide.")
+            raise ValueError(
+                "Cannot summarize quantification results for mask slide.")
         elif self.is_reference:
             self.logger.error(
                 "Cannot summarize quantification results for reference slide."
@@ -384,7 +397,8 @@ class Slide(object):
             ],
             dtype=xp.float32,
         )
-        h_score = xp.sum(percentages_tissue[:3] * xp.array([3, 2, 1]), dtype=xp.float32)
+        h_score = xp.sum(
+            percentages_tissue[:3] * xp.array([3, 2, 1]), dtype=xp.float32)
 
         # Determine slide score (exclude background)
         if xp.any(percentages_tissue > 66.6):
@@ -399,7 +413,8 @@ class Slide(object):
         perc_processed_tiles = (
             processed_tiles / len(self.detailed_quantification_results)
         ) * 100
-        perc_error = (error_tiles / len(self.detailed_quantification_results)) * 100
+        perc_error = (
+            error_tiles / len(self.detailed_quantification_results)) * 100
 
         # Update the dictionary
         self.quantification_summary = {
@@ -479,7 +494,8 @@ class Slide(object):
         # Create WSI and save as pyramidal TIF in self.reconstruct_dir
         logging.getLogger("pyvips").setLevel(logging.WARNING)
         segmented_wsi = np.concatenate(row_array, axis=0)
-        segmented_wsi = VipsImage.new_from_array(segmented_wsi).cast(BandFormat.INT)
+        segmented_wsi = VipsImage.new_from_array(
+            segmented_wsi).cast(BandFormat.INT)
         end_time = time()
         self.logger.info(
             f"Finished reconstructing slide: {self.name} in {round((end_time - start_time)/60,2)} minutes."
@@ -506,3 +522,22 @@ class Slide(object):
         self.logger.debug(
             f"Saved reconstructed slide to {out} in {round((end_time_save - start_time_save)/60,2)} minutes."
         )
+
+    def update_slide(self, new_path):
+        """
+        Updates the path of the slide and reinitializes the OpenSlide object.
+
+        Args:
+            new_path (str): The new path to the slide file.
+        """
+        self.logger.info(f"Updating path for slide {self.name} to {new_path}")
+        self.registered_path = new_path
+        self.openslide_object = openslide.OpenSlide(new_path)
+        self.tiles = DeepZoomGenerator(
+            self.openslide_object, tile_size=1024, overlap=0, limit_bounds=True
+        )
+        self.level_count = self.tiles.level_count
+        self.level_dimensions = self.tiles.level_dimensions
+        self.tile_count = self.tiles.tile_count
+        self.logger.info(
+            f"Slide {self.name} updated with new path: {new_path}")
