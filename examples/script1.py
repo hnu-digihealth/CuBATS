@@ -7,7 +7,7 @@ import traceback
 
 # CuBATS
 # import cubats.registration as registration
-from cubats import segmentation as segmentation
+from cubats.slide_collection import segmentation as segmentation
 from cubats.slide_collection.slide_collection import SlideCollection
 
 # The path can also be read from a config file, etc.
@@ -71,7 +71,8 @@ def main(paths):
         # Find which storage contains this folder
         src = None
         for base_path in paths:
-            potential_src = os.path.join(base_path, folder_name, "registered_slides")
+            potential_src = os.path.join(
+                base_path, folder_name, "registered_slides")
             if os.path.exists(potential_src):
                 src = potential_src
                 break
@@ -102,7 +103,8 @@ def main(paths):
             "pixel-level_dual_antigen_expressions.csv",
             "pixel-level_triplet_antigen_expressions.csv",
         ]
-        all_exist = all(os.path.exists(os.path.join(data_dir, f)) for f in result_files)
+        all_exist = all(os.path.exists(os.path.join(data_dir, f))
+                        for f in result_files)
         if all_exist:
             print(f"Skipping {folder_name}: all result files already exist.")
             continue
@@ -164,13 +166,15 @@ def main(paths):
             print(f"Quantification took {time_quant:.2f} minutes")
 
             begin_dual = time.time()
-            collection.get_dual_antigen_combinations(masking_mode="pixel-level")
+            collection.generate_antigen_pair_combinations(
+                masking_mode="pixel-level")
             end_dual = time.time()
             time_dual = (end_dual - begin_dual) / 60
             print(f"Dual antigen took {time_dual:.2f} minutes")
 
             begin_triple = time.time()
-            collection.get_triplet_antigen_combinations(masking_mode="pixel-level")
+            collection.generate_antigen_triplet_combinations(
+                masking_mode="pixel-level")
             end_triple = time.time()
             time_triple = (end_triple - begin_triple) / 60
             print(f"Triple antigen took {time_triple:.2f} minutes")
@@ -211,7 +215,8 @@ if __name__ == "__main__":
 
     log_file = os.path.join(r"F:\CuBATS_out", "processing_times_1.log")
     with open(log_file, "a") as log:
-        log.write(f"\nProcessing started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        log.write(
+            f"\nProcessing started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     parser = argparse.ArgumentParser(description="Process Tumor Set")
     parser.add_argument(
         "paths",

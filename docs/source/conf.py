@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 project = "CuBATS"
-copyright = "2024, Moritz Dinser & Daniel Hieber"
+copyright = "2024-2025 Moritz Dinser & Daniel Hieber"
 author = "Moritz Dinser"
 release = "0.1.0"
 # -- General configuration ---------------------------------------------------
@@ -34,8 +34,17 @@ autosummary_generate = True
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["../images"]
-html_logo = "../images/CuBATS.png"
+html_logo = "../images/CuBATS_logo.png"
 html_theme_options = {
     "logo_only": True,
-    "display_version": True,
 }
+# -- Mock heavy dependencies for Sphinx autodoc -------------------------------
+autodoc_mock_imports = [
+    "openslide",
+    "pyvips",
+    "cupy",
+    "valis",
+    "cubats.cutils"
+]
+# copy any extra files into the built HTML root
+html_extra_path = ['_extra']

@@ -8,17 +8,26 @@ CuBATS
 
 .. include:: README.rst
 
-Welcome to the CuBATS's Documentation!
-======================================
+Documentation
+==============
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
+   :caption: User-Guide
 
    installation
    examples
+
+.. toctree::
+   :maxdepth: 2
+   :caption: CuBATS Architecture
+
+   slide_collection
    registration
    segmentation
-   slide_collection
+   quantification
+   colocalization
+
 
 Indices and tables
 ==================

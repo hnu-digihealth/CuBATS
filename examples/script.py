@@ -6,8 +6,8 @@ import time
 import traceback
 
 # CuBATS
-import cubats.registration as registration
-import cubats.segmentation as segmentation
+import cubats.slide_collection.registration as registration
+import cubats.slide_collection.segmentation as segmentation
 from cubats.slide_collection.slide_collection import SlideCollection
 
 # # The path can also be read from a config file, etc.
@@ -30,14 +30,15 @@ def main(path):
 
         if os.path.isdir(src):
             try:
-                registration.register(src, dst, True, 2000)
+                registration.register_slides(src, dst, True, 2000)
             except Exception as e:
                 error = f"Error Aligning files {path}: {str(e)}"
                 traceback.print_exc()
 
         src = os.path.join(dst, folder_name, "registered_slides")
         if not os.path.exists(src):
-            print(f"Skipping folder: {folder_name} as source can not be found.")
+            print(
+                f"Skipping folder: {folder_name} as source can not be found.")
             continue
 
         he_path = ""
@@ -87,11 +88,11 @@ def main(path):
             end_quant = time.time()
             time_quant = (end_quant - begin_quant) / 60
             begin_dual = time.time()
-            collection.get_dual_antigen_combinations()
+            collection.generate_antigen_pair_combinations()
             end_dual = time.time()
             time_dual = (end_dual - begin_dual) / 60
             begin_triple = time.time()
-            collection.get_triplet_antigen_combinations()
+            collection.generate_antigen_triplet_combinations()
             end_triple = time.time()
             time_triple = (end_triple - begin_triple) / 60
             end_processing = time.time()
@@ -124,7 +125,8 @@ if __name__ == "__main__":
         r"H:\Notebookstuff\Sail_stuff\organoid_out", "processing_times.log"
     )
     with open(log_file, "a") as log:
-        log.write(f"\nProcessing started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        log.write(
+            f"\nProcessing started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     parser = argparse.ArgumentParser(description="Process Tumor Set")
     parser.add_argument("path", type=str, help="Path to folder")
     args = parser.parse_args()

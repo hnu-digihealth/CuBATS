@@ -54,16 +54,20 @@ cov_report = { shell = "pdm run -v coverage run -m pytest tests && pdm run cover
 check_pre_commit = "pdm run pre-commit run --all-files"
 # run prior to tests
 pre_test = "pdm install"
-build-docs = { shell = """
-cd docs && make clean && make html
-if [ "$(uname)" == "Darwin" ]; then
+build-docs = { shell = '''
+cd docs
+make clean
+make html
+OS_NAME=$(uname)
+if [ "$OS_NAME" = "Darwin" ]; then
     open build/html/index.html
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+elif [ "${OS_NAME:0:5}" = "Linux" ]; then
     xdg-open build/html/index.html
-elif [ "$(expr substr %(uname -s) 1 10" == "MINGW32_NT" ] || [ "$(expr substr %(uname -s) 1 10" == "MINGW64_NT" ]; then
-    start /build/html/index.html
+elif [[ "${OS_NAME:0:10}" = "MINGW32_NT" ]] || [[ "${OS_NAME:0:10}" = "MINGW64_NT" ]]; then
+    start build/html/index.html
 fi
-"""}
+''' }
+
 
 [tool.isort]
 src_paths = ["src", "tests"]
