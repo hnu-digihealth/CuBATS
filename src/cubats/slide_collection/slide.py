@@ -17,7 +17,8 @@ from tqdm import tqdm
 # CuBATS
 import cubats.logging_config as log_config
 from cubats.config import xp
-from cubats.slide_collection import tile_processing
+from cubats.slide_collection.tile_quantification import (mask_tile,
+                                                         quantify_tile)
 
 
 class Slide(object):
@@ -108,6 +109,8 @@ class Slide(object):
         self.logger = logging.getLogger(__name__)
 
         self.name = name
+        self.orig_path = path  # TODO also path after reference
+        self.registered_path = None
         self.openslide_object = openslide.OpenSlide(path)
         self.tiles = DeepZoomGenerator(
             self.openslide_object, tile_size=1024, overlap=0, limit_bounds=True
@@ -164,15 +167,19 @@ class Slide(object):
         staining intensity (0-255) is quantified based on the thresholds defined in `self.antigen_profile`. If no
         specific antigen_profile was provided the default profile will be used. Results are stored in
         `self.detailed_quantification_results` and summarized in `self.quantification_summary`. Both are saved as
-         PICKLE files in `save_dir`.
+        PICKLE files in `save_dir`.
 
         Args:
             mask_coordinates (list): List of xy-coordinates from the maskslide where the mask is positive.
+
             save_dir (str): Directory to save the results. Usually the slides pickle directory.
+
             save_img (bool, optional): Whether to save the tiles after color deconvolution. Defaults to False.
                 Necessary for reconstruction of the slide.
+
             img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
                 None.
+
             mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed
                 mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
                 might result in larger inaccuracies for WSI with low congruence.
@@ -207,7 +214,7 @@ class Slide(object):
                 x,
                 y,
                 (
-                    tile_processing.mask_tile(
+                    mask_tile(
                         self.tiles.get_tile(self.level_count - 1, (x, y)),
                         mask.get_tile(self.level_count - 1, (x, y)),
                     )
@@ -244,7 +251,7 @@ class Slide(object):
         # Multiprocessing using concurrent.futures, gathering results and adding them to dictionary in linear manner.
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
-                exe.map(tile_processing.quantify_tile, iterable),
+                exe.map(quantify_tile, iterable),
                 total=len(iterable),
                 desc="Processing slide: " + self.name,
             )
@@ -347,6 +354,35 @@ class Slide(object):
             else:
                 error_tiles += 1
 
+        if processed_tiles == 0:
+            self.logger.warning(
+                f"No tiles were successfully processed for slide: {self.name}. "
+                "Skipping quantification summary calculations."
+            )
+            self.quantification_summary = {
+                "Name": self.name,
+                "Coverage (%)": 0.0,
+                "High Positive (%)": 0.0,
+                "Medium Positive (%)": 0.0,
+                "Low Positive (%)": 0.0,
+                "Negative (%)": 0.0,
+                "Total Tissue (%)": 0.0,
+                "Background / No Tissue (%)": 0.0,
+                "Mask Area (%)": 0.0,
+                "Non-mask Area (%)": 0.0,
+                "H-Score": 0.0,
+                "Score": "Background",
+                "Total Processed Tiles (%)": 0.0,
+                "Error (%)": 100.0,
+                "Thresholds": [
+                    self.antigen_profile["high_positive_threshold"],
+                    self.antigen_profile["medium_positive_threshold"],
+                    self.antigen_profile["low_positive_threshold"],
+                    235,
+                ],
+            }
+            return  # Exit early
+
         # Calculate percentages and scores
         total_pixels_in_mask = sum_mask_count
         tissue_count = xp.sum(sum_zones[:4])
@@ -381,6 +417,7 @@ class Slide(object):
                 percentage_med_pos,
                 percentage_low_pos,
                 percentage_neg,
+                percentage_background,
             ],
             dtype=xp.float32,
         )
@@ -441,10 +478,24 @@ class Slide(object):
 
         """
         start_time = time()
+        # Check paths
+        if not os.path.isdir(in_path):
+            self.logger.error(f"Input path {in_path} does not exist.")
+            raise ValueError(f"Input path {in_path} does not exist.")
+        # Check if in_path contains .tif files
+        tif_files = [f for f in os.listdir(in_path) if f.endswith(".tif")]
+        if not tif_files:
+            self.logger.error(f"No .tif files found in input path {in_path}.")
+            raise ValueError(f"No .tif files found in input path {in_path}.")
+
+        # Ensure output directory exists
+        os.makedirs(out_path, exist_ok=True)
+
         # Init variables
         counter = 0
         cols, rows = self.tiles.level_tiles[self.level_count - 1]
         row_array = []
+
         # append tiles for each column and row. Previously not processed tiles are replaced by white tiles.
         for row in tqdm(range(rows), desc="Reconstructing slide: " + self.name):
             column_array = []
@@ -492,3 +543,21 @@ class Slide(object):
         self.logger.debug(
             f"Saved reconstructed slide to {out} in {round((end_time_save - start_time_save)/60,2)} minutes."
         )
+
+    def update_slide(self, new_path):
+        """
+        Updates the path of the slide and reinitializes the OpenSlide object.
+
+        Args:
+            new_path (str): The new path to the slide file.
+        """
+        self.logger.debug(f"Updating path for slide {self.name} to {new_path}")
+        self.registered_path = new_path
+        self.openslide_object = openslide.OpenSlide(new_path)
+        self.tiles = DeepZoomGenerator(
+            self.openslide_object, tile_size=1024, overlap=0, limit_bounds=True
+        )
+        self.level_count = self.tiles.level_count
+        self.level_dimensions = self.tiles.level_dimensions
+        self.tile_count = self.tiles.tile_count
+        self.logger.debug(f"Slide {self.name} updated with new path: {new_path}")

@@ -4,7 +4,7 @@ Installation
 ************
 
 .. note::
-    CuBATS currently requires Python 3.10 to 3.12.
+    CuBATS currently requires Python 3.10 to 3.11.
 
 Pip Install
 ===========

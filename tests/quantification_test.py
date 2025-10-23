@@ -9,9 +9,9 @@ from PIL import Image
 # CuBATS
 from cubats.config import xp
 from cubats.cutils import to_numpy
-from cubats.slide_collection.tile_processing import (
-    calculate_percentage_and_score, calculate_pixel_intensity,
-    ihc_stain_separation, quantify_tile)
+from cubats.slide_collection.tile_quantification import (
+    calculate_percentage_and_score, color_deconvolution,
+    evaluate_staining_intensities, quantify_tile)
 
 
 class TestQuantifyTile(unittest.TestCase):
@@ -23,10 +23,10 @@ class TestQuantifyTile(unittest.TestCase):
             "high_positive_threshold": 61,
         }
 
-    @patch("cubats.slide_collection.tile_processing.ihc_stain_separation")
-    @patch("cubats.slide_collection.tile_processing.calculate_pixel_intensity")
+    @patch("cubats.slide_collection.tile_quantification.color_deconvolution")
+    @patch("cubats.slide_collection.tile_quantification.evaluate_staining_intensities")
     def test_quantify_tile_not_processed(
-        self, mock_calculate_pixel_intensity, mock_ihc_stain_separation
+        self, mock_evaluate_staining_intensities, mock_color_deconvolution
     ):
         # Create a mostly white tile
         white_tile = Image.fromarray(np.full((10, 10, 3), 255, dtype=np.uint8))
@@ -61,14 +61,15 @@ class TestQuantifyTile(unittest.TestCase):
         mask = np.zeros((10, 10), dtype=bool)
         mask[0:5, 0:5] = True  # top-left corner
 
-        iterable = [2, 2, (tile, mask), "/fake/dir", False, self.antigen_profile]
+        iterable = [2, 2, (tile, mask), "/fake/dir",
+                    False, self.antigen_profile]
 
         with (
             patch(
-                "cubats.slide_collection.tile_processing.ihc_stain_separation"
+                "cubats.slide_collection.tile_quantification.color_deconvolution"
             ) as mock_ihc,
             patch(
-                "cubats.slide_collection.tile_processing.calculate_pixel_intensity"
+                "cubats.slide_collection.tile_quantification.evaluate_staining_intensities"
             ) as mock_calc,
         ):
 
@@ -82,23 +83,25 @@ class TestQuantifyTile(unittest.TestCase):
             self.assertIn("Mask Count", result)
             self.assertEqual(result["Mask Count"], 25)
 
-    @patch("cubats.slide_collection.tile_processing.ihc_stain_separation")
-    @patch("cubats.slide_collection.tile_processing.calculate_pixel_intensity")
+    @patch("cubats.slide_collection.tile_quantification.color_deconvolution")
+    @patch("cubats.slide_collection.tile_quantification.evaluate_staining_intensities")
     def test_quantify_tile_processed(
-        self, mock_calculate_pixel_intensity, mock_ihc_stain_separation
+        self, mock_evaluate_staining_intensities, mock_color_deconvolution
     ):
         # Create a tile that should be processed
 
-        tile = Image.fromarray(np.random.randint(0, 255, (10, 10, 3), dtype=np.uint8))
-        iterable = [1, 1, (tile, None), "/fake/dir", False, True, self.antigen_profile]
+        tile = Image.fromarray(np.random.randint(
+            0, 255, (10, 10, 3), dtype=np.uint8))
+        iterable = [1, 1, (tile, None), "/fake/dir", False,
+                    True, self.antigen_profile]
 
         # Mock the return values of the called functions
-        mock_ihc_stain_separation.return_value = (
+        mock_color_deconvolution.return_value = (
             np.random.randint(0, 255, (10, 10, 3), dtype=np.uint8),
             None,
             None,
         )
-        mock_calculate_pixel_intensity.return_value = (
+        mock_evaluate_staining_intensities.return_value = (
             np.random.rand(256),
             np.random.rand(256),
             np.random.rand(5),
@@ -128,14 +131,15 @@ class TestQuantifyTile(unittest.TestCase):
         mask = np.zeros((10, 10), dtype=bool)
         mask[2:8, 2:8] = True  # middle 6x6 region
 
-        iterable = [1, 1, (tile, mask), "/fake/dir", False, True, self.antigen_profile]
+        iterable = [1, 1, (tile, mask), "/fake/dir", False,
+                    True, self.antigen_profile]
 
         with (
             patch(
-                "cubats.slide_collection.tile_processing.ihc_stain_separation"
+                "cubats.slide_collection.tile_quantification.color_deconvolution"
             ) as mock_ihc,
             patch(
-                "cubats.slide_collection.tile_processing.calculate_pixel_intensity"
+                "cubats.slide_collection.tile_quantification.evaluate_staining_intensities"
             ) as mock_calc,
         ):
 
@@ -166,7 +170,8 @@ class TestQuantifyTile(unittest.TestCase):
             quantify_tile(iterable)
 
     def test_quantify_tile_none_tile(self):
-        iterable = [1, 1, (None, None), "/fake/dir", False, True, self.antigen_profile]
+        iterable = [1, 1, (None, None), "/fake/dir", False,
+                    True, self.antigen_profile]
 
         with self.assertRaises(AttributeError):
             quantify_tile(iterable)
@@ -175,7 +180,8 @@ class TestQuantifyTile(unittest.TestCase):
         # Create a black tile
         tile_array = np.zeros((10, 10, 3), dtype=np.uint8)
         tile = Image.fromarray(tile_array)
-        iterable = [1, 1, (tile, None), "/fake/dir", False, True, self.antigen_profile]
+        iterable = [1, 1, (tile, None), "/fake/dir", False,
+                    True, self.antigen_profile]
 
         result = quantify_tile(iterable)
 
@@ -189,14 +195,14 @@ class TestQuantifyTile(unittest.TestCase):
         self.assertNotIn("Mask Count", result)
         self.assertNotIn("Image Array", result)
 
-    @patch("cubats.slide_collection.tile_processing.os.makedirs")
-    @patch("cubats.slide_collection.tile_processing.Image.fromarray")
-    @patch("cubats.slide_collection.tile_processing.ihc_stain_separation")
-    @patch("cubats.slide_collection.tile_processing.calculate_pixel_intensity")
+    @patch("os.makedirs")
+    @patch("cubats.slide_collection.tile_quantification.Image.fromarray")
+    @patch("cubats.slide_collection.tile_quantification.color_deconvolution")
+    @patch("cubats.slide_collection.tile_quantification.evaluate_staining_intensities")
     def test_quantify_tile_save_img_true_dir_none(
         self,
-        mock_calculate_pixel_intensity,
-        mock_ihc_stain_separation,
+        mock_evaluate_staining_intensities,
+        mock_color_deconvolution,
         mock_fromarray,
         mock_makedirs,
     ):
@@ -204,7 +210,8 @@ class TestQuantifyTile(unittest.TestCase):
         mock_tile_np = np.random.normal(loc=100, scale=20, size=(10, 10, 3)).astype(
             np.uint8
         )
-        print(f"Mock tile mean: {mock_tile_np.mean()}, std: {mock_tile_np.std()}")
+        print(
+            f"Mock tile mean: {mock_tile_np.mean()}, std: {mock_tile_np.std()}")
         assert mock_tile_np.mean() < 235
         assert mock_tile_np.std() > 15
 
@@ -213,22 +220,24 @@ class TestQuantifyTile(unittest.TestCase):
         mock_tile.convert.return_value = mock_tile
         mock_tile.__array__ = lambda: mock_tile_np
 
-        # Mock ihc_stain_separation
-        mock_ihc_stain_separation.return_value = (
+        # Mock color_deconvolution
+        mock_color_deconvolution.return_value = (
             mock_tile_np,
             mock_tile_np,
             mock_tile_np,
         )
 
-        # Mock calculate_pixel_intensity
-        mock_calculate_pixel_intensity.return_value = ([], [], [], [], [], [], [])
+        # Mock evaluate_staining_intensities
+        mock_evaluate_staining_intensities.return_value = (
+            [], [], [], [], [], [], [])
 
         # Call the function and expect a ValueError
         # CuBATS
-        from cubats.slide_collection.tile_processing import quantify_tile
+        from cubats.slide_collection.tile_quantification import quantify_tile
 
         with self.assertRaises(ValueError) as context:
-            quantify_tile([0, 1, mock_tile, None, True, True, self.antigen_profile])
+            quantify_tile([0, 1, mock_tile, None, True,
+                          True, self.antigen_profile])
 
         self.assertEqual(
             str(context.exception),
@@ -236,7 +245,7 @@ class TestQuantifyTile(unittest.TestCase):
         )
 
 
-class TestIHCStainSeparation(unittest.TestCase):
+class TestColorDeconvolution(unittest.TestCase):
 
     def setUp(self):
         # Create a sample RGB image
@@ -249,8 +258,8 @@ class TestIHCStainSeparation(unittest.TestCase):
             dtype=np.uint8,
         )
 
-    def test_ihc_stain_separation_all_false(self):
-        ihc_d, ihc_h, ihc_e = ihc_stain_separation(
+    def test_color_deconvolution_all_false(self):
+        ihc_d, ihc_h, ihc_e = color_deconvolution(
             self.ihc_rgb, hematoxylin=False, eosin=False
         )
 
@@ -261,8 +270,8 @@ class TestIHCStainSeparation(unittest.TestCase):
         # Check that DAB image is not None
         self.assertIsNotNone(ihc_d)
 
-    def test_ihc_stain_separation_hematoxylin_true(self):
-        ihc_d, ihc_h, ihc_e = ihc_stain_separation(
+    def test_color_deconvolution_hematoxylin_true(self):
+        ihc_d, ihc_h, ihc_e = color_deconvolution(
             self.ihc_rgb, hematoxylin=True, eosin=False
         )
 
@@ -275,8 +284,8 @@ class TestIHCStainSeparation(unittest.TestCase):
         # Check that DAB image is not None
         self.assertIsNotNone(ihc_d)
 
-    def test_ihc_stain_separation_eosin_true(self):
-        ihc_d, ihc_h, ihc_e = ihc_stain_separation(
+    def test_color_deconvolution_eosin_true(self):
+        ihc_d, ihc_h, ihc_e = color_deconvolution(
             self.ihc_rgb, hematoxylin=False, eosin=True
         )
 
@@ -289,8 +298,8 @@ class TestIHCStainSeparation(unittest.TestCase):
         # Check that DAB image is not None
         self.assertIsNotNone(ihc_d)
 
-    def test_ihc_stain_separation_all_true(self):
-        ihc_d, ihc_h, ihc_e = ihc_stain_separation(
+    def test_color_deconvolution_all_true(self):
+        ihc_d, ihc_h, ihc_e = color_deconvolution(
             self.ihc_rgb, hematoxylin=True, eosin=True
         )
 
@@ -325,7 +334,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         )
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -336,7 +345,8 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         # expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
         percentage_tissue = (zones[:4] / 6) * 100
         percentage_background = (zones[4:] / 9) * 100
-        expected_percentage = xp.concatenate([percentage_tissue, percentage_background])
+        expected_percentage = xp.concatenate(
+            [percentage_tissue, percentage_background])
 
         np.testing.assert_array_almost_equal(
             to_numpy(percentage), to_numpy(expected_percentage)
@@ -356,7 +366,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         image = np.full((2, 2, 3), 50, dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -365,21 +375,23 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(to_numpy(pixelcount), 4)
 
         # Check img_analysis
         expected_img_analysis = np.full((2, 2), 50, dtype=np.uint8)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_positive(self):
         # Create an image where all pixels are positive
         image = np.full((2, 2, 3), 100, dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -388,21 +400,23 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(to_numpy(pixelcount), 4)
 
         # Check img_analysis
         expected_img_analysis = np.full((2, 2), 100, dtype=np.uint8)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_low_positive(self):
         # Create an image where all pixels are low positive
         image = np.full((2, 2, 3), 180, dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -411,21 +425,23 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(to_numpy(pixelcount), 4)
 
         # Check img_analysis
         expected_img_analysis = np.full((2, 2), 180, dtype=np.uint8)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_negative(self):
         # Create an image where all pixels are negative
         image = np.full((2, 2, 3), 200, dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -434,21 +450,23 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(to_numpy(pixelcount), 4)
 
         # Check img_analysis
         expected_img_analysis = np.full((2, 2), 200, dtype=np.uint8)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_background_nomask(self):
         # Create an image where all pixels are background
         image = np.full((2, 2, 3), 255, dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -457,14 +475,16 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = np.array([0, 0, 0, 0, 100])
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(pixelcount, 0)
 
         # Check img_analysis
         expected_img_analysis = np.full((2, 2), 255, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_background_with_mask(self):
         # Create an all-background image (all pixels = 255)
@@ -475,7 +495,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Run the pixel intensity calculation with mask
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -486,7 +506,8 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages: all background
         expected_percentage = np.array([0, 0, 0, 0, 100], dtype=np.float32)
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check that the score reflects background-only tile
         self.assertEqual(score, "Background")
@@ -497,14 +518,15 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Check img_analysis: all 255 (float32)
         expected_img_analysis = np.full((2, 2), 255, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_high_positive_with_mask(self):
         image = np.full((2, 2, 3), 50, dtype=np.uint8)
         tumor_mask = np.ones((2, 2), dtype=bool)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -513,19 +535,21 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         np.testing.assert_array_equal(to_numpy(zones), expected_zones)
 
         expected_percentage = (expected_zones / np.sum(tumor_mask)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         self.assertEqual(pixelcount, np.sum(tumor_mask))
 
         expected_img_analysis = np.full((2, 2), 50, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_positive_with_mask(self):
         image = np.full((2, 2, 3), 100, dtype=np.uint8)
         tumor_mask = np.ones((2, 2), dtype=bool)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -534,19 +558,21 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         np.testing.assert_array_equal(to_numpy(zones), expected_zones)
 
         expected_percentage = (expected_zones / np.sum(tumor_mask)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         self.assertEqual(pixelcount, np.sum(tumor_mask))
 
         expected_img_analysis = np.full((2, 2), 100, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_low_positive_with_mask(self):
         image = np.full((2, 2, 3), 180, dtype=np.uint8)
         tumor_mask = np.ones((2, 2), dtype=bool)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -555,19 +581,21 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         np.testing.assert_array_equal(to_numpy(zones), expected_zones)
 
         expected_percentage = (expected_zones / np.sum(tumor_mask)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         self.assertEqual(pixelcount, np.sum(tumor_mask))
 
         expected_img_analysis = np.full((2, 2), 180, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_all_negative_with_mask(self):
         image = np.full((2, 2, 3), 200, dtype=np.uint8)
         tumor_mask = np.ones((2, 2), dtype=bool)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -576,19 +604,21 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         np.testing.assert_array_equal(to_numpy(zones), expected_zones)
 
         expected_percentage = (expected_zones / np.sum(tumor_mask)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         self.assertEqual(pixelcount, np.sum(tumor_mask))
 
         expected_img_analysis = np.full((2, 2), 200, dtype=np.float32)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_empty_image(self):
         # Create an image with all pixels set to zero
         image = np.zeros((2, 2, 3), dtype=np.uint8)
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(image, self.antigen_profile)
+            evaluate_staining_intensities(image, self.antigen_profile)
         )
 
         # Expected zones
@@ -597,14 +627,16 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         # Expected percentages
         expected_percentage = (expected_zones / to_numpy(pixelcount)) * 100
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         # Check pixel count
         self.assertEqual(to_numpy(pixelcount), 4)
 
         # Check img_analysis
         expected_img_analysis = np.zeros((2, 2), dtype=np.uint8)
-        np.testing.assert_array_equal(to_numpy(img_analysis), expected_img_analysis)
+        np.testing.assert_array_equal(
+            to_numpy(img_analysis), expected_img_analysis)
 
     def test_partial_mask_mixed_intensities(self):
         image = np.array(
@@ -627,7 +659,7 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         )
 
         hist, hist_centers, zones, percentage, score, pixelcount, img_analysis = (
-            calculate_pixel_intensity(
+            evaluate_staining_intensities(
                 image, self.antigen_profile, tumor_mask=tumor_mask
             )
         )
@@ -641,7 +673,8 @@ class TestCalculatePixelIntensity(unittest.TestCase):
         expected_percentage = np.array(
             [33.333333, 33.333333, 0, 33.333333, 25], dtype=np.float32
         )
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
 
         self.assertIsInstance(score, str)
 
@@ -649,10 +682,12 @@ class TestCalculatePixelIntensity(unittest.TestCase):
 
         img_analysis_np = to_numpy(img_analysis)
         self.assertTrue(np.isnan(img_analysis_np[~tumor_mask]).all())
-        expected_masked_values = np.array([[50, 100], [200, 240]], dtype=np.float32)
+        expected_masked_values = np.array(
+            [[50, 100], [200, 240]], dtype=np.float32)
         self.assertTrue(
             np.array_equal(
-                img_analysis_np[tumor_mask].reshape(2, 2), expected_masked_values
+                img_analysis_np[tumor_mask].reshape(
+                    2, 2), expected_masked_values
             )
         )
 
@@ -666,9 +701,12 @@ class TestCalculateScore(unittest.TestCase):
             calculate_percentage_and_score(zones)
 
     def test_large_numbers(self):
-        zones = xp.array([1000000, 2000000, 3000000, 4000000, 0], dtype=xp.float32)
-        expected_percentage = np.array([10.0, 20.0, 30.0, 40.0, 0.0], dtype=np.float32)
-        expected_score = "Positive"  # weights: [4,3,2,1], scores=[4000000,6000000,6000000,4000000] → max=6e6 → Positive
+        zones = xp.array([1000000, 2000000, 3000000,
+                         4000000, 0], dtype=xp.float32)
+        expected_percentage = np.array(
+            [10.0, 20.0, 30.0, 40.0, 0.0], dtype=np.float32)
+        # weights: [4,3,2,1], scores=[4000000,6000000,6000000,4000000] → max=6e6 → Positive
+        expected_score = "Medium Positive"
 
         percentage, score = calculate_percentage_and_score(zones)
 
@@ -698,17 +736,19 @@ class TestCalculateScore(unittest.TestCase):
 
         percentage, score = calculate_percentage_and_score(zones)
 
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_positive_score(self):
         zones = xp.array([20, 27, 29, 24, 0])
         expected_percentage = np.array([20.0, 27.0, 29.0, 24.0, 0.0])
-        expected_score = "Positive"  # Based on the weights and the highest score
+        expected_score = "Medium Positive"  # Based on the weights and the highest score
 
         percentage, score = calculate_percentage_and_score(zones)
 
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_low_positive_score(self):
@@ -718,7 +758,8 @@ class TestCalculateScore(unittest.TestCase):
 
         percentage, score = calculate_percentage_and_score(zones)
 
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_negative_score(self):
@@ -728,7 +769,8 @@ class TestCalculateScore(unittest.TestCase):
 
         percentage, score = calculate_percentage_and_score(zones)
 
-        np.testing.assert_array_almost_equal(to_numpy(percentage), expected_percentage)
+        np.testing.assert_array_almost_equal(
+            to_numpy(percentage), expected_percentage)
         self.assertEqual(score, expected_score)
 
     def test_background_score(self):
@@ -751,7 +793,7 @@ class TestCalculateScore(unittest.TestCase):
             [20.0, 40.0, 20.0, 20.0, 56.90], dtype=np.float32
         )
         expected_score = (
-            "Positive"  # Background is exactly 66%, so the score is calculated
+            "Medium Positive"  # Background is exactly 66%, so the score is calculated
         )
 
         percentage, score = calculate_percentage_and_score(zones)
@@ -760,62 +802,6 @@ class TestCalculateScore(unittest.TestCase):
             to_numpy(percentage), expected_percentage, decimal=2
         )
         self.assertEqual(score, expected_score)
-
-
-class TestTileProcessing(unittest.TestCase):
-
-    @patch("cubats.slide_collection.tile_processing.os.makedirs")
-    @patch("cubats.slide_collection.tile_processing.tiff.imsave")
-    @patch("cubats.slide_collection.tile_processing.ihc_stain_separation")
-    # Mock tqdm to pass through
-    @patch("cubats.slide_collection.tile_processing.tqdm", side_effect=lambda x: x)
-    def test_separate_stains_and_save__tiles_as_tif(
-        self, mock_tqdm, mock_ihc_stain_separation, mock_imsave, mock_makedirs
-    ):
-        # Mock deepzoom_object
-        mock_deepzoom_object = MagicMock()
-        mock_deepzoom_object.level_tiles = {0: (2, 2)}
-        mock_tile = MagicMock()
-        mock_tile.convert.return_value = mock_tile
-        mock_deepzoom_object.get_tile.return_value = mock_tile
-        mock_tile_np = np.random.randint(0, 255, (10, 10, 3), dtype=np.uint8)
-        mock_tile.__array__ = lambda: mock_tile_np
-
-        # Mock ihc_stain_separation
-        mock_ihc_stain_separation.return_value = (
-            mock_tile_np,
-            mock_tile_np,
-            mock_tile_np,
-        )
-
-        # Call the function
-        # CuBATS
-        from cubats.slide_collection.tile_processing import \
-            separate_stains_and_save__tiles_as_tif
-
-        separate_stains_and_save__tiles_as_tif(
-            mock_deepzoom_object, 1, "/mock/target_directory"
-        )
-
-        # Log calls to mock_imsave
-        print(f"mock_imsave.call_count: {mock_imsave.call_count}")
-        for call in mock_imsave.call_args_list:
-            print(f"mock_imsave called with args: {call}")
-
-        # Check if directories are created
-        mock_makedirs.assert_any_call(
-            "/mock/target_directory/original_tiles", exist_ok=True
-        )
-        mock_makedirs.assert_any_call("/mock/target_directory/DAB_tiles", exist_ok=True)
-        mock_makedirs.assert_any_call("/mock/target_directory/H_tiles", exist_ok=True)
-        mock_makedirs.assert_any_call("/mock/target_directory/E_tiles", exist_ok=True)
-
-        # Check if tiles are saved
-        # Adjusted expected call count
-        self.assertEqual(mock_imsave.call_count, 16)
-
-        # Check if ihc_stain_separation is called
-        self.assertEqual(mock_ihc_stain_separation.call_count, 4)
 
 
 if __name__ == "__main__":
