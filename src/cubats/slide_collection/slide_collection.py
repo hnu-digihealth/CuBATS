@@ -360,8 +360,7 @@ class SlideCollection(object):
         self.slides = []
 
         # Slide informations
-        self.collection_info = pd.DataFrame(
-            columns=SLIDE_COLLECTION_COLUMN_NAMES)
+        self.collection_info = pd.DataFrame(columns=SLIDE_COLLECTION_COLUMN_NAMES)
 
         # Mask Variables
         self.mask = None
@@ -389,7 +388,7 @@ class SlideCollection(object):
             "segmented": False,
             "quantified": False,
             "dual_antigen_expression": False,
-            "triple_antigen_expression": False,
+            "triplet_antigen_expression": False,
         }
 
         # Set destination directories
@@ -436,7 +435,7 @@ class SlideCollection(object):
 
             TODO: Check indexing of collection_info_df
         """
-        self.logger.info("Initializing Slide Collection")
+        self.logger.info(f"Initializing SlideCollection: {self.collection_name}")
         init_start_time = time()
         for file in os.listdir(self.src_dir):
             if os.path.isfile(os.path.join(self.src_dir, file)):
@@ -502,31 +501,33 @@ class SlideCollection(object):
 
         """
         prev_res_start_time = time()
-        self.logger.info("Searching for previous results")
+        self.logger.debug("Searching for previous results")
 
         reg_dir = os.path.join(self.dest_dir, REGISTRATION_DIR)
         if os.path.isdir(reg_dir) and os.listdir(reg_dir):
             self.registration_dir = reg_dir
             try:
+                self.logger.info("Searching for previous registration results")
                 # update Slide objects to point to registered images
                 self._update_slide_paths_after_registration()
                 self.status["registered"] = True
-                self.logger.debug(
-                    f"Found existing registration directory at {reg_dir}; updated slide paths to registered images."
+                self.logger.info(
+                    f"Successfully loaded registered slides into {self.collection_name}."
                 )
             except Exception as e:
                 self.logger.warning(
                     f"Failed to update slide paths from existing registration directory: {e}"
                 )
 
+            self.logger.info("Searching for previous segmentation results")
             self.add_mask_to_collection(reg_dir)
 
+        self.logger.info("Searching for previous quantification results")
         if self.quantification_results.__len__() == 0:
             if path is None:
                 path = self.pickle_dir
             path_mask_coord = os.path.join(path, "mask_coordinates.pickle")
-            path_quant_res = os.path.join(
-                path, "quantification_results.pickle")
+            path_quant_res = os.path.join(path, "quantification_results.pickle")
             path_dual_overlap_res = os.path.join(
                 path, "dual_antigen_expressions.pickle"
             )
@@ -536,10 +537,9 @@ class SlideCollection(object):
 
             # load mask coordinates
             if os.path.exists(path_mask_coord):
-                self.mask_coordinates = pickle.load(
-                    open(path_mask_coord, "rb"))
+                self.mask_coordinates = pickle.load(open(path_mask_coord, "rb"))
                 self.status["segmented"] = True
-                self.logger.debug(
+                self.logger.info(
                     f"Successfully loaded mask coordinates for {self.collection_name}"
                 )
             else:
@@ -549,10 +549,9 @@ class SlideCollection(object):
 
             # load quantification results
             if os.path.exists(path_quant_res):
-                self.quantification_results = pickle.load(
-                    open(path_quant_res, "rb"))
+                self.quantification_results = pickle.load(open(path_quant_res, "rb"))
                 self.status["quantified"] = True
-                self.logger.debug(
+                self.logger.info(
                     f"Sucessfully loaded quantification results for {self.collection_name}"
                 )
             else:
@@ -561,12 +560,13 @@ class SlideCollection(object):
                 )
 
             # load dual overlap results
+            self.logger.info("Searching for previous dual antigen expression results")
             if os.path.exists(path_dual_overlap_res):
                 self.dual_antigen_expressions = pickle.load(
                     open(path_dual_overlap_res, "rb")
                 )
                 self.status["dual_antigen_expression"] = True
-                self.logger.debug(
+                self.logger.info(
                     f"Successfully loaded dual_antigen_expression results for {self.collection_name}"
                 )
             else:
@@ -575,12 +575,15 @@ class SlideCollection(object):
                 )
 
             # load triplet overlap results
+            self.logger.info(
+                "Searching for previous triplet antigen expression results"
+            )
             if os.path.exists(path_triplet_overlap_res):
                 self.triplet_antigen_results = pickle.load(
                     open(path_triplet_overlap_res, "rb")
                 )
                 self.status["triplet_antigen_expression"] = True
-                self.logger.debug(
+                self.logger.info(
                     f"Successfully loaded triplet_antigen_expression results for {self.collection_name}"
                 )
             else:
@@ -590,8 +593,7 @@ class SlideCollection(object):
 
             # Load processing info for each slide TODO load into slide object
             for slide in self.slides:
-                path_slide = os.path.join(
-                    path, f"{slide.name}_processing_info.pickle")
+                path_slide = os.path.join(path, f"{slide.name}_processing_info.pickle")
                 if os.path.exists(path_slide):
                     slide.detailed_quantification_results = pickle.load(
                         open(path_slide, "rb")
@@ -634,7 +636,8 @@ class SlideCollection(object):
         """
         if not dir or not os.path.isdir(dir):
             self.logger.debug(
-                f"Registration directory {dir} does not exist yet. Please run registration first.")
+                f"Registration directory {dir} does not exist yet. Please run registration first."
+            )
         try:
             for fname in os.listdir(dir):
                 if re.search(r"_mask", fname, re.IGNORECASE):
@@ -650,12 +653,12 @@ class SlideCollection(object):
                             existing[0].update_slide(mask_path)
                         except Exception:
                             self.logger.debug(
-                                f"Could not update existing mask slide path for {mask_name}")
+                                f"Could not update existing mask slide path for {mask_name}"
+                            )
                         self.mask = existing[0]
                     else:
                         try:
-                            new_mask = Slide(
-                                mask_name, mask_path, is_mask=True)
+                            new_mask = Slide(mask_name, mask_path, is_mask=True)
                             self.slides.append(new_mask)
                             try:
                                 self.collection_info.loc[len(self.collection_info)] = (
@@ -663,13 +666,14 @@ class SlideCollection(object):
                                 )
                             except Exception:
                                 self.logger.debug(
-                                    "Could not append new mask slide to collection_info")
+                                    "Could not append new mask slide to collection_info"
+                                )
                             self.mask = new_mask
                         except Exception as e:
                             self.logger.warning(
-                                f"Found mask Slide but failed to load it: {mask_path}: {e}")
-                    self.logger.info(
-                        f"Loaded mask slide from directory: {mask_path}")
+                                f"Found mask Slide but failed to load it: {mask_path}: {e}"
+                            )
+                    self.logger.info(f"Loaded mask slide from directory: {mask_path}")
         except Exception as e:
             self.logger.debug(f"Error while scanning {dir} for mask: {e}")
 
@@ -708,8 +712,7 @@ class SlideCollection(object):
             cols, rows = mask_tiles.level_tiles[mask_tiles.level_count - 1]
             for col in tqdm(range(cols), desc="Extracting mask tiles"):
                 for row in range(rows):
-                    temp = mask_tiles.get_tile(
-                        mask_tiles.level_count - 1, (col, row))
+                    temp = mask_tiles.get_tile(mask_tiles.level_count - 1, (col, row))
                     if temp.mode != "RGB":
                         temp = temp.convert("RBG")
                     temp = xp.array(temp)
@@ -721,7 +724,9 @@ class SlideCollection(object):
                         if save_img:
                             tile_name = str(col) + "_" + str(row)
                             # Convert to NumPy array if necessary
-                            if hasattr(temp, "asnumpy"):
+                            if hasattr(temp, "get"):
+                                temp = temp.get()
+                            elif hasattr(temp, "asnumpy"):
                                 temp = temp.asnumpy()
                             # Convert to PIL Image
                             img = Image.fromarray(temp)
@@ -740,20 +745,19 @@ class SlideCollection(object):
         # Save mask coordinates as pickle
         out = os.path.join(self.pickle_dir, "mask_coordinates.pickle")
         with open(out, "wb") as file:
-            pickle.dump(self.mask_coordinates, file,
-                        protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.mask_coordinates, file, protocol=pickle.HIGHEST_PROTOCOL)
         # pickle.dump(self.mask_coordinates, open(out, "wb"))
         self.logger.debug(f"Successfully saved mask coordinates to {out}")
         self.logger.info("Finished Mask Tile Extraction")
 
     def register_slides(
-            self,
-            reference_slide=None,
-            microregistration=True,
-            max_non_rigid_registration_dim_px=2000,
-            crop=None,
-            high_res_alignement=False,
-            high_res_fraction=None,
+        self,
+        reference_slide=None,
+        microregistration=True,
+        max_non_rigid_registration_dim_px=2000,
+        crop=None,
+        high_res_alignement=False,
+        high_res_fraction=None,
     ):
         """Registers all WSIs in the collection using Valis.
 
@@ -788,24 +792,27 @@ class SlideCollection(object):
         self.registration_dir = os.path.join(self.dest_dir, REGISTRATION_DIR)
         os.makedirs(self.registration_dir, exist_ok=True)
 
-        self.intermediate_registration_dir = os.path.join(self.data_dir,
-                                                          "intermediate_registration_results")
+        self.intermediate_registration_dir = os.path.join(
+            self.data_dir, "intermediate_registration_results"
+        )
         os.makedirs(self.intermediate_registration_dir, exist_ok=True)
 
         if reference_slide:
             self.logger.info(
-                f"Registering slides with reference slide {reference_slide}")
+                f"Registering slides with reference slide {reference_slide}"
+            )
             register_slides_with_reference(
                 slide_src_dir=self.src_dir,
                 results_dst_dir=self.intermediate_registration_dir,
-                reference_slide=self.registration_dir,
+                referenceSlide=reference_slide,
                 microregistration=microregistration,
                 max_non_rigid_registration_dim_px=max_non_rigid_registration_dim_px,
                 crop=crop,
             )
         elif high_res_alignement:
             self.logger.info(
-                f"Performing high resolution alignment with {high_res_fraction} fraction")
+                f"Performing high resolution alignment with {high_res_fraction} fraction"
+            )
             register_slides_high_resolution(
                 slide_src_dir=self.src_dir,
                 results_dst_dir=self.intermediate_registration_dir,
@@ -829,37 +836,50 @@ class SlideCollection(object):
             f"Finished image registration of {self.collection_name} in \
                 {round((registration_end_time - registration_begin_time)/60,2)} minutes."
         )
+        self.logger.info(f"Updating slide paths for {self.collection_name}")
         self._update_slide_paths_after_registration()
 
     def _update_slide_paths_after_registration(self):
         """Update Slide objects to use registered slide files saved in self.registration_dir.
-        Uses original basename to look for the registered file (registration preserves filenames)."""
+        Uses original basename to look for the registered file (registration preserves filenames).
+        """
         if not self.registration_dir or not os.path.isdir(self.registration_dir):
-            self.logger.debug(
-                "Registration directory not set or missing; skipping _update_slide_paths_after_registration.")
+            self.logger.info(
+                "Registration directory not set or missing; skipping _update_slide_paths_after_registration."
+            )
             return
+        # First, scan all files in registration_dir recursively and build a mapping from stem -> path
+        reg_files = {}
+        for root, _, files in os.walk(self.registration_dir):
+            for f in files:
+                stem = cutils.get_name(f)
+                path = os.path.join(root, f)
+                reg_files[stem] = path
 
         for slide in self.slides:
-            base = os.path.basename(slide.orig_path)
-            reg_path = os.path.join(self.registration_dir, base)
-            if os.path.exists(reg_path):
+            base_stem = cutils.get_name(slide.orig_path)
+            if base_stem in reg_files:
+                reg_path = reg_files[base_stem]
                 try:
                     slide.update_slide(reg_path)
-                    self.logger.debug(
-                        f"Updated slide {slide.name} to registered path {reg_path}")
                 except Exception as e:
-                    self.logger.warning(
-                        f"Could not update slide {slide.name} to {reg_path}: {e}")
+                    self.logger.error(
+                        f"Could not update slide {slide.name} to {reg_path}: {e}"
+                    )
+            else:
+                self.logger.debug(
+                    f"No registered file found for {slide.name} (stem={base_stem})"
+                )
 
     def tumor_segmentation(
-            self,
-            model_path,
-            reference_slide=None,
-            tile_size=[1024, 1024],
-            output_path=None,
-            normalization=False,
-            inversion=False,
-            plot_results=False,
+        self,
+        model_path,
+        reference_slide=None,
+        tile_size=[1024, 1024],
+        output_path=None,
+        normalization=False,
+        inversion=False,
+        plot_results=False,
     ):
         """Performs tumor segmentation on the HE WSI in the SlideCollection.
 
@@ -898,8 +918,15 @@ class SlideCollection(object):
         if output_path is None:
             output_path = self.registration_dir
 
-        run_tumor_segmentation(reference_slide, model_path, tile_size,
-                               output_path, normalization, inversion, plot_results)
+        run_tumor_segmentation(
+            reference_slide,
+            model_path,
+            tile_size,
+            output_path,
+            normalization,
+            inversion,
+            plot_results,
+        )
         self.add_mask_to_collection(output_path)
         self.status["segmented"] = True
 
@@ -964,7 +991,8 @@ class SlideCollection(object):
             )
         start_quant_time = time()
         self.logger.info(
-            f"Starting quantification of all slides, save_imgs: {save_imgs}, masking_mode: {masking_mode}")
+            f"Starting quantification of all slides, save_imgs: {save_imgs}, masking_mode: {masking_mode}"
+        )
         if self.quantification_results.__len__() != 0:
             self.quantification_results = self.quantification_results.iloc[0:0]
         # Counter variable for progress tracking
@@ -978,7 +1006,7 @@ class SlideCollection(object):
                 c += 1
         end_quant_time = time()
         self.logger.info(
-            f"Finished quantification for {self.name} in \
+            f"Finished quantification for {self.collection_name} in \
                 {round((end_quant_time - start_quant_time)/60,2)} minutes."
         )
         self.status["quantified"] = True
@@ -1023,17 +1051,14 @@ class SlideCollection(object):
             )
 
         if not self.mask_coordinates:
-            self.logger.info(
-                "Extracting mask coordinates before quantification"
-            )
+            self.logger.info("Extracting mask coordinates before quantification")
             self.extract_mask_tile_coordinates()
 
         slide = [slide for slide in self.slides if slide.name == slide_name][0]
 
         # Create directories for images if they are to be saved.
         if save_img:
-            dab_tile_dir = os.path.join(
-                self.tiles_dir, slide_name, DAB_TILE_DIR)
+            dab_tile_dir = os.path.join(self.tiles_dir, slide_name, DAB_TILE_DIR)
             if masking_mode == "pixel-level":
                 slide.quantify_slide(
                     self.mask_coordinates,
@@ -1105,8 +1130,7 @@ class SlideCollection(object):
                 index=False,
                 encoding="utf-8",
             )
-            out = os.path.join(
-                self.pickle_dir, "quantification_results.pickle")
+            out = os.path.join(self.pickle_dir, "quantification_results.pickle")
             with open(out, "wb") as file:
                 pickle.dump(
                     self.quantification_results, file, protocol=pickle.HIGHEST_PROTOCOL
@@ -1151,9 +1175,7 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_dual_antigen_combination method
         for combo in slide_combinations:
-            self.evaluate_antigen_pair(
-                combo[0], combo[1], masking_mode=masking_mode
-            )
+            self.evaluate_antigen_pair(combo[0], combo[1], masking_mode=masking_mode)
         dual_expression_time_end = time()
         self.logger.info(
             f"Finished dual antigen expression analysis in \
@@ -1229,8 +1251,7 @@ class SlideCollection(object):
         # Create directory for pair of slides
         if save_img:
             # Create Colocalization directory if it does not exist
-            self.colocalization_dir = os.path.join(
-                self.dest_dir, COLOCALIZATION)
+            self.colocalization_dir = os.path.join(self.dest_dir, COLOCALIZATION)
             os.makedirs(self.colocalization_dir, exist_ok=True)
 
             # Create sub-directory for slide pair
@@ -1298,8 +1319,7 @@ class SlideCollection(object):
             [slide1.name, slide2.name],
             antigen_profiles=[slide1.antigen_profile, slide2.antigen_profile],
         )
-        self.save_antigen_combinations(
-            result_type="dual", masking_mode=masking_mode)
+        self.save_antigen_combinations(result_type="dual", masking_mode=masking_mode)
 
     def evaluate_antigen_triplet(
         self, slide1, slide2, slide3, save_img=False, masking_mode="tile-level"
@@ -1333,8 +1353,7 @@ class SlideCollection(object):
         # Create directory for triplet of slides
         if save_img:
             # Create Colocalization directory if it does not exist
-            self.colocalization_dir = os.path.join(
-                self.dest_dir, COLOCALIZATION)
+            self.colocalization_dir = os.path.join(self.dest_dir, COLOCALIZATION)
             os.makedirs(self.colocalization_dir, exist_ok=True)
 
             # Create sub-directory for slide triplet
@@ -1383,9 +1402,7 @@ class SlideCollection(object):
         # Process tiles using multiprocessing
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as exe:
             results = tqdm(
-                exe.map(
-                    evaluate_antigen_triplet_tile, iterable
-                ),
+                exe.map(evaluate_antigen_triplet_tile, iterable),
                 total=len(iterable),
                 desc="Calculating Coverage of Slides "
                 + slide1.name
@@ -1416,8 +1433,7 @@ class SlideCollection(object):
                 slide3.antigen_profile,
             ],
         )
-        self.save_antigen_combinations(
-            result_type="triplet", masking_mode=masking_mode)
+        self.save_antigen_combinations(result_type="triplet", masking_mode=masking_mode)
 
     def summarize_antigen_combinations(
         self, comparison_dict, slide_names, antigen_profiles
@@ -1593,8 +1609,7 @@ class SlideCollection(object):
             csv_filename = f"{masking_mode}_triplet_antigen_expressions.csv"
             pickle_filename = "triplet_antigen_expressions.pickle"
         else:
-            raise ValueError(
-                "Invalid result_type. Must be 'dual' or 'triplet'.")
+            raise ValueError("Invalid result_type. Must be 'dual' or 'triplet'.")
 
         # Save results as CSV
         summary_df.to_csv(

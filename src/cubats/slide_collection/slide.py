@@ -202,10 +202,8 @@ class Slide(object):
         # Create directory to save tiles if save_img is True
         if save_img:
             if img_dir is None:
-                self.logger.error(
-                    "img_dir must be provided if save_img is True.")
-                raise ValueError(
-                    "img_dir must be provided if save_img is True.")
+                self.logger.error("img_dir must be provided if save_img is True.")
+                raise ValueError("img_dir must be provided if save_img is True.")
             self.dab_tile_dir = img_dir
             os.makedirs(self.dab_tile_dir, exist_ok=True)
 
@@ -278,8 +276,7 @@ class Slide(object):
         # Save dictionary as pickle
         start_time_save = time()
         f_out = os.path.join(save_dir, f"{self.name}_processing_info.pickle")
-        self.logger.info(
-            f"Saving quantification results for {self.name} to {f_out}")
+        self.logger.info(f"Saving quantification results for {self.name} to {f_out}")
         with open(f_out, "wb") as f:
             pickle.dump(
                 self.detailed_quantification_results,
@@ -322,13 +319,10 @@ class Slide(object):
             ValueError: If the slide is a mask slide or a reference slide.
         """
         start_time_summarize = time()
-        self.logger.info(
-            f"Summarizing quantification results for slide: {self.name}")
+        self.logger.info(f"Summarizing quantification results for slide: {self.name}")
         if self.is_mask:
-            self.logger.error(
-                "Cannot summarize quantification results for mask slide.")
-            raise ValueError(
-                "Cannot summarize quantification results for mask slide.")
+            self.logger.error("Cannot summarize quantification results for mask slide.")
+            raise ValueError("Cannot summarize quantification results for mask slide.")
         elif self.is_reference:
             self.logger.error(
                 "Cannot summarize quantification results for reference slide."
@@ -359,6 +353,35 @@ class Slide(object):
                 sum_mask_count += tile_result["Mask Count"]
             else:
                 error_tiles += 1
+
+        if processed_tiles == 0:
+            self.logger.warning(
+                f"No tiles were successfully processed for slide: {self.name}. "
+                "Skipping quantification summary calculations."
+            )
+            self.quantification_summary = {
+                "Name": self.name,
+                "Coverage (%)": 0.0,
+                "High Positive (%)": 0.0,
+                "Medium Positive (%)": 0.0,
+                "Low Positive (%)": 0.0,
+                "Negative (%)": 0.0,
+                "Total Tissue (%)": 0.0,
+                "Background / No Tissue (%)": 0.0,
+                "Mask Area (%)": 0.0,
+                "Non-mask Area (%)": 0.0,
+                "H-Score": 0.0,
+                "Score": "Background",
+                "Total Processed Tiles (%)": 0.0,
+                "Error (%)": 100.0,
+                "Thresholds": [
+                    self.antigen_profile["high_positive_threshold"],
+                    self.antigen_profile["medium_positive_threshold"],
+                    self.antigen_profile["low_positive_threshold"],
+                    235,
+                ],
+            }
+            return  # Exit early
 
         # Calculate percentages and scores
         total_pixels_in_mask = sum_mask_count
@@ -394,11 +417,11 @@ class Slide(object):
                 percentage_med_pos,
                 percentage_low_pos,
                 percentage_neg,
+                percentage_background,
             ],
             dtype=xp.float32,
         )
-        h_score = xp.sum(
-            percentages_tissue[:3] * xp.array([3, 2, 1]), dtype=xp.float32)
+        h_score = xp.sum(percentages_tissue[:3] * xp.array([3, 2, 1]), dtype=xp.float32)
 
         # Determine slide score (exclude background)
         if xp.any(percentages_tissue > 66.6):
@@ -413,8 +436,7 @@ class Slide(object):
         perc_processed_tiles = (
             processed_tiles / len(self.detailed_quantification_results)
         ) * 100
-        perc_error = (
-            error_tiles / len(self.detailed_quantification_results)) * 100
+        perc_error = (error_tiles / len(self.detailed_quantification_results)) * 100
 
         # Update the dictionary
         self.quantification_summary = {
@@ -494,8 +516,7 @@ class Slide(object):
         # Create WSI and save as pyramidal TIF in self.reconstruct_dir
         logging.getLogger("pyvips").setLevel(logging.WARNING)
         segmented_wsi = np.concatenate(row_array, axis=0)
-        segmented_wsi = VipsImage.new_from_array(
-            segmented_wsi).cast(BandFormat.INT)
+        segmented_wsi = VipsImage.new_from_array(segmented_wsi).cast(BandFormat.INT)
         end_time = time()
         self.logger.info(
             f"Finished reconstructing slide: {self.name} in {round((end_time - start_time)/60,2)} minutes."
@@ -530,7 +551,7 @@ class Slide(object):
         Args:
             new_path (str): The new path to the slide file.
         """
-        self.logger.info(f"Updating path for slide {self.name} to {new_path}")
+        self.logger.debug(f"Updating path for slide {self.name} to {new_path}")
         self.registered_path = new_path
         self.openslide_object = openslide.OpenSlide(new_path)
         self.tiles = DeepZoomGenerator(
@@ -539,5 +560,4 @@ class Slide(object):
         self.level_count = self.tiles.level_count
         self.level_dimensions = self.tiles.level_dimensions
         self.tile_count = self.tiles.tile_count
-        self.logger.info(
-            f"Slide {self.name} updated with new path: {new_path}")
+        self.logger.debug(f"Slide {self.name} updated with new path: {new_path}")
