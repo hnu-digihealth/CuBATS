@@ -16,11 +16,11 @@ CuBATS includes the following steps:
 4. **Quantification of Staining Intensities:** Classification of tissue regions into high-, medium-, low-positive and negative intensity categories.
 5. **Combinatorial Analysis:** Evaluation of spatial TAA co-expression to identify optimal mono-, dual-, and triplet TAA combinations that maximize tumor coverage while minimizing TAA overlap.
 
-For full details and installation instructions, see the [Documentation](./docs/build/html/index.html).
+For full details and installation instructions, see the [Documentation](https://hnu-digihealth.github.io/CuBATS/).
 
 ## Contribute to the Project
 If you want to contribute to the project please read our [Contributing Guideline](./CONTRIBUTING.md).
 
 
 ## License
-[MIT](LICENSE.txt) © 2024-2025 Moritz Dinser, Daniel Hieber
+[MIT](LICENSE.txt) © 2025 Moritz Dinser, Daniel Hieber

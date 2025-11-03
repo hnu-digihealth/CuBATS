@@ -40,4 +40,4 @@ If you want to contribute to the project please check out our `Contributing Guid
 
 License
 -------
-`MIT <LICENSE.txt>`_ © 2024-2025 Moritz Dinser, Daniel Hieber
+`MIT <LICENSE.txt>`_ © 2025 Moritz Dinser, Daniel Hieber

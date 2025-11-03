@@ -169,5 +169,11 @@ cython_debug/
 
 # Logs
 logs/
-src/cubats/script1.py
-src/cubats/script.py
+
+# Scripts
+examples/script1.py
+examples/script.py
+src/cubats/Main.ipynb
+
+# VSCode
+.vscode/
