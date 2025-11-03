@@ -29,20 +29,6 @@ build-backend = "pdm.backend"
 [tool.pdm]
 distribution = true
 
-[tool.pdm.dev-dependencies]
-testing = [
-    "pytest>=8.2.0",
-    "coverage>=7.5.0",
-    "flake8>=7.0.0",
-    "pylint>=3.2.7",
-    "graphviz>=0.20.3",
-    "imagecodecs>=2024.6.1",
-]
-docs = [
-    "sphinx>=7.3",
-    "sphinx-rtd-theme>=2.0",
-]
-
 [tool.pdm.scripts]
 test = "pdm run -v pytest tests"
 lint = "pdm run -v flake8 --ignore=E124,E127,E128,E203,E701,E731,W503 --max-line-length 120 src tests"
