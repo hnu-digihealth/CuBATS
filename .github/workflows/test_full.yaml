@@ -1,13 +1,11 @@
 name: pre-release testing
 
 on:
-  # Triggers the workflow on push or pull request events, but only for the main branch
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -51,8 +49,8 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11']
-        os: [ubuntu-latest, macos-latest, windows-latest]  # All platforms
-    if: github.ref_name == 'main'  # This job runs only on main
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    if: github.ref_name == 'main'
     steps:
       - uses: actions/checkout@v4
       - name: Set up PDM
@@ -69,15 +67,15 @@ jobs:
           pdm test
         continue-on-error: true  # Temporary during deploy
 
-  # Job for testing - Development branch (Only Ubuntu)
+  # # Only Ubuntu for dev
   testing-dev:
     name: Test on Development
     needs: [flake8-lint, isort]
-    runs-on: ubuntu-latest  # Only Ubuntu for dev
-    if: github.ref_name == 'development'  # Runs only on the development branch
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'development'
     strategy:
       matrix:
-        python-version: ['3.10', '3.11']  # Same python versions as main
+        python-version: ['3.10', '3.11']
     steps:
       - uses: actions/checkout@v4
       - name: Set up PDM

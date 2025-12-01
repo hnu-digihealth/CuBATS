@@ -1,7 +1,7 @@
 [project]
 name = "CuBATS"
 version = "1.0.0"
-description = "Computer Vision Based Antigen Target Selector"
+description = "Computer vision-Based Antigen Target Selector"
 authors = [
     { name = "Moritz Dinser", email = "moritz.dinser@hnu.de" },
     { name = "Daniel Hieber", email = "daniel.hieber@hnu.de" },
@@ -67,6 +67,7 @@ dev = [
     "isort>=5.13.2",
     "wheel>=0.45.1",
     "ipykernel>=6.29.5",
+    "twine>=6.2.0",
 ]
 testing = [
     "pytest>=8.2.0",

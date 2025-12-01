@@ -1,4 +1,4 @@
-# **C**omp**u**ter vision **B**ased **A**ntigen **T**arget **S**elector <img src="./docs/images/CuBATS_logo.png" alt="Kitten" title="A cute kitten" width="150" height="150" />
+# **C**omp**u**ter vision **B**ased **A**ntigen **T**arget **S**elector <img src="https://raw.githubusercontent.com/hnu-digihealth/CuBATS/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/docs/images/CuBATS_logo.png" alt="CuBATS" title="CuBATS Logo" width="100" height="100" />
 
 
 [![codecov](https://codecov.io/gh/hnu-digihealth/CuBATS/graph/badge.svg?token=5R3EBA6JS9)](https://codecov.io/gh/hnu-digihealth/CuBATS)
@@ -10,7 +10,7 @@ CuBATS integrates WSI registration, tumor segmentation, color deconvolution, qua
 
 ## Pipeline Overview
 CuBATS includes the following steps:
-1. **WSI Registration:** Registration and alignment of tissue across all WSIs using [VALIS](https://github.com/MathOnco/valis-wsi).
+1. **WSI Registration:** Registration and alignment of tissue across all WSIs using [VALIS](https://github.com/MathOnco/valis).
 2. **Tumor Segmentation:** Configurable tumor segmentation based on the HE WSI. CuBATS accepts segmentation models in **ONNX** format, enabling tumor-type independent application, if an appropriate model is provided.
 3. **Color Deconvolution:** Separation of antigen-specific DAB stain from counterstains.
 4. **Quantification of Staining Intensities:** Classification of tissue regions into high-, medium-, low-positive and negative intensity categories.
@@ -19,8 +19,8 @@ CuBATS includes the following steps:
 For full details and installation instructions, see the [Documentation](https://hnu-digihealth.github.io/CuBATS/).
 
 ## Contribute to the Project
-If you want to contribute to the project please read our [Contributing Guideline](./CONTRIBUTING.md).
+If you want to contribute to the project please read our [Contributing Guideline](https://github.com/hnu-digihealth/CuBATS/blob/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/CONTRIBUTING.md).
 
 
 ## License
-[MIT](LICENSE.txt) © 2025 Moritz Dinser, Daniel Hieber
+[MIT](https://github.com/hnu-digihealth/CuBATS/blob/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/LICENSE.txt) © 2025 Moritz Dinser, Daniel Hieber

@@ -18,7 +18,7 @@ Pipeline Overview
 CuBATS includes the following steps:
 
 1. **WSI Registration:** Registration and alignment of tissue across all WSIs using VALIS
-   (`VALIS <https://github.com/MathOnco/valis-wsi>`_).
+   (`VALIS <https://github.com/MathOnco/valis>`_).
 2. **Tumor Segmentation:** Configurable tumor segmentation based on the HE WSI. CuBATS accepts
    segmentation models in ``ONNX`` format.
 3. **Color Deconvolution:** Separation of antigen-specific DAB stain from counterstains.
