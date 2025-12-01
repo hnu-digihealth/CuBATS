@@ -1,4 +1,4 @@
-# **C**omp**u**ter vision **B**ased **A**ntigen **T**arget **S**elector <img src="https://raw.githubusercontent.com/hnu-digihealth/CuBATS/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/docs/images/CuBATS_logo.png" alt="CuBATS" title="CuBATS Logo" width="100" height="100" />
+# **C**omp**u**ter vision **B**ased **A**ntigen **T**arget **S**elector <img src="https://raw.githubusercontent.com/hnu-digihealth/CuBATS/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/docs/images/CuBATS_logo.png" alt="CuBATS" title="CuBATS Logo" width="150" height="150" />
 
 
 [![codecov](https://codecov.io/gh/hnu-digihealth/CuBATS/graph/badge.svg?token=5R3EBA6JS9)](https://codecov.io/gh/hnu-digihealth/CuBATS)

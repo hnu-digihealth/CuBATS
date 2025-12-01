@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pdm sync -d
+          pdm sync -dG docs
       - name: Build HTML
         working-directory: docs
         run: |
