@@ -19,10 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           pdm sync -dG docs
-      - name: Build HTML
-        working-directory: docs
-        run: |
-          pdm run make html
+      - name: Build Sphinx HTML
+        run: pdm run sphinx-build -b html docs/source docs/build/html
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
