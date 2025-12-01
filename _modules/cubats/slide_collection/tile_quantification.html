@@ -1,0 +1,506 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cubats.slide_collection.tile_quantification &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cubats.slide_collection.tile_quantification</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cubats.slide_collection.tile_quantification</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module performs tile-level quantification of IHC tiles, including color deconvolution, quantification of staining</span>
+<span class="sd">intensities, H-score and the IHC-Profiler score calculation, all based on antigen-specific thresholds, and masking of</span>
+<span class="sd">tumor-tissue areas.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Third Party</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">img_as_ubyte</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage.color</span><span class="w"> </span><span class="kn">import</span> <span class="n">hed2rgb</span><span class="p">,</span> <span class="n">rgb2gray</span><span class="p">,</span> <span class="n">rgb2hed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage.exposure</span><span class="w"> </span><span class="kn">import</span> <span class="n">histogram</span>
+
+<span class="c1"># CuBATS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">xp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.cutils</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_numpy</span>
+
+
+<div class="viewcode-block" id="quantify_tile">
+<a class="viewcode-back" href="../../../quantification.html#cubats.slide_collection.tile_quantification.quantify_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">quantify_tile</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This function quantifies a single input tile and returns a dictionary.</span>
+
+<span class="sd">    The function offers two masking modes: tile-level masking and pixel-level masking. In tile-level masking tiles that</span>
+<span class="sd">    contain sufficient tissue (mean pixel value &lt; 230 and standard deviation &gt; 15), will undergo stain separation and</span>
+<span class="sd">    quantification. The results will be returned in the dictionary. The &#39;flag&#39; will be set to 1. If &#39;save_img&#39; is True</span>
+<span class="sd">    the DAB image will additionally be saved in the specified directory. If the tile does not contain sufficient tissue</span>
+<span class="sd">    it will not be processed and the returned dictionary will only contain the tile name and a &#39;flag&#39; set to 0.</span>
+<span class="sd">    In pixel-level masking the mask will be applied to the tile prior to quantification to receive a merged tile which</span>
+<span class="sd">    will then be quantified. Non-mask pixels will be set to 255.</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        iterable (iterable): Iterable containing the following Information on passed tile:</span>
+
+<span class="sd">            - index 0: Column, necessary for naming.</span>
+<span class="sd">            - index 1: Row, necessary for naming.</span>
+<span class="sd">            - index 2: Tile itself, necessary since processes cannot access shared memory.</span>
+<span class="sd">            - DAB_TILE_DIR: Directory, for saving Image, since single processes cannot access shared memory.</span>
+<span class="sd">            - save_img: Boolean, if True, DAB image will be saved in specified directory.</span>
+<span class="sd">            - antigen_profile: Antigen-specific thresholds used during quantification.</span>
+<span class="sd">            - masking_mode: Masking mode for quantification.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Dictionary containing tile results:</span>
+
+<span class="sd">            - Tilename (str): Name of the tile.</span>
+<span class="sd">            - Histogram (ndarray): Histogram of the tile.</span>
+<span class="sd">            - Hist_centers (ndarray): Centers of histogram bins.</span>
+<span class="sd">            - Zones (ndarray): Number of pixels in each intensity zone.</span>
+<span class="sd">            - Percentage (ndarray): Percentage of pixels in each zone.</span>
+<span class="sd">            - Score (ndarray): Score for the tile.</span>
+<span class="sd">            - Tissue Count (int): Total number of tissue pixels in the tile.</span>
+<span class="sd">            - Flag (int): Processing flag (1 if processed, 0 if not).</span>
+<span class="sd">            - Image Array (ndarray): Array of pixel values for positive pixels.</span>
+
+<span class="sd">        TODO Add modes for optional histogram etc save</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assign local variables for better readability</span>
+    <span class="n">col</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">tile</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">DAB_TILE_DIR</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">save_img</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">antigen_profile</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+    <span class="c1"># masking_mode = iterable[6]</span>
+
+    <span class="n">tile_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+    <span class="c1"># Initialize Dictionary for single tile</span>
+    <span class="n">single_tile_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Tilename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tile_name</span>
+
+    <span class="c1"># Convert tile to numpy array</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">tile</span>  <span class="c1"># DEEPZOOM_OBJECT.get_tile(DEEPZOOM_LEVEL - 1, (row, col))</span>
+    <span class="n">temp_rgb</span> <span class="o">=</span> <span class="n">temp</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">)</span>
+
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">temp_rgb</span><span class="p">)</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+    <span class="n">std</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+
+    <span class="n">process_tile</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># Masking mode</span>
+    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mean</span> <span class="o">&lt;</span> <span class="mi">230</span> <span class="ow">and</span> <span class="n">std</span> <span class="o">&gt;</span> <span class="mi">15</span><span class="p">:</span>
+            <span class="n">process_tile</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">process_tile</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">process_tile</span><span class="p">:</span>
+        <span class="c1"># Separate stains</span>
+        <span class="n">DAB</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">E</span> <span class="o">=</span> <span class="n">color_deconvolution</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+
+        <span class="c1"># Calculate pixel intensity</span>
+        <span class="p">(</span><span class="n">hist</span><span class="p">,</span> <span class="n">hist_centers</span><span class="p">,</span> <span class="n">zones</span><span class="p">,</span> <span class="n">percentage</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">mask_count</span><span class="p">,</span> <span class="n">img_analysis</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">evaluate_staining_intensities</span><span class="p">(</span><span class="n">DAB</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Save image as tif in passed directory if wanted.</span>
+        <span class="k">if</span> <span class="n">save_img</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">DAB_TILE_DIR</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Target directory must be specified if save_img is True&quot;</span>
+                <span class="p">)</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">DAB</span><span class="p">))</span>
+            <span class="n">DAB_TILE_DIR</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DAB_TILE_DIR</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">tile_name</span><span class="si">}</span><span class="s2">.tif&quot;</span>
+            <span class="c1"># print(DAB_TILE_DIR)</span>
+            <span class="n">img</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">DAB_TILE_DIR</span><span class="p">)</span>
+
+        <span class="c1"># Complete dictionary</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Histogram&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hist</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Hist_centers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hist_centers</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Zones&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zones</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Percentage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">percentage</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Score&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">score</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Mask Count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask_count</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">img_analysis</span>
+        <span class="n">single_tile_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">single_tile_dict</span></div>
+
+
+
+<div class="viewcode-block" id="color_deconvolution">
+<a class="viewcode-back" href="../../../quantification.html#cubats.slide_collection.tile_quantification.color_deconvolution">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">color_deconvolution</span><span class="p">(</span>
+    <span class="n">ihc_rgb</span><span class="p">,</span>
+    <span class="n">hematoxylin</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">eosin</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Separates individual stains (Hematoxylin, Eosin, DAB) from an IHC image and returns an image for each stain.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ihc_rgb (Image): IHC image in RGB format.</span>
+<span class="sd">        hematoxylin (bool): If True, returns Hematoxylin image as well. Defaults to False.</span>
+<span class="sd">        eosin (bool): If True, returns Eosin image. Defaults to False.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing:</span>
+<span class="sd">            - ihc_d (Image): DAB (3&#39;,3&#39;-Diaminobenzidine) stain of the image.</span>
+<span class="sd">            - ihc_h (Image): Hematoxylin stain of the image if hematoxylin=True, otherwise None.</span>
+<span class="sd">            - ihc_e (Image): Eosin stain of the image if eosin=True, otherwise None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert RGB image to HED using prebuilt skimage method</span>
+    <span class="c1"># Convert to numpy array if transformation</span>
+    <span class="n">ihc_hed</span> <span class="o">=</span> <span class="n">rgb2hed</span><span class="p">(</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">ihc_rgb</span><span class="p">))</span>
+    <span class="n">ihc_hed</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ihc_hed</span><span class="p">)</span>
+    <span class="c1"># Create RGB image for each seperate stain</span>
+    <span class="n">null</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">ihc_hed</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="c1"># Separate Hematoxylin stain</span>
+    <span class="n">ihc_h</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">img_as_ubyte</span><span class="p">(</span>
+            <span class="n">hed2rgb</span><span class="p">(</span>
+                <span class="n">to_numpy</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">ihc_hed</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">hematoxylin</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="c1"># Separate Eosin stain</span>
+    <span class="n">ihc_e</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">img_as_ubyte</span><span class="p">(</span>
+            <span class="n">hed2rgb</span><span class="p">(</span>
+                <span class="n">to_numpy</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">null</span><span class="p">,</span> <span class="n">ihc_hed</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">null</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">eosin</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="c1"># Separate DAB stain</span>
+    <span class="n">ihc_d</span> <span class="o">=</span> <span class="n">img_as_ubyte</span><span class="p">(</span>
+        <span class="n">hed2rgb</span><span class="p">(</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">null</span><span class="p">,</span> <span class="n">null</span><span class="p">,</span> <span class="n">ihc_hed</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)))</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ihc_d</span><span class="p">,</span> <span class="n">ihc_h</span><span class="p">,</span> <span class="n">ihc_e</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_staining_intensities">
+<a class="viewcode-back" href="../../../quantification.html#cubats.slide_collection.tile_quantification.evaluate_staining_intensities">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_staining_intensities</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="p">,</span> <span class="n">tumor_mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates pixel intensity of each pixel in the input image and separates them into 5 different zones based on</span>
+<span class="sd">    their intensity. The image is converted to grayscale format, resulting in a distribution of intensity values</span>
+<span class="sd">    between 0-255. Intensities above 235 are predominantly background or fatty tissues and do not contribute to</span>
+<span class="sd">    pathological scoring. Thresholds for high-positive, medium-positive, low-positive and negative pixels are defined</span>
+<span class="sd">    by the passed antigen profile. If &#39;masking_mode&#39; is &#39;pixel-level&#39;, pixels with an intensity value of 255 will be</span>
+<span class="sd">    excluded as they mark non-mask areas.</span>
+<span class="sd">    After calculating pixel intensities this function calculates percentage contribution of each of the zones with</span>
+<span class="sd">    respect to the mask tissue in the tile, as well as the a pathology score.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image (xp.ndarray): Input image.</span>
+<span class="sd">        antigen_profile (dict): Dictionary with threshold values.</span>
+<span class="sd">        tumor_mask (xp.ndarray). Boolean tumor mask for pixel-level, None for tile-level masking.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing:</span>
+<span class="sd">            - hist (ndarray): Histogram of the image.</span>
+<span class="sd">            - hist_centers (ndarray): Centers of histogram bins.</span>
+<span class="sd">            - zones (xp.ndarray): Number of pixels in each intensity zone with respect to the tumor mask.</span>
+<span class="sd">            - percentage (xp.ndarray): Percentage of pixels in each intensity zone with respect to the tumor mask.</span>
+<span class="sd">            - score (str): Overall score of the tile.</span>
+<span class="sd">            - maskcount (int): Tissue count for tile-level masking. Count of masked pixels for pixel-level.</span>
+<span class="sd">            - img_analysis (xp.ndarray): Array of pixel values for multi-antigen evaluation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Conversion to gray-scale-ubyte image</span>
+    <span class="n">gray_scale_image</span> <span class="o">=</span> <span class="n">rgb2gray</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="n">gray_scale_ubyte</span> <span class="o">=</span> <span class="n">img_as_ubyte</span><span class="p">(</span><span class="n">gray_scale_image</span><span class="p">)</span>
+
+    <span class="c1"># Calculate histogram</span>
+    <span class="n">hist</span><span class="p">,</span> <span class="n">hist_centers</span> <span class="o">=</span> <span class="n">histogram</span><span class="p">(</span><span class="n">gray_scale_image</span><span class="p">)</span>
+
+    <span class="c1"># Convert to xp array for processing</span>
+    <span class="n">gray_scale_ubyte</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gray_scale_ubyte</span><span class="p">)</span>
+    <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># Initilize arrays for analysis</span>
+    <span class="n">img_analysis</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="mi">255</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
+
+    <span class="n">zones</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="c1"># Get thresholds from antigen_profile</span>
+    <span class="n">high_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Define intensity masks</span>
+    <span class="n">high_positive_mask</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span> <span class="o">&lt;</span> <span class="n">high_thresh</span>
+    <span class="n">positive_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">gray_scale_ubyte</span> <span class="o">&gt;=</span> <span class="n">high_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">gray_scale_ubyte</span> <span class="o">&lt;</span> <span class="n">medium_thresh</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">gray_scale_ubyte</span> <span class="o">&gt;=</span> <span class="n">medium_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">gray_scale_ubyte</span> <span class="o">&lt;</span> <span class="n">low_thresh</span>
+    <span class="p">)</span>
+    <span class="n">negative_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">gray_scale_ubyte</span> <span class="o">&gt;=</span> <span class="n">low_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">gray_scale_ubyte</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span>
+    <span class="n">background_mask</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span> <span class="o">&gt;=</span> <span class="mi">235</span>
+
+    <span class="k">if</span> <span class="n">tumor_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">tumor_mask</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tumor_mask</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>  <span class="c1"># ensure boolean</span>
+        <span class="n">high_positive_mask</span> <span class="o">&amp;=</span> <span class="n">tumor_mask</span>
+        <span class="n">positive_mask</span> <span class="o">&amp;=</span> <span class="n">tumor_mask</span>
+        <span class="n">low_positive_mask</span> <span class="o">&amp;=</span> <span class="n">tumor_mask</span>
+        <span class="n">negative_mask</span> <span class="o">&amp;=</span> <span class="n">tumor_mask</span>
+        <span class="n">background_mask</span> <span class="o">&amp;=</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Update img_analysis with pixel values based on intensity masks also containing background</span>
+    <span class="n">img_analysis</span><span class="p">[</span><span class="n">high_positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="p">[</span><span class="n">high_positive_mask</span><span class="p">]</span>
+    <span class="n">img_analysis</span><span class="p">[</span><span class="n">positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="p">[</span><span class="n">positive_mask</span><span class="p">]</span>
+    <span class="n">img_analysis</span><span class="p">[</span><span class="n">low_positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="p">[</span><span class="n">low_positive_mask</span><span class="p">]</span>
+    <span class="n">img_analysis</span><span class="p">[</span><span class="n">negative_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="p">[</span><span class="n">negative_mask</span><span class="p">]</span>
+    <span class="n">img_analysis</span><span class="p">[</span><span class="n">background_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">gray_scale_ubyte</span><span class="p">[</span><span class="n">background_mask</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">tumor_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">img_analysis</span><span class="p">[</span><span class="o">~</span><span class="n">tumor_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">nan</span>
+    <span class="c1"># Calculate zones except non-mask</span>
+    <span class="n">zones</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">high_positive_mask</span><span class="p">)</span>
+    <span class="n">zones</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">positive_mask</span><span class="p">)</span>
+    <span class="n">zones</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">low_positive_mask</span><span class="p">)</span>
+    <span class="n">zones</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">negative_mask</span><span class="p">)</span>
+    <span class="n">zones</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">background_mask</span><span class="p">)</span>
+
+    <span class="n">tissue_count</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zones</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">tumor_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mask_count</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tumor_mask</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mask_count</span> <span class="o">=</span> <span class="n">tissue_count</span>
+    <span class="c1"># Calculate pixel count and percentage</span>
+
+    <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zones</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">percentage</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">percentage</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="s2">&quot;Background&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">percentage</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">calculate_percentage_and_score</span><span class="p">(</span><span class="n">zones</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">hist</span><span class="p">,</span>
+        <span class="n">hist_centers</span><span class="p">,</span>
+        <span class="n">zones</span><span class="p">,</span>
+        <span class="n">percentage</span><span class="p">,</span>
+        <span class="n">score</span><span class="p">,</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">mask_count</span><span class="p">),</span>
+        <span class="n">to_numpy</span><span class="p">(</span><span class="n">img_analysis</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_percentage_and_score">
+<a class="viewcode-back" href="../../../quantification.html#cubats.slide_collection.tile_quantification.calculate_percentage_and_score">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_percentage_and_score</span><span class="p">(</span><span class="n">zones</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the percentage of pixels in each zone relative to the tissue count (Positive tissues) and total mask</span>
+<span class="sd">    count (Background) and computes a score for each zone. If more than 66.6% of the total pixels are attributed to</span>
+<span class="sd">    a single zone, that zone&#39;s score is assigned. Else, the score for each zone is calculated using this formula:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\text{Score} = \\frac{(\\text{number of pixels in zone} \\times \\text{weight of zone})}{\\text{total</span>
+<span class="sd">        pixels in image}}</span>
+
+<span class="sd">    with weights 4 for the high positive zone, 3 for the positive zone, 2 for the low positive zone, 1 for the negative</span>
+<span class="sd">    zone, and 0 for the background. The final score is the maximum score among all zones.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        zones (xp.ndarray): Array containing amount of pixels from each zone</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing:</span>
+<span class="sd">            - percentage (xp.ndarray): Array containing the percentage of pixels in each zone.</span>
+<span class="sd">            - score (str): Name of the zone if it exceeds 66.6%, otherwise the name of the zone with the highest score.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If all zones have zero pixels.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zones</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All zones have zero pixels&quot;</span><span class="p">)</span>
+
+    <span class="n">tissue_count</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zones</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">total_pixels</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zones</span><span class="p">)</span>
+
+    <span class="c1"># Calculate percentage of pixels in each zone</span>
+    <span class="n">percentage_tissue</span> <span class="o">=</span> <span class="p">(</span><span class="n">zones</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">percentage_background</span> <span class="o">=</span> <span class="p">(</span><span class="n">zones</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span> <span class="o">/</span> <span class="n">total_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    <span class="n">percentage</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">percentage_tissue</span><span class="p">,</span> <span class="n">percentage_background</span><span class="p">])</span>
+    <span class="n">zone_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;High Positive&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Medium Positive&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Low Positive&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Negative&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Background&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Check if any zone exceeds 66.6% of the total pixels</span>
+    <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">percentage</span> <span class="o">&gt;</span> <span class="mf">66.6</span><span class="p">):</span>
+        <span class="n">max_score_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">percentage</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">percentage</span><span class="p">,</span> <span class="n">zone_names</span><span class="p">[</span><span class="n">max_score_index</span><span class="p">]</span>
+
+    <span class="c1"># Else calculate wheighted score for each zone</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>  <span class="c1"># Weights for each zone</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="p">(</span><span class="n">zones</span> <span class="o">*</span> <span class="n">weights</span><span class="p">)</span> <span class="o">/</span> <span class="n">tissue_count</span>
+    <span class="n">max_score_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">scores</span><span class="p">[:</span><span class="mi">4</span><span class="p">]))</span>  <span class="c1"># ignore background zone</span>
+
+    <span class="k">return</span> <span class="n">percentage</span><span class="p">,</span> <span class="n">zone_names</span><span class="p">[</span><span class="n">max_score_index</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="mask_tile">
+<a class="viewcode-back" href="../../../quantification.html#cubats.slide_collection.tile_quantification.mask_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mask_tile</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Masks the tile with the given mask. The mask is a binary image with the same dimensions as the tile. The function</span>
+<span class="sd">    returns the masked tile as an Image, containing the tile where the mask is positive and white where it is negative.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tile (Image): Tile to be masked</span>
+<span class="sd">        mask (Image): Mask to be applied to the tile</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Image: Masked tile</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert tile to numpy array</span>
+    <span class="n">tile_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+    <span class="n">mask_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask_np</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">mask_np</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">mask_np</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_RGB2GRAY</span><span class="p">)</span>
+    <span class="c1"># Resize mask to tile size if needed</span>
+    <span class="k">if</span> <span class="n">mask_np</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">tile_np</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
+        <span class="n">mask_np</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
+            <span class="n">mask_np</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">tile_np</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">tile_np</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">interpolation</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">INTER_NEAREST</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">binary_mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">threshold</span><span class="p">(</span><span class="n">mask_np</span><span class="p">,</span> <span class="mi">127</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">THRESH_BINARY</span><span class="p">)</span>
+
+    <span class="n">tumor_mask</span> <span class="o">=</span> <span class="n">binary_mask</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="n">binary_mask_inv</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">bitwise_not</span><span class="p">(</span><span class="n">binary_mask</span><span class="p">)</span>
+    <span class="n">binary_mask_inv_3ch</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">binary_mask_inv</span><span class="p">,</span> <span class="n">binary_mask_inv</span><span class="p">,</span> <span class="n">binary_mask_inv</span><span class="p">))</span>
+
+    <span class="n">masked_tile</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">bitwise_and</span><span class="p">(</span><span class="n">tile_np</span><span class="p">,</span> <span class="n">binary_mask_inv_3ch</span><span class="p">)</span>
+    <span class="n">white_bg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">tile_np</span><span class="p">)</span> <span class="o">*</span> <span class="mi">255</span>
+    <span class="n">masked_tile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">binary_mask_inv_3ch</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">white_bg</span><span class="p">,</span> <span class="n">masked_tile</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">masked_tile</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)),</span> <span class="n">tumor_mask</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

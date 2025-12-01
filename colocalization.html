@@ -1,0 +1,499 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Co-Expression Analysis &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Quantification" href="quantification.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantification.html">Quantification</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Co-Expression Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-documentation">Module Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#primary-functions">Primary Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cubats.slide_collection.tile_colocalization.evaluate_antigen_pair_tile"><code class="docutils literal notranslate"><span class="pre">evaluate_antigen_pair_tile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cubats.slide_collection.tile_colocalization.evaluate_antigen_triplet_tile"><code class="docutils literal notranslate"><span class="pre">evaluate_antigen_triplet_tile()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#internal-functions">Internal Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cubats.slide_collection.tile_colocalization._process_single_tile"><code class="docutils literal notranslate"><span class="pre">_process_single_tile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cubats.slide_collection.tile_colocalization._process_two_tiles"><code class="docutils literal notranslate"><span class="pre">_process_two_tiles()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cubats.slide_collection.tile_colocalization._process_three_tiles"><code class="docutils literal notranslate"><span class="pre">_process_three_tiles()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Co-Expression Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/colocalization.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="co-expression-analysis">
+<h1>Co-Expression Analysis<a class="headerlink" href="#co-expression-analysis" title="Link to this heading"></a></h1>
+<section id="module-documentation">
+<h2>Module Documentation<a class="headerlink" href="#module-documentation" title="Link to this heading"></a></h2>
+<p>This module performs evaluation of spatial co-expression of two or three antigens based on their staining intensities within tumor-tissue areas. It calculates combined tumor coverage as well as overlapping and complementary expression of the evaluated antigens.</p>
+</section>
+<section id="primary-functions">
+<h2>Primary Functions<a class="headerlink" href="#primary-functions" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="cubats.slide_collection.tile_colocalization.evaluate_antigen_pair_tile">
+<span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.tile_colocalization.</span></span><span class="sig-name descname"><span class="pre">evaluate_antigen_pair_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/tile_colocalization.html#evaluate_antigen_pair_tile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.tile_colocalization.evaluate_antigen_pair_tile" title="Link to this definition"></a></dt>
+<dd><p>This function analyzes antigen co-expression of the same tile from two different antigen slides and returns the
+results as dictionary.</p>
+<p>The function performs pixel-wise comparison across two images to evaluate combined total coverage, antigen overlap,
+and complementary expression. The intensity levels are divided into five categories based on their intensity values.
+Intensity values are defined for each tile by the passed antigen profile which can be defined when initializing the
+SlideCollection. If not antigen profiles are defined, intensity values will fall back to default thresholds:
+high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
+colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+during quantification: <cite>tile-level</cite> or <cite>pixel-level</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>iterable</strong> (<em>iterable</em>) – <p>An iterable containing the following elements:</p>
+<ul class="simple">
+<li><p><cite>tile1</cite>: the first tile to be compared and analyzed for antigen coverage.</p></li>
+<li><p><cite>tile2</cite>: the second tile to be compared and analyzed for antigen coverage.</p></li>
+<li><p><cite>Antigen-specific profiles</cite>: ‘profile1’, ‘profile2’, and ‘profile3’ containing antigen-specific thresholds
+for tile1, tile2, and tile 3respectively.</p></li>
+<li><p><cite>output path</cite>: the directory where the output image should be saved.</p></li>
+<li><p><cite>save_img</cite>: a flag indicating whether to save the output image.</p></li>
+<li><p><cite>masking_mode</cite>: Applied masking mode as for quantification: <cite>tile-level</cite> or <cite>pixel-level</cite>.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary containing the results of the analysis:</dt><dd><ul class="simple">
+<li><p>Tilename: Name of the tile</p></li>
+<li><p>Flag: Flag indicating if the tile was processed or not. (1: processed; -1: not processed due to both
+tiles not being processable; -2: one of the tiles was not processable due to wrong shape)</p></li>
+<li><p>Total Coverage: Percentage of positive pixels (intensity values &lt; 181), covered by both tiles combined,
+with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Total Overlap: Percentage of positive pixels that are positive in both images combined, with respect to
+the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Total Complement: Percentage of positive pixels that are only covered by one of the two images, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>High Positive Overlap: Percentage of highly positive pixels covered by both tiles combined, with respect
+to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>High Positive Complement: Percentage of highly positive pixels covered by only one of the two tiles, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Medium Positive Overlap: Percentage of medium positive pixels covered by both tiles combined, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Medium Positive Complement: Percentage of medium positive pixels covered by only one of the two tiles,
+with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Low Positive Overlap: Percentage of low positive pixels covered by both tiles combined, with respect to
+the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Low Positive Complement: Percentage of low positive pixels covered by only one of the two tiles, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Negative: Percentage of negative pixels not covered by either of the two tiles, with respect to the
+tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images
+(!=255). (Only if Flag == 1)</p></li>
+<li><p>Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+respect to the total pixel count of the tile. (Only if Flag == 1)</p></li>
+<li><p>Mask Area: Percentage of the tile that is covered by the tumor mask.</p></li>
+<li><p>Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
+respect to total pixels in the image (1024 x 1024 = 1048576).</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<dl>
+<dt>Optional Image Saving:</dt><dd><p>If save_img is True, an image containing the colored results will be saved in the specified directory. The
+coloring scheme is as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>Overlapping pixels (positive in both tiles):</dt><dd><ul>
+<li><p>Highly positive: Red ([255, 0, 0])</p></li>
+<li><p>Medium positive: Red ([255, 0, 0])</p></li>
+<li><p>Low positive: Red ([255, 0, 0])</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Complementary pixels (positive in only one tile):</dt><dd><ul>
+<li><p>Tile1 highly positive: Green ([0, 255, 0])</p></li>
+<li><p>Tile1 medium positive: Light Green ([153, 238, 153])</p></li>
+<li><p>Tile1 low positive: Very Light Green ([204, 255, 204])</p></li>
+<li><p>Tile2 highly positive: Blue ([0, 0, 204])</p></li>
+<li><p>Tile2 medium positive: Light Blue ([102, 204, 255])</p></li>
+<li><p>Tile2 low positive: Very Light Blue ([153, 204, 255])</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Negative pixels (both tiles negative): White ([255, 255, 255])</p></li>
+<li><p>Background pixels (no tissue): Gray ([192, 192, 192])</p></li>
+<li><p>Non-mask pixels: Dark Gray ([128, 128, 128])</p></li>
+</ul>
+</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cubats.slide_collection.tile_colocalization.evaluate_antigen_triplet_tile">
+<span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.tile_colocalization.</span></span><span class="sig-name descname"><span class="pre">evaluate_antigen_triplet_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iterable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/tile_colocalization.html#evaluate_antigen_triplet_tile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.tile_colocalization.evaluate_antigen_triplet_tile" title="Link to this definition"></a></dt>
+<dd><p>This function analyzes antigen co-expression of the same tile from 3 different antigen slides and returns the
+results as dictionary.</p>
+<p>The function performs pixel-wise comparison across three images to evaluate combined total coverage, antigen
+overlap, and complementary expression. The intensity levels are divided into five categories based on their
+intensity values. Intensity values are defined for each tile by the passed antigen profile which can be defined
+when initializing the <cite>SlideCollection</cite>. If not antigen profiles are defined, intensity values will fall back to
+default thresholds: high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),
+and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the
+colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied
+during quantification: <cite>tile-level</cite> or <cite>pixel-level</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>iterable</strong> (<em>iterable</em>) – <p>An iterable containing the following elements:</p>
+<ul class="simple">
+<li><p><cite>tile1</cite>: the first tile to be compared and analyzed for antigen coverage.</p></li>
+<li><p><cite>tile2</cite>: the second tile to be compared and analyzed for antigen coverage.</p></li>
+<li><p><cite>tile3</cite>: the third tile to be compared and analyzed for antigen coverage.</p></li>
+<li><p><cite>Antigen-specific profiles</cite>: ‘profile1’, ‘profile2’, and ‘profile3’ containing antigen-specific thresholds
+for tile1, tile2, and tile 3respectively.</p></li>
+<li><p><cite>output path</cite>: the directory where the output image should be saved.</p></li>
+<li><p><cite>save_img</cite>: a flag indicating whether to save the output image.</p></li>
+<li><p><cite>masking_mode</cite>: Applied masking mode as for quantification: <cite>tile-level</cite> or <cite>pixel-level</cite>.</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A dictionary containing the results of the analysis:</dt><dd><ul class="simple">
+<li><p>Tilename: Name of the tile</p></li>
+<li><p>Flag: Flag indicating if the tile was processed or not. (1: processed; 0: not processed due both tiles
+not being processable; -1: all tiles not containing tissue)</p></li>
+<li><p>Total Coverage: Percentage of positive pixels (intensity values &lt; 181), covered by all three tiles
+combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Total Overlap: Percentage of positive pixels that are positive in at least two or all three images
+combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Total Complement: Percentage of positive pixels that are only covered by one of the three images, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>High Positive Overlap: Percentage of highly positive pixels covered by all three tiles combined, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>High Positive Complement: Percentage of highly positive pixels covered by only one of the three tiles,
+with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Medium Positive Overlap: Percentage of medium positive pixels covered by all three tiles combined, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Medium Positive Complement: Percentage of medium positive pixels covered by only one of the three tiles.
+(Only if Flag == 1)</p></li>
+<li><p>Low Positive Overlap: Percentage of low positive pixels covered by all three tiles combined, with respect
+to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Low Positive Complement: Percentage of low positive pixels covered by only one of the three tiles, with
+respect to the tumor mask in the images (!=255). (Only if Flag == 1)</p></li>
+<li><p>Negative: Percentage of negative pixels not covered by any of the three tiles, with respect to actual
+tissue in the images.(Only if Flag == 1)</p></li>
+<li><p>Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images
+(!=255). (Only if Flag == 1)</p></li>
+<li><p>Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with
+respect to the total pixel count of the tile. (Only if Flag == 1)</p></li>
+<li><p>Mask Area: Percentage of the tile that is covered by the tumor mask.</p></li>
+<li><p>Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with
+respect to total pixels in the image (1024 x 1024 = 1048576).</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+<dl>
+<dt>Optional Image Saving:</dt><dd><p>If save_img is True, an image containing the colored results will be saved in the specified directory. The
+coloring scheme is as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>Overlapping pixels (positive in both tiles):</dt><dd><ul>
+<li><p>Highly positive: Red ([255, 0, 0])</p></li>
+<li><p>Medium Positive: Red ([255, 0, 0])</p></li>
+<li><p>Low positive: Red ([255, 0, 0])</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Complementary pixels (positive in only one tile):</dt><dd><ul>
+<li><p>Tile1 highly positive: Green ([0, 255, 0])</p></li>
+<li><p>Tile1 medium positive: Light Green ([153, 238, 153])</p></li>
+<li><p>Tile1 low positive: Very Light Green ([204, 255, 204])</p></li>
+<li><p>Tile2 highly positive: Blue ([0, 0, 204])</p></li>
+<li><p>Tile2 medium positive: Light Blue ([102, 204, 255])</p></li>
+<li><p>Tile2 low positive: Very Light Blue ([153, 204, 255])</p></li>
+<li><p>Tile3 highly positive: Orange ([255, 165, 0])</p></li>
+<li><p>Tile3 medium positive: Light Orange ([255, 200, 102])</p></li>
+<li><p>Tile3 low positive: Very Light Orange ([255, 225, 153])</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Negative pixels (both tiles negative): White ([255, 255, 255])</p></li>
+<li><p>Background pixels (no tissue): Gray ([192, 192, 192])</p></li>
+<li><p>Non-mask pixels: Dark Gray ([128, 128, 128])</p></li>
+</ul>
+</div></blockquote>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="internal-functions">
+<h2>Internal Functions<a class="headerlink" href="#internal-functions" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="cubats.slide_collection.tile_colocalization._process_single_tile">
+<span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.tile_colocalization.</span></span><span class="sig-name descname"><span class="pre">_process_single_tile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tile</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">antigen_profile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/tile_colocalization.html#_process_single_tile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.tile_colocalization._process_single_tile" title="Link to this definition"></a></dt>
+<dd><p>Processes antigen expression for a single tile.</p>
+<p>Processes a single image tile using vectorization and automatic backend detection for GPU acceleration. It
+categorizes pixels into different complement levels, negative tissue, and background based on the passed antigen
+profile. Optionally creates and saves a colored image of the analysis into the directory if <cite>save_img</cite> is True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tile</strong> (<em>dict</em>) – A dictionary containing the image under the key <cite>Image Array</cite> and masks under the key <cite>Masks</cite>.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – A flag indicating whether to create a colored image and save it.</p></li>
+<li><p><strong>dir</strong> (<em>str</em>) – The directory where the image should be saved if save_img is True.</p></li>
+<li><p><strong>color</strong> (<em>list</em>) – A list of RGB color values to be used for different complement levels.</p></li>
+<li><p><strong>antigen_profile</strong> (<em>dict</em>) – Antigen profile for the tile, specifying the thresholds applied during processing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A tuple containing counts of pixels in the following order:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>high_complement (int): Sum of pixels with values below <cite>high_positive_threshold</cite> of <cite>antigen profile</cite>.</p></li>
+<li><p>med_complement (int): Sum of pixels with values between <cite>high_positive_threshold</cite> and
+‘medium_positive_threshold` of <cite>antigen_profile</cite>.</p></li>
+<li><p>low_complement (int): Sum of pixels with values between <cite>medium_positive_threshold</cite> and
+<cite>low_positive_threshold</cite> of <cite>antigen_profile</cite>.</p></li>
+<li><p>negative (int): Sum of pixels with values between <cite>low_positive_threshold</cite> and 234 of <cite>antigen_profile</cite>.</p></li>
+<li><p>background (int): Sum of pixels above 235 and below 255.</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Optional Image Saving:</dt><dd><p>If <cite>save_img</cite> is True, an image containing the colored results will be saved in the specified directory.
+The coloring scheme depends on the color parameter and is specified by the calling function.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cubats.slide_collection.tile_colocalization._process_two_tiles">
+<span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.tile_colocalization.</span></span><span class="sig-name descname"><span class="pre">_process_two_tiles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tile1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">antigen_profiles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/tile_colocalization.html#_process_two_tiles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.tile_colocalization._process_two_tiles" title="Link to this definition"></a></dt>
+<dd><p>Processes antigen co-expression for two single tiles.</p>
+<p>Processes two image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
+profiles. Optionally creates and saves a colored image of the analysis into the directory if <cite>save_img</cite> is True.
+This function is typically called by <cite>evaluate_antigen_pair_tile</cite> or <cite>evaluate_antigen_triplet_tile</cite> when two of
+the three tiles contain tissue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tile1</strong> (<em>dict</em>) – A dictionary containing tile1’s data. The image can be accessed using the key <cite>Image Array</cite>.</p></li>
+<li><p><strong>tile2</strong> (<em>dict</em>) – A dictionary containing tile2’s data. The image can be accessed using the key <cite>Image Array</cite>.</p></li>
+<li><p><strong>dir</strong> (<em>str</em>) – The directory where the output image should be saved if <cite>save_img</cite> is True.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – A flag indicating whether to save the output image.</p></li>
+<li><p><strong>colors</strong> (<em>list</em>) – A list of RGB color values to be used for different complement levels.</p></li>
+<li><p><strong>antigen_profiles</strong> (<em>list</em>) – List of two dicts specifying antigen thresholds for each tile respectively.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A tuple containing the counts of:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>high_overlap (int): Sum of pixels where both tiles are highly positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>med_overlap (int): Sum of pixels where both tiles are medium positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>low_overlap (int): Sum of pixels where both tiles are low positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>high_complement (int): Sum of pixels with only one tile is below <cite>high_positive_threshold</cite> of
+<cite>antigen profiles</cite>.</p></li>
+<li><p>med_complement (int): Sum of pixels with only one tile is between <cite>high_positive_threshold</cite> and
+<cite>medium_positive_threshold</cite> of <cite>antigen_profiles</cite>.</p></li>
+<li><p>low_complement (int): Sum of pixels with only one tile is between <cite>medium_positive_threshold</cite> and
+<cite>low_positive_threshold</cite> of <cite>antigen_profiles</cite>.</p></li>
+<li><p>negative (int): Sum of pixels with values between <cite>low_positive_threshold</cite> and 235 of <cite>antigen_profiles</cite>.</p></li>
+<li><p>background (int): Sum of pixels above 235 and below 255.</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Optional Image Saving:</dt><dd><p>If save_img is True, an image containing the colored results will be saved in the specified directory.
+The coloring scheme depends on the color parameter and is specified by the calling function. For more
+information, refer to the <cite>evaluate_antigen_pair_tile</cite> or <cite>evaluate_antigen_triplet_tile</cite> functions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cubats.slide_collection.tile_colocalization._process_three_tiles">
+<span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.tile_colocalization.</span></span><span class="sig-name descname"><span class="pre">_process_three_tiles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tile1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">antigen_profiles</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/tile_colocalization.html#_process_three_tiles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.tile_colocalization._process_three_tiles" title="Link to this definition"></a></dt>
+<dd><p>Processes antigen expression for three tiles.</p>
+<p>Processes three image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes
+pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen
+profiles. Optionally creates and saves a colored image of the analysis into the directory if <cite>save_img</cite> is True.
+This function is typically called by <cite>evaluate_antigen_pair_tile</cite> or <cite>evaluate_antigen_triplet_tile</cite> when two of
+the three tiles contain tissue.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tile1</strong> (<em>dict</em>) – A dictionary containing tile1’s data. The image can be accessed using the key <cite>Image Array</cite>.</p></li>
+<li><p><strong>tile2</strong> (<em>dict</em>) – A dictionary containing tile2’s data. The image can be accessed using the key <cite>Image Array</cite>.</p></li>
+<li><p><strong>tile3</strong> (<em>dict</em>) – A dictionary containing tile3’s data. The image can be accessed using the key <cite>Image Array</cite>.</p></li>
+<li><p><strong>dir</strong> (<em>str</em>) – The directory where the output image should be saved if <cite>save_img</cite> is True.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – A flag indicating whether to save the output image.</p></li>
+<li><p><strong>colors</strong> (<em>list</em>) – A list of RGB color values to be used for different complement levels.</p></li>
+<li><p><strong>antigen_profiles</strong> (<em>list</em>) – List of two dicts specifying antigen thresholds for each tile respectively.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A tuple containing the counts of:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>high_overlap (int): Sum of pixels where both tiles are highly positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>med_overlap (int): Sum of pixels where both tiles are medium positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>low_overlap (int): Sum of pixels where both tiles are low positive, according to <cite>antigen_profiles</cite>.</p></li>
+<li><p>high_complement (int): Sum of pixels with only one tile is below <cite>high_positive_threshold</cite> of
+<cite>antigen profiles</cite>.</p></li>
+<li><p>med_complement (int): Sum of pixels with only one tile is between <cite>high_positive_threshold</cite> and
+<cite>medium_positive_threshold</cite> of <cite>antigen_profiles</cite>.</p></li>
+<li><p>low_complement (int): Sum of pixels with only one tile is between <cite>medium_positive_threshold</cite> and
+<cite>low_positive_threshold</cite> of <cite>antigen_profiles</cite>.</p></li>
+<li><p>negative (int): Sum of pixels with values between <cite>low_positive_threshold</cite> and 235 of <cite>antigen_profiles</cite>.</p></li>
+<li><p>background (int): Sum of pixels above 235 and below 255.</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Optional Image Saving:</dt><dd><p>If save_img is True, an image containing the colored results will be saved in the specified directory.
+The coloring scheme depends on the color parameter and is specified by the calling function. For more
+information, refer to the <cite>evaluate_antigen_pair_tile</cite> or <cite>evaluate_antigen_triplet_tile</cite> functions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quantification.html" class="btn btn-neutral float-left" title="Quantification" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

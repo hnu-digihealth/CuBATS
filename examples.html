@@ -1,0 +1,368 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Slide Collection" href="slide_collection.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#initialize-slidecollection">Initialize SlideCollection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-initialize-slidecollection">Example 1: Initialize SlideCollection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#image-registration">Image Registration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-image-registration-with-reference-wsi">Example 2: Image Registration With Reference WSI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-3-image-registration-without-reference">Example 3: Image Registration Without Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#tumor-segmentation">Tumor Segmentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-4-tumor-segmentation">Example 4: Tumor Segmentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#wsi-quantification">WSI Quantification</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#quantification-modes">Quantification Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quantify-all-ihc-wsis-in-slidecollection">Quantify All IHC WSIs in SlideCollection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-5-quantify-all-wsis">Example 5: Quantify All WSIs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#quantify-a-single-slide">Quantify a Single Slide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-6-quantify-a-single-slide">Example 6: Quantify a Single Slide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#combinatorial-analysis-of-antigen-expressions">Combinatorial Analysis of Antigen Expressions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pairwise-antigen-combinations">Pairwise-Antigen Combinations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-7-pairwise-antigen-co-expression-analysis">Example 7: Pairwise-Antigen Co-Expression Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/examples.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<span id="id1"></span><h1>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h1>
+<p>CuBATS processes a single HE-stained WSI, used for tumor segmentation, along with a variable number of IHC-stained WSIs, each stained for a tumor-associated antigen (TAA).
+All downstream analyses—including registration, quantification, and combinatorial co-expression analysis—are performed on these WSIs.</p>
+<p>The pipeline leverages <strong>multiprocessing</strong> to speed up computation, and supports both <strong>CPU</strong> and <strong>GPU</strong> execution.
+Hardware availability is automatically detected, with seamless fallback to <strong>CPU</strong> if no compatible <strong>GPU</strong> is found.
+<strong>GPU</strong>-based processing uses <a class="reference external" href="https://cupy.dev">CuPy</a>, whereas <strong>CPU</strong>-based processing relies on standard <a class="reference external" href="https://numpy.org">NumPy</a> operations.
+In both cases, computations build upon tile-based parallelization and vectorization, providing substantial performance gains for computationally intensive steps such as quantification and multi-antigen analysis.</p>
+<p>The following examples provide a complete walkthrough of CuBATS and serve as a guide to get
+started. They cover the main steps of the pipeline, starting with <em>image registration</em> and <em>tumor segmentation</em>, followed by <em>quantification</em> and <em>combinatorial analysis</em> of antigen expressions.</p>
+<p>An executable version of the these examples can be found as a Jupyter notebook in the <cite>CuBATS/examples</cite> directory.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In this documentation, the terms <em>slide</em> and <em>whole-slide image (WSI)</em> are used interchangeably.
+For clarity, “WSI” is preferred when referring to the digital image data processed by CuBATS.</p>
+</div>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Depending on the size of your data, ensure your system has sufficient disc space and RAM available for processing.  We recommend a minimum of 32 GB of RAM, or the use of a dedicated server for larger datasets.</p>
+</div>
+<section id="initialize-slidecollection">
+<span id="id2"></span><h2>Initialize SlideCollection<a class="headerlink" href="#initialize-slidecollection" title="Link to this heading"></a></h2>
+<p>CuBATS organizes and processes WSIs in the <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code>.
+Once initialized, the collection provides built-in methods for <em>registration</em>, <em>tumor segmentation</em>, <em>quantification</em>, and <em>combinatorial antigen analysis</em>.</p>
+<p><a class="reference internal" href="#example-1">Example 1</a> demonstrates the initialization of a <strong>SlideCollection</strong>. A <strong>SlideCollection</strong> can be initialized with the following arguments: <code class="code docutils literal notranslate"><span class="pre">collection_name</span></code> (e.g., tumor set or patient ID), a source directory (<code class="code docutils literal notranslate"><span class="pre">src_dir</span></code>) containing the WSIs, a destination directory (<code class="code docutils literal notranslate"><span class="pre">dest_dir</span></code>) for results, an optional reference WSI (<code class="code docutils literal notranslate"><span class="pre">ref_slide</span></code>), and an optional path to antigen threshold profiles (<code class="code docutils literal notranslate"><span class="pre">path_antigen_profiles</span></code>).
+If <code class="code docutils literal notranslate"><span class="pre">ref_slide</span></code> is omitted, CuBATS automatically selects an HE WSI based on filenames. If no <code class="code docutils literal notranslate"><span class="pre">path_antigen_profiles</span></code> is provided, default thresholds are used.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the specified <code class="code docutils literal notranslate"><span class="pre">dest_dir</span></code> already contains previous processing results, these are automatically reloaded when initializing the collection, allowing to resume analysis without reprocessing completed steps.
+Reprocessing will overwrite existing results, so back up any important data before re-running analyses.</p>
+</div>
+<section id="example-1-initialize-slidecollection">
+<span id="example-1"></span><h3>Example 1: Initialize SlideCollection<a class="headerlink" href="#example-1-initialize-slidecollection" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+
+<span class="n">my_collection</span> <span class="o">=</span> <span class="n">SlideCollection</span><span class="p">(</span>
+    <span class="n">collection_name</span>  <span class="s2">&quot;Tumor_Set_01&quot;</span><span class="p">,</span>
+    <span class="n">src_dir</span> <span class="o">=</span> <span class="s2">&quot;/path/to/wsi_files&quot;</span><span class="p">,</span>
+    <span class="n">dest_dir</span> <span class="o">=</span> <span class="s2">&quot;/path/to/output_dir&quot;</span><span class="p">,</span>
+    <span class="n">ref_slide</span> <span class="o">=</span> <span class="s2">&quot;/path/to/reference_wsi.tiff&quot;</span><span class="p">,</span>
+    <span class="n">path_antigen_profiles</span> <span class="o">=</span> <span class="s2">&quot;/path/to/threshold_profiles.json&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="image-registration">
+<span id="id3"></span><h2>Image Registration<a class="headerlink" href="#image-registration" title="Link to this heading"></a></h2>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Image registration and alignment is performed using the <a class="reference external" href="https://github.com/MathOnco/valis">VALIS</a> framework. Please ensure all dependencies are correctly installed. For details, refer to the CuBATS <a class="reference internal" href="installation.html#installation"><span class="std std-ref">Installation</span></a> section or the <a class="reference external" href="https://valis.readthedocs.io/en/latest/index.html">VALIS documentation</a>.</p>
+<p>CuBATS provides a wrapper class that predefines registration parameters for convenience. For more customized registration or if the registration results are unsatisfactory, check out the <a class="reference external" href="https://valis.readthedocs.io/en/latest/index.html">VALIS documentation</a> for parameter adjustments.</p>
+</div>
+<p>This example demonstrates registering a collection of WSIs and aligning them.
+Registration can be performed towards a selected reference WSI or automatically towards a WSI chosen by VALIS. While reference-based registration may be beneficial in some cases, we have observed that automatic registration often produced more accurate results for larger datasets during development.</p>
+<p>By default, registration includes a <em>rigid registration</em> followed by a <em>non-rigid registration</em>. Optionally, high-resolution <em>micro-registration</em> can be enabled via <code class="code docutils literal notranslate"><span class="pre">microregistration</span> <span class="pre">=</span> <span class="pre">True</span></code>, which is recommended for large high-resolution WSIs.</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#example-2">Example 2</a> shows registration <em>with a reference WSI</em>.</p></li>
+<li><p><a class="reference internal" href="#example-3">Example 3</a> shows registration <em>without a reference WSI</em>.</p></li>
+</ul>
+<p>WSIs must be located in <code class="code docutils literal notranslate"><span class="pre">SlideCollection.src_dir</span></code>. Registered WSIs will be saved to <code class="code docutils literal notranslate"><span class="pre">SlideCollection.registration_dir</span></code>. The parameter <code class="code docutils literal notranslate"><span class="pre">max_non_rigid_registration_dim_px</span></code> defaults to 2000 for high-resolution registration but can be adjusted, as in <a class="reference internal" href="#example-2">Example 2</a>. Cropping can be specified via <code class="code docutils literal notranslate"><span class="pre">crop</span></code> with options <cite>“overlap”</cite>, <cite>“reference”</cite>, or <cite>None</cite>. Micro-registration is be enabled via <code class="code docutils literal notranslate"><span class="pre">microregistration=True</span></code>.</p>
+<section id="example-2-image-registration-with-reference-wsi">
+<span id="example-2"></span><h3>Example 2: Image Registration With Reference WSI<a class="headerlink" href="#example-2-image-registration-with-reference-wsi" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_collection</span><span class="o">.</span><span class="n">register_slides</span><span class="p">(</span>
+    <span class="n">reference_slide</span> <span class="o">=</span> <span class="s2">&quot;path/to/reference_wsi.tiff&quot;</span><span class="p">,</span>
+    <span class="n">microregistration</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">crop</span> <span class="o">=</span> <span class="s2">&quot;reference&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="example-3-image-registration-without-reference">
+<span id="example-3"></span><h3>Example 3: Image Registration Without Reference<a class="headerlink" href="#example-3-image-registration-without-reference" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="n">my_collection</span><span class="o">.</span><span class="n">register_slides</span><span class="p">(</span>
+    <span class="n">microregistration</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">max_non_rigid_registration_dim_px</span> <span class="o">=</span> <span class="mi">1800</span><span class="p">,</span>
+    <span class="n">crop</span> <span class="o">=</span> <span class="s2">&quot;overlap&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Additional registration outputs and intermediate files are stored inside the <cite>intermediate_registration_results</cite> directory. For more details on subdirectory contents or advanced registration options, see the <a class="reference external" href="https://valis.readthedocs.io/en/latest/index.html">VALIS documentation</a>.</p>
+</div>
+</section>
+</section>
+<section id="tumor-segmentation">
+<span id="image-segmentation"></span><h2>Tumor Segmentation<a class="headerlink" href="#tumor-segmentation" title="Link to this heading"></a></h2>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The accuracy of tumor segmentation depends on the chosen model and its training. Segmentation parameters such as <code class="code docutils literal notranslate"><span class="pre">tile_size</span></code>, <code class="code docutils literal notranslate"><span class="pre">normalization</span></code>, or <code class="code docutils literal notranslate"><span class="pre">inversion</span></code> may require adjustment. If results are unsatisfactory, modify the parameters or verify the model quality.</p>
+</div>
+<p><a class="reference internal" href="#example-4">Example 4</a> demonstrates running tumor segmentation using <code class="code docutils literal notranslate"><span class="pre">my_collection.tumor_segmentation</span></code>. The function applies a segmentation model to the HE-stained WSI and produces a binary tumor mask (.TIFF). An HE-stained WSI is required for this step, as it better captures morphological tissue structures and tumor boundaries than antigen-specific stains such as IHC. The input can be a single WSI file or a directory containing multiple HE-stained WSIs.</p>
+<p>The segmentation model must be provided as an <cite>.ONNX</cite> file via <code class="code docutils literal notranslate"><span class="pre">model_path</span></code>. The <code class="code docutils literal notranslate"><span class="pre">tile_size</span></code> parameter is specified as a tuple (e.g., (1024, 1024)). Optional parameters include <code class="code docutils literal notranslate"><span class="pre">output_path</span></code> (default is <code class="code docutils literal notranslate"><span class="pre">SlideCollection.registration_dir</span></code>), <code class="code docutils literal notranslate"><span class="pre">normalization</span></code> (Reinhard normalization), <code class="code docutils literal notranslate"><span class="pre">inversion</span></code> (invert mask), and <code class="code docutils literal notranslate"><span class="pre">plot_results</span></code> (creates a thumbnail overlay of the tumor mask on the WSI).</p>
+<p>The function automatically resizes input tiles to match the model’s expected input size and scales the output mask back to the original tile size, after segmentation.</p>
+<section id="example-4-tumor-segmentation">
+<span id="example-4"></span><h3>Example 4: Tumor Segmentation<a class="headerlink" href="#example-4-tumor-segmentation" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_collection</span><span class="o">.</span><span class="n">tumor_segmentation</span><span class="p">(</span>
+    <span class="n">model_path</span> <span class="o">=</span> <span class="s2">&quot;path/to/model.onnx&quot;</span><span class="p">,</span>
+    <span class="n">reference_slide</span> <span class="o">=</span> <span class="s2">&quot;path/to/he_wsi.tiff&quot;</span><span class="p">,</span>
+    <span class="n">tile_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">),</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">normalization</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">inversion</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">plot_results</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="wsi-quantification">
+<span id="quantify-slidecollection"></span><h2>WSI Quantification<a class="headerlink" href="#wsi-quantification" title="Link to this heading"></a></h2>
+<p>Quantification in CuBATS is performed on the previously registered IHC-stained WSIs using their extracted antigen-specific DAB stain channel. The DAB channel is separated from the hematoxylin channel using color deconvolution <a class="footnote-reference brackets" href="#id10" id="id6" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, allowing accurate measurement of antigen staining.
+Each WSI is divided into non-overlapping tiles of 1024×1024 pixels, which are quantified individually in a pixel-wise manner. For each tile, the staining intensities are measured across tumor regions, and the results are ultimately aggregated for the entire WSI.
+This step implements a variation of the IHC-Profiler algorithm <a class="footnote-reference brackets" href="#id11" id="id7" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, producing output metrics such as <em>tumor coverage</em>, stratification of coverage into <em>high, medium-, and low-positive expression</em>, <em>negative tissue</em>, <em>background</em>, <em>H-score</em>, and an additional <em>IHC-Profiler score</em>.</p>
+<p>CuBATS allows quantification of either all IHC WSIs in the <strong>SlideCollection</strong> or a single slide individually.
+Results are automatically stored as <code class="code docutils literal notranslate"><span class="pre">.CSV</span></code> and <code class="code docutils literal notranslate"><span class="pre">.PICKLE</span></code> files in the specified <code class="code docutils literal notranslate"><span class="pre">data_dir</span></code>.</p>
+<section id="quantification-modes">
+<h3>Quantification Modes<a class="headerlink" href="#quantification-modes" title="Link to this heading"></a></h3>
+<p>Quantification can be run in two mask application modes:</p>
+<ul class="simple">
+<li><p><code class="code docutils literal notranslate"><span class="pre">&quot;tile-level&quot;</span></code> (default): Applies the tumor mask coarsely — tiles overlapping the mask are fully included.
+Recommended when registration accuracy is moderate.</p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">&quot;pixel-level&quot;</span></code>: Applies the tumor mask at pixel precision — only masked pixels are included.
+Offers higher accuracy but is more sensitive to registration noise.</p></li>
+</ul>
+<p>CuBATS also supports <em>antigen-specific threshold profiles</em>, allowing for fine-tuned quantification across different antibodies or staining intensities.
+Thresholds can be supplied as a <code class="code docutils literal notranslate"><span class="pre">.JSON</span></code> or <code class="code docutils literal notranslate"><span class="pre">.CSV</span></code> file via the <code class="code docutils literal notranslate"><span class="pre">threshold_profile_path</span></code> parameter when initializing the <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code>.
+If omitted, default thresholds are used.</p>
+<p>CuBATS also offers post-quantification reconstruction of tiles into a DAB WSI. In order to do this, saving of tile images must be enabled via <code class="code docutils literal notranslate"><span class="pre">save_imgs=True</span></code> in the quantification functions.</p>
+</section>
+<section id="quantify-all-ihc-wsis-in-slidecollection">
+<h3>Quantify All IHC WSIs in SlideCollection<a class="headerlink" href="#quantify-all-ihc-wsis-in-slidecollection" title="Link to this heading"></a></h3>
+<p><a class="reference internal" href="#example-5">Example 5</a> demonstrates how to quantify all IHC WSIs within a predefined <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code>.
+All WSIs (except the reference and mask slides) are processed sequentially, and results are saved to the output directory. This example applies <cite>“tile-level”</cite> masking without saving tile images.</p>
+</section>
+<section id="example-5-quantify-all-wsis">
+<span id="example-5"></span><h3>Example 5: Quantify All WSIs<a class="headerlink" href="#example-5-quantify-all-wsis" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+
+<span class="c1"># Quantify all slides in the collection</span>
+<span class="n">my_collection</span><span class="o">.</span><span class="n">quantify_all_slides</span><span class="p">(</span>
+    <span class="n">save_imgs</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">masking_mode</span> <span class="o">=</span> <span class="s2">&quot;tile-level&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>After execution, the results are available in <code class="code docutils literal notranslate"><span class="pre">my_collection.quantification_results</span></code>
+and stored as <code class="code docutils literal notranslate"><span class="pre">tile-level_quantification_results.csv</span></code> inside the <code class="code docutils literal notranslate"><span class="pre">data_dir</span></code>.</p>
+</section>
+<section id="quantify-a-single-slide">
+<h3>Quantify a Single Slide<a class="headerlink" href="#quantify-a-single-slide" title="Link to this heading"></a></h3>
+<p><a class="reference internal" href="#example-6">Example 6</a> shows how to quantify a single slide within a predefined <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code>.
+This is useful for re-quantifying a specific slide with different parameters. This example applies <cite>“pixel-level”</cite> masking and saves tile images for potential reconstruction.</p>
+</section>
+<section id="example-6-quantify-a-single-slide">
+<span id="example-6"></span><h3>Example 6: Quantify a Single Slide<a class="headerlink" href="#example-6-quantify-a-single-slide" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+
+<span class="c1"># Quantify a single slide by name</span>
+<span class="n">my_collection</span><span class="o">.</span><span class="n">quantify_single_slide</span><span class="p">(</span>
+    <span class="n">slide_name</span> <span class="o">=</span> <span class="s2">&quot;Slide_01&quot;</span><span class="p">,</span>
+    <span class="n">save_img</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">masking_mode</span> <span class="o">=</span> <span class="s2">&quot;pixel-level&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Quantification overwrites existing results in <code class="code docutils literal notranslate"><span class="pre">data_dir</span></code>.
+Back up previous data before re-running quantification on the same collection.</p>
+</div>
+</section>
+</section>
+<section id="combinatorial-analysis-of-antigen-expressions">
+<span id="id8"></span><h2>Combinatorial Analysis of Antigen Expressions<a class="headerlink" href="#combinatorial-analysis-of-antigen-expressions" title="Link to this heading"></a></h2>
+<p>CuBATS enables spatial co-expression analysis of TAAs by performing pixel-wise comparisons across the previously quantified IHC-stained WSIs.
+For each antigen pair or triplet, CuBATS computes combined tumor coverage, identifying regions of <em>overlapping expression</em> and <em>complementary expression</em> between markers as well as stratification into <em>high-, medium-, and low-positive</em> categories.
+This analysis builds upon the results generated during quantification, using the same antigen-specific intensity thresholds.</p>
+<p>Results are stored in <code class="code docutils literal notranslate"><span class="pre">.CSV</span></code> and <code class="code docutils literal notranslate"><span class="pre">.PICKLE</span></code> format within the <code class="code docutils literal notranslate"><span class="pre">data_dir</span></code>.
+Optionally, a visualization of the combinatorial analysis can be saved for reconstruction into a WSIs. This can be done by enabling <code class="code docutils literal notranslate"><span class="pre">save_imgs=True</span></code>.</p>
+<p>Furthermore the selection of tile-level or pixel-level masking can be specified via the <code class="code docutils literal notranslate"><span class="pre">masking_mode</span></code> parameter. This parameter should be set consistent with the selection used during quantification.</p>
+<section id="pairwise-antigen-combinations">
+<h3>Pairwise-Antigen Combinations<a class="headerlink" href="#pairwise-antigen-combinations" title="Link to this heading"></a></h3>
+<p><a class="reference internal" href="#example-7">Example 7</a> demonstrates how to compute all possible antigen pairs within a predefined <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code>.
+Each pair of quantified slides is compared tile by tile, with results aggregated to a WSI-level. The example applies <cite>“pixel-level”</cite> masking with saving tile images.</p>
+</section>
+<section id="example-7-pairwise-antigen-co-expression-analysis">
+<span id="example-7"></span><h3>Example 7: Pairwise-Antigen Co-Expression Analysis<a class="headerlink" href="#example-7-pairwise-antigen-co-expression-analysis" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+
+<span class="c1"># Compute all possible antigen pairs within the collection</span>
+<span class="n">my_collection</span><span class="o">.</span><span class="n">generate_antigen_pair_combinations</span><span class="p">(</span>
+    <span class="n">save_imgs</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">masking_mode</span> <span class="o">=</span> <span class="s2">&quot;pixel-level&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>After completion, the dual-antigen results are available in <code class="code docutils literal notranslate"><span class="pre">my_collection.dual_antigen_expressions</span></code>
+and saved in <code class="code docutils literal notranslate"><span class="pre">data_dir/pixel-level_dual_antigen_expressions.csv</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Co-expression analysis relies on previously quantified slides.
+Ensure quantification has been completed before running antigen combination analysis.
+Triplet combinations can be computed analogously using
+<code class="code docutils literal notranslate"><span class="pre">my_collection.generate_antigen_triplet_combinations(masking_mode=&quot;pixel-level&quot;)</span></code>.</p>
+</div>
+</section>
+</section>
+<section id="references">
+<span id="id9"></span><h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id10" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id6">1</a><span class="fn-bracket">]</span></span>
+<p>Ruifrok, A., &amp; Johnston, D. Quantification of histochemical staining by color deconvolution. Anal Quant Cytol Histol, 2001, 23.</p>
+</aside>
+<aside class="footnote brackets" id="id11" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id7">2</a><span class="fn-bracket">]</span></span>
+<p>Varghese, F., Bukhari, A. B., Malhotra, R., &amp; De, A. IHC Profiler: an open source plugin for the quantitative evaluation and automated scoring of immunohistochemistry images of human tissue samples. PLoS One, 2014, 9(5): e96801.</p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="slide_collection.html" class="btn btn-neutral float-right" title="Slide Collection" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

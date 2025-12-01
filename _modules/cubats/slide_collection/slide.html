@@ -1,0 +1,689 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cubats.slide_collection.slide &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cubats.slide_collection.slide</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cubats.slide_collection.slide</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Standard Library</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">concurrent.futures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">time</span>
+
+<span class="c1"># Third Party</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openslide</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openslide.deepzoom</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeepZoomGenerator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyvips</span><span class="w"> </span><span class="kn">import</span> <span class="n">BandFormat</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyvips</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">VipsImage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="c1"># CuBATS</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cubats.logging_config</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">log_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">xp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.slide_collection.tile_quantification</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">mask_tile</span><span class="p">,</span>
+                                                         <span class="n">quantify_tile</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Slide">
+<a class="viewcode-back" href="../../../slide_collection.html#cubats.slide_collection.slide.Slide">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Slide</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Slide Class.</span>
+
+<span class="sd">    `Slide` class instatiates a slide object containing all relevant information and results for a single slide. All</span>
+<span class="sd">     slide specific operations that can be performed on a single slide rather than on a collection of slides are</span>
+<span class="sd">     implemented in this class. This includes quantification of staining intensities and reconstruction of a slide. The</span>
+<span class="sd">     class is initialized with the name of the slide, the path to the slide file, as well as information on whether the</span>
+<span class="sd">     slide is a mask or reference slide. The class contains a dictionary of detailed quantification results for each</span>
+<span class="sd">     tile, as well as a dictionary of summarized quantification results for the entire slide. The slide object also</span>
+<span class="sd">     contains information on the OpenSlide object, the tiles, the level count, the level dimensions, as well as the</span>
+<span class="sd">     tile count. The slide object also contains a directory to save the tiles after color deconvolution, which is</span>
+<span class="sd">     necessary for reconstruction of the slide later on.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): The name of the slide.</span>
+
+<span class="sd">        openslide_object (openslide.OpenSlide): The OpenSlide Object of the slide.</span>
+
+<span class="sd">        tiles (openslide.deepzoom.DeepZoomGenerator): DeepZoom Generator containing the tiles of the slide.</span>
+
+<span class="sd">        level_count (int): The number of DeepZoom levels of the slide.</span>
+
+<span class="sd">        level_dimensions (list):  List of tuples (pixels_x, pixels_y) for each Deep Zoom level.</span>
+
+<span class="sd">        tile_count (int): The number of tiles in the slide.</span>
+
+<span class="sd">        masked_tiles (list): List containing the tiles after intersection of the slide and mask.</span>
+
+<span class="sd">        dab_tile_dir (str): Directory to save the tiles after color deconvolution is applied. Necessary for</span>
+<span class="sd">            reconstruction of the slide. If save_img is False no tiles are saved and this attribute is None.</span>
+
+<span class="sd">        is_mask (bool): Whether the slide is the slide_collections mask slide.</span>
+
+<span class="sd">        is_reference (bool): Whether the slide is the slide_collections reference slide.</span>
+
+<span class="sd">        antigen_profile (dict, optional): Dictionary containing antigen-specific quantification thresholds</span>
+<span class="sd">            (high-positive, medium-positive, low-postitive). If no profile is provided, default thresholds are used.</span>
+
+<span class="sd">        detailed_quantification_results (dict): Dictionary containing detailed quantification results for each tile of</span>
+<span class="sd">            the slide. The dictionary is structured as follows:</span>
+
+<span class="sd">            - key (int): Index of the tile.</span>
+<span class="sd">            - value (dict): Dictionary containing the following:</span>
+
+<span class="sd">                - Flag (int): Flag indicating whether the tile was processed (1) or not (0).</span>
+<span class="sd">                - Histogram (array): Array containing the histogram of the tile.</span>
+<span class="sd">                - Hist_centers (array): Array containing the centers of the histogram bins.</span>
+<span class="sd">                - Zones (array): Array containing the number of pixels in each zone sorted by index according to the</span>
+<span class="sd">                  following attribution High Positive, Positive, Low Positive, Negative, Background).</span>
+<span class="sd">                - Score (str): Score of the tile based on the zones.</span>
+
+<span class="sd">        quantification_summary (dict): Dictionary containing the summarized quantification results for the slide:</span>
+
+<span class="sd">            - Name (str): Slide name</span>
+<span class="sd">            - Coverage (%) (float): Percentage of all positively quantified pixels in the Slide. This includes all</span>
+<span class="sd">              high-postive, medium-positive, and low-positive stained pixels.</span>
+<span class="sd">            - High Positive (%) (float): Percentage of highly positive stained pixels in the Slide.</span>
+<span class="sd">            - Medium Positive (%) (float): Percentage of medium positive stained pixels in the Slide.</span>
+<span class="sd">            - Low Positive  (%) (float): Percentage of low positive stained pixels in the Slide.</span>
+<span class="sd">            - Negative  (%) (float): Percentage of negatively stained pixels in the Slide.</span>
+<span class="sd">            - Total Tissue  (%) (float): Percentage of tissue in the Slide.</span>
+<span class="sd">            - Background / No Tissue (%) (float): Percentage of Background pixels in the Slide.</span>
+<span class="sd">            - H-Score (int): H-Score of the slide.</span>
+<span class="sd">            - Score (str): Pathological score of the slide: High Positive, Medium Positive, Low Positive, Negative,</span>
+<span class="sd">              Background.</span>
+<span class="sd">            - Total Processed Tiles (%): Percentage of processed tiles of the slide.</span>
+<span class="sd">            - Error (%) (float): Percentage of skipped tiles because they did not contain tissue.</span>
+<span class="sd">            - Thresholds: Antigen-specific thresholds used during quantification.</span>
+
+<span class="sd">        properties (dict): Dictionary containing relevant slide properties including: `name`, `is_reference`, `is_mask`,</span>
+<span class="sd">            `openslide_object`, `tiles`, `level_count`, `level_dimensions`, and `tile_count`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Slide.__init__">
+<a class="viewcode-back" href="../../../slide_collection.html#cubats.slide_collection.slide.Slide.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">is_mask</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">is_reference</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a Slide object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of the slide.</span>
+<span class="sd">            path (str): The path to the slide file.</span>
+<span class="sd">            is_mask (bool, optional): Whether the slide is a mask. Defaults to False.</span>
+<span class="sd">            is_reference (bool, optional): Whether the slide is a reference slide. Defaults to False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize logger</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">dictConfig</span><span class="p">(</span><span class="n">log_config</span><span class="o">.</span><span class="n">LOGGING</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orig_path</span> <span class="o">=</span> <span class="n">path</span>  <span class="c1"># TODO also path after reference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registered_path</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span> <span class="o">=</span> <span class="n">openslide</span><span class="o">.</span><span class="n">OpenSlide</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span> <span class="o">=</span> <span class="n">DeepZoomGenerator</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">overlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit_bounds</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">level_count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_dimensions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">level_dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tile_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">tile_count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">masked_tiles</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Unused: TODO store masked tiles</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dab_tile_dir</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_mask</span> <span class="o">=</span> <span class="n">is_mask</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_reference</span> <span class="o">=</span> <span class="n">is_reference</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quantification_summary</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_mask</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_reference</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">:</span> <span class="mi">181</span><span class="p">,</span>
+                <span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">:</span> <span class="mi">121</span><span class="p">,</span>
+                <span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">:</span> <span class="mi">61</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;reference&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_reference</span><span class="p">,</span>
+            <span class="s2">&quot;mask&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mask</span><span class="p">,</span>
+            <span class="s2">&quot;openslide_object&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span><span class="p">,</span>
+            <span class="s2">&quot;tiles&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="p">,</span>
+            <span class="s2">&quot;level_count&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_count</span><span class="p">,</span>
+            <span class="s2">&quot;level_dimensions&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_dimensions</span><span class="p">,</span>
+            <span class="s2">&quot;tile_count&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tile_count</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slide </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> initialized.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slide.quantify_slide">
+<a class="viewcode-back" href="../../../slide_collection.html#cubats.slide_collection.slide.Slide.quantify_slide">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">quantify_slide</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mask_coordinates</span><span class="p">,</span>
+        <span class="n">save_dir</span><span class="p">,</span>
+        <span class="n">save_img</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">img_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Quantifies staining intensities for masked tiles of this slide.</span>
+
+<span class="sd">        This function uses multiprocessing to quantify staining intensities of masked tiles for the slide.</span>
+<span class="sd">        Each tile undergoes color deconvolution followed by staining intensity quantification based on the IHC</span>
+<span class="sd">        Profiler&#39;s algorithm. If `save_img` is True, tiles are saved in `img_dir` after deconvolution for later</span>
+<span class="sd">        reconstruction. After color deconvolution, each tile is processed as a grayscale image, and each pixel&#39;s</span>
+<span class="sd">        staining intensity (0-255) is quantified based on the thresholds defined in `self.antigen_profile`. If no</span>
+<span class="sd">        specific antigen_profile was provided the default profile will be used. Results are stored in</span>
+<span class="sd">        `self.detailed_quantification_results` and summarized in `self.quantification_summary`. Both are saved as</span>
+<span class="sd">        PICKLE files in `save_dir`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mask_coordinates (list): List of xy-coordinates from the maskslide where the mask is positive.</span>
+
+<span class="sd">            save_dir (str): Directory to save the results. Usually the slides pickle directory.</span>
+
+<span class="sd">            save_img (bool, optional): Whether to save the tiles after color deconvolution. Defaults to False.</span>
+<span class="sd">                Necessary for reconstruction of the slide.</span>
+
+<span class="sd">            img_dir (str, optional): Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to</span>
+<span class="sd">                None.</span>
+
+<span class="sd">            mask (openslide.deepzoom.DeepZoomGenerator, optional): DeepZoomGenerator containing the detailed</span>
+<span class="sd">                mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,</span>
+<span class="sd">                might result in larger inaccuracies for WSI with low congruence.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Quantifying slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, antigen_profile: &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s1">&#39;Name&#39;</span><span class="p">]</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;None&#39;</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;save_img: </span><span class="si">{</span><span class="n">save_img</span><span class="si">}</span><span class="s2">, masking_mode: </span><span class="si">{</span><span class="s1">&#39;pixel-level&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">mask</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;tile-level&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mask</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cannot quantify mask slide.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot quantify mask slide.&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_reference</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cannot quantify reference slide.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot quantify reference slide.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># masking_mode = &quot;pixel-level&quot; if mask is not None else &quot;tile-level&quot;</span>
+
+        <span class="c1"># Create directory to save tiles if save_img is True</span>
+        <span class="k">if</span> <span class="n">save_img</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">img_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;img_dir must be provided if save_img is True.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;img_dir must be provided if save_img is True.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dab_tile_dir</span> <span class="o">=</span> <span class="n">img_dir</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dab_tile_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">start_time_preprocessing</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="c1"># Creates an iterable containing xy-Tuples for each tile, DeepZoomGenerator, and directory.</span>
+        <span class="n">iterable</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span>
+                <span class="n">x</span><span class="p">,</span>
+                <span class="n">y</span><span class="p">,</span>
+                <span class="p">(</span>
+                    <span class="n">mask_tile</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)),</span>
+                        <span class="n">mask</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)),</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="k">else</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)),</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dab_tile_dir</span><span class="p">,</span>
+                <span class="n">save_img</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">,</span>
+                <span class="c1"># masking_mode,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">mask_coordinates</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Pre-processing slide: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">mask_coordinates</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">end_time_preprocessing</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">end_time_preprocessing</span> <span class="o">-</span> <span class="n">start_time_preprocessing</span> <span class="o">&gt;=</span> <span class="mi">60</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Finished pre-processing slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                    </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_preprocessing</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_preprocessing</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Finished pre-processing slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                    </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_preprocessing</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_preprocessing</span><span class="p">),</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> seconds.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">start_time_quantification</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="n">max_workers</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="c1"># k = 4</span>
+        <span class="c1"># chunksize = max(1, len(iterable) // (max_workers * k))</span>
+        <span class="c1"># Multiprocessing using concurrent.futures, gathering results and adding them to dictionary in linear manner.</span>
+        <span class="k">with</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span>
+                <span class="n">exe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">quantify_tile</span><span class="p">,</span> <span class="n">iterable</span><span class="p">),</span>
+                <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Processing slide: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+                <span class="c1"># if result is not None:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="n">end_time_quantification</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">end_time_quantification</span> <span class="o">-</span> <span class="n">start_time_quantification</span> <span class="o">&gt;=</span> <span class="mi">60</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Finished quantifying slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                    </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_quantification</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_quantification</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Finished quantifying slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                    </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_quantification</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_quantification</span><span class="p">),</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> seconds.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Retrieve Quantification results and save to disk</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">summarize_quantification_results</span><span class="p">()</span>
+
+        <span class="c1"># Save dictionary as pickle</span>
+        <span class="n">start_time_save</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="n">f_out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_processing_info.pickle&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving quantification results for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">f_out</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">f_out</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span><span class="p">,</span>
+                <span class="n">f</span><span class="p">,</span>
+                <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">end_time_save</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Saved quantification results for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">f_out</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_save</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_save</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished processing slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slide.summarize_quantification_results">
+<a class="viewcode-back" href="../../../slide_collection.html#cubats.slide_collection.slide.Slide.summarize_quantification_results">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">summarize_quantification_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Summarizes quantification results.</span>
+
+<span class="sd">        Summarizes quantification results for a given slide and appends them to `self.quantification_summary`. This</span>
+<span class="sd">        includes the total number of pixels in each zone, the percentage of pixels in each zone, and a score for each</span>
+<span class="sd">        zone.</span>
+
+<span class="sd">        The summary contains the following keys:</span>
+<span class="sd">            - Slide (str): Name of the slide.</span>
+<span class="sd">            - Coverage (float): Tumor coverage of the antigen in the slide.</span>
+<span class="sd">            - High Positive (float): Percentage of pixels in the high positive zone.</span>
+<span class="sd">            - Positive (float): Percentage of pixels in the positive zone.</span>
+<span class="sd">            - Low Positive (float): Percentage of pixels in the low positive zone.</span>
+<span class="sd">            - Negative (float): Percentage of pixels in the negative zone.</span>
+<span class="sd">            - Total Tissue (float): Total amount of tissue in the slide.</span>
+<span class="sd">            - Background (float): Percentage of pixels in the white space background or fatty tissues.</span>
+<span class="sd">            - H-Score (float): H-score calculation based on positive pixels.</span>
+<span class="sd">            - Score (str): Overall score of the slide based on the zones. However, the score for the entire slide</span>
+<span class="sd">              may be misleading since much negative tissue may lead to a negative score even though the slide may</span>
+<span class="sd">              contain a lot of positive tissue as well. Therefore, the score for the entire slide should be</span>
+<span class="sd">              interpreted with caution.</span>
+<span class="sd">            - Total Processed Tiles (float): Percentage of total processed tiles.</span>
+<span class="sd">            - Error (float): Percentage of tiles that were not processed as they did not contain sufficient tissue.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the slide is a mask slide or a reference slide.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_time_summarize</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Summarizing quantification results for slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mask</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cannot summarize quantification results for mask slide.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot summarize quantification results for mask slide.&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_reference</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot summarize quantification results for reference slide.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot summarize quantification results for reference slide.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Init variables</span>
+        <span class="n">zone_names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;High Positive&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Medium Positive&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Low Positive&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Negative&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Background&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">wheights</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">sum_zones</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">5</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">sum_mask_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">processed_tiles</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">error_tiles</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Iterate through tiles and aggregate results</span>
+        <span class="k">for</span> <span class="n">tile_result</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">tile_result</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">processed_tiles</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">sum_zones</span> <span class="o">+=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile_result</span><span class="p">[</span><span class="s2">&quot;Zones&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+                <span class="n">sum_mask_count</span> <span class="o">+=</span> <span class="n">tile_result</span><span class="p">[</span><span class="s2">&quot;Mask Count&quot;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">error_tiles</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">processed_tiles</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No tiles were successfully processed for slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;Skipping quantification summary calculations.&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">quantification_summary</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="s2">&quot;Coverage (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;High Positive (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Medium Positive (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Low Positive (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Negative (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Total Tissue (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Background / No Tissue (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Mask Area (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Non-mask Area (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;H-Score&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Score&quot;</span><span class="p">:</span> <span class="s2">&quot;Background&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Total Processed Tiles (%)&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+                <span class="s2">&quot;Error (%)&quot;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+                <span class="s2">&quot;Thresholds&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">],</span>
+                    <span class="mi">235</span><span class="p">,</span>
+                <span class="p">],</span>
+            <span class="p">}</span>
+            <span class="k">return</span>  <span class="c1"># Exit early</span>
+
+        <span class="c1"># Calculate percentages and scores</span>
+        <span class="n">total_pixels_in_mask</span> <span class="o">=</span> <span class="n">sum_mask_count</span>
+        <span class="n">tissue_count</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sum_zones</span><span class="p">[:</span><span class="mi">4</span><span class="p">])</span>
+        <span class="n">total_pixels</span> <span class="o">=</span> <span class="n">processed_tiles</span> <span class="o">*</span> <span class="mi">1048576</span>
+        <span class="n">total_non_mask_pixels</span> <span class="o">=</span> <span class="n">total_pixels</span> <span class="o">-</span> <span class="n">total_pixels_in_mask</span>
+
+        <span class="c1"># Percentage for intensity zones based on tissue count</span>
+        <span class="n">percentage_high_pos</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="n">percentage_med_pos</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="n">percentage_low_pos</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="n">percentage_neg</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="c1"># percentages_tissue = (sum_zones[:4] / total_non_mask_pixels) * 100</span>
+
+        <span class="c1"># Percentage for background based on total pixels</span>
+        <span class="n">percentage_background</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="c1"># Coverage percentage of positively stained tissue (high+medium+low)</span>
+        <span class="n">coverage_pixels</span> <span class="o">=</span> <span class="n">sum_zones</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">sum_zones</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">sum_zones</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">perc_coverage</span> <span class="o">=</span> <span class="p">(</span><span class="n">coverage_pixels</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="c1"># Total percentage of tissue</span>
+        <span class="n">perc_tissue</span> <span class="o">=</span> <span class="p">(</span><span class="n">tissue_count</span> <span class="o">/</span> <span class="n">total_pixels_in_mask</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="n">perc_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_pixels_in_mask</span> <span class="o">/</span> <span class="n">total_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="n">perc_non_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_non_mask_pixels</span> <span class="o">/</span> <span class="n">total_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="c1"># Calculate H-Score</span>
+        <span class="n">percentages_tissue</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">percentage_high_pos</span><span class="p">,</span>
+                <span class="n">percentage_med_pos</span><span class="p">,</span>
+                <span class="n">percentage_low_pos</span><span class="p">,</span>
+                <span class="n">percentage_neg</span><span class="p">,</span>
+                <span class="n">percentage_background</span><span class="p">,</span>
+            <span class="p">],</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">h_score</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">percentages_tissue</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="c1"># Determine slide score (exclude background)</span>
+        <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">percentages_tissue</span> <span class="o">&gt;</span> <span class="mf">66.6</span><span class="p">):</span>
+            <span class="n">max_score_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">percentages_tissue</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="p">(</span><span class="n">sum_zones</span> <span class="o">*</span> <span class="n">wheights</span><span class="p">)</span> <span class="o">/</span> <span class="n">processed_tiles</span>
+            <span class="n">max_score_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xp</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">scores</span><span class="p">[:</span><span class="mi">4</span><span class="p">]))</span>
+
+        <span class="n">slide_score</span> <span class="o">=</span> <span class="n">zone_names</span><span class="p">[</span><span class="n">max_score_index</span><span class="p">]</span>
+
+        <span class="c1"># Calculate percentage of processed tiles and error</span>
+        <span class="n">perc_processed_tiles</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">processed_tiles</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span><span class="p">)</span>
+        <span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+        <span class="n">perc_error</span> <span class="o">=</span> <span class="p">(</span><span class="n">error_tiles</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">detailed_quantification_results</span><span class="p">))</span> <span class="o">*</span> <span class="mi">100</span>
+
+        <span class="c1"># Update the dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quantification_summary</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;Coverage (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_coverage</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;High Positive (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">percentage_high_pos</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Medium Positive (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">percentage_med_pos</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Low Positive (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">percentage_low_pos</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Negative (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">percentage_neg</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Total Tissue (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_tissue</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Background / No Tissue (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">percentage_background</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Mask Area (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_mask</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Non-mask Area (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_non_mask</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;H-Score&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">h_score</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
+            <span class="s2">&quot;Score&quot;</span><span class="p">:</span> <span class="n">slide_score</span><span class="p">,</span>
+            <span class="s2">&quot;Total Processed Tiles (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_processed_tiles</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Error (%)&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">perc_error</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="s2">&quot;Thresholds&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">],</span>
+                <span class="mi">235</span><span class="p">,</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+        <span class="n">end_time_summarize</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Finished summarizing quantification results for slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="se">\</span>
+<span class="s2">                </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_summarize</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_summarize</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Slide.reconstruct_slide">
+<a class="viewcode-back" href="../../../slide_collection.html#cubats.slide_collection.slide.Slide.reconstruct_slide">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_slide</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_path</span><span class="p">,</span> <span class="n">out_path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reconstructs a slide into a Whole Slide Image (WSI) based on saved tiles. This is only possible if tiles have</span>
+<span class="sd">        been saved during processing. The WSI is then saved as .tif in the specified `out_path`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            in_path (str): Path to saved tiles</span>
+<span class="sd">            out_path (str): Path where to save the reconstructed slide.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="c1"># Check paths</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">in_path</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input path </span><span class="si">{</span><span class="n">in_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input path </span><span class="si">{</span><span class="n">in_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+        <span class="c1"># Check if in_path contains .tif files</span>
+        <span class="n">tif_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">in_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.tif&quot;</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tif_files</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No .tif files found in input path </span><span class="si">{</span><span class="n">in_path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No .tif files found in input path </span><span class="si">{</span><span class="n">in_path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Ensure output directory exists</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Init variables</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">cols</span><span class="p">,</span> <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">row_array</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># append tiles for each column and row. Previously not processed tiles are replaced by white tiles.</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Reconstructing slide: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">column_array</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cols</span><span class="p">):</span>
+                <span class="n">tile_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+                <span class="n">file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">in_path</span><span class="p">,</span> <span class="n">tile_name</span> <span class="o">+</span> <span class="s2">&quot;.tif&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                    <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">),</span> <span class="p">(</span><span class="mi">192</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">192</span><span class="p">))</span>
+
+                <span class="n">column_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+
+            <span class="n">segmented_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">column_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">row_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">segmented_row</span><span class="p">)</span>
+
+        <span class="c1"># Create WSI and save as pyramidal TIF in self.reconstruct_dir</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;pyvips&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="n">segmented_wsi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">row_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">segmented_wsi</span> <span class="o">=</span> <span class="n">VipsImage</span><span class="o">.</span><span class="n">new_from_array</span><span class="p">(</span><span class="n">segmented_wsi</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">BandFormat</span><span class="o">.</span><span class="n">INT</span><span class="p">)</span>
+        <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Finished reconstructing slide: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">start_time_save</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_reconst.tif&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving reconstructed slide to </span><span class="si">{</span><span class="n">out</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">segmented_wsi</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">tiffsave</span><span class="p">(</span>
+            <span class="n">out</span><span class="p">,</span>
+            <span class="n">tile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;jpeg&quot;</span><span class="p">,</span>
+            <span class="n">bigtiff</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">pyramid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">tile_width</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+            <span class="n">tile_height</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">end_time_save</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Saved reconstructed slide to </span><span class="si">{</span><span class="n">out</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="nb">round</span><span class="p">((</span><span class="n">end_time_save</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_save</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> minutes.&quot;</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_slide</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Updates the path of the slide and reinitializes the OpenSlide object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            new_path (str): The new path to the slide file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Updating path for slide </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">new_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registered_path</span> <span class="o">=</span> <span class="n">new_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span> <span class="o">=</span> <span class="n">openslide</span><span class="o">.</span><span class="n">OpenSlide</span><span class="p">(</span><span class="n">new_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span> <span class="o">=</span> <span class="n">DeepZoomGenerator</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">openslide_object</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n">overlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit_bounds</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">level_count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_dimensions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">level_dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tile_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tiles</span><span class="o">.</span><span class="n">tile_count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Slide </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> updated with new path: </span><span class="si">{</span><span class="n">new_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

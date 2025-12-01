@@ -1,0 +1,710 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cubats.slide_collection.segmentation &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cubats.slide_collection.segmentation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cubats.slide_collection.segmentation</h1><div class="highlight"><pre>
+<span></span><span class="c1"># TODO add type hints</span>
+<span class="c1"># TODO add unit tests</span>
+<span class="c1"># TODO add multi processing</span>
+
+<span class="c1"># Standard Library</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging.config</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">listdir</span><span class="p">,</span> <span class="n">path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="c1"># Third Party</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">onnx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchstain</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">concatenate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">onnx2torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openslide</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenSlide</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openslide.deepzoom</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeepZoomGenerator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyvips</span><span class="w"> </span><span class="kn">import</span> <span class="n">BandFormat</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyvips</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">VipsImage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage.transform</span><span class="w"> </span><span class="kn">import</span> <span class="n">resize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="c1"># CuBATS</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cubats.logging_config</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">log_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">cutils</span> <span class="k">as</span> <span class="n">cutils</span>
+
+<span class="c1"># Initialize logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">dictConfig</span><span class="p">(</span><span class="n">log_config</span><span class="o">.</span><span class="n">LOGGING</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="c1"># Suppress pyvips logs</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;pyvips&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+
+<span class="c1"># Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used</span>
+<span class="c1"># TODO add support for a heatmap output (optional or alternative)</span>
+<span class="c1"># TODO fix tile_size logic -&gt; deepzoom gnerator only takes quadratic tiles, maybe change to int overall?</span>
+<span class="c1"># device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;)</span>
+<span class="c1"># print(torch.cuda.is_available())</span>
+<span class="c1"># logger.info(f&quot;Using device: {device}&quot;)</span>
+
+
+<div class="viewcode-block" id="run_tumor_segmentation">
+<a class="viewcode-back" href="../../../segmentation.html#cubats.slide_collection.segmentation.run_tumor_segmentation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_tumor_segmentation</span><span class="p">(</span>
+    <span class="n">input_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">model_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">tile_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">output_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">inversion</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">plot_results</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the segmentation pipeline on the given input path using the specified model.</span>
+
+<span class="sd">    Performs segmentation on a single HE stained WSI or all HE stained WSIs in a directory using the specified model.</span>
+<span class="sd">    The segmentation results are saved as .TIFF in the output directory, as well as a . PNG thumbnail. If no output</span>
+<span class="sd">    directory is provided, the results are saved in the same directory as the input. Optionally, a thumbnail of the</span>
+<span class="sd">    segmentation results can be plotted on the original image and saved.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        input_path (str): The path to the input file or directory.</span>
+<span class="sd">        model_path (str): The path to the ONNX model file.</span>
+<span class="sd">        tile_size (Tuple[int, int]): The size of each tile for segmentation.</span>
+<span class="sd">        output_path (Union[str, None], optional): The path to the output directory. If not provided, the output will be</span>
+<span class="sd">            saved in the same directory as the input. Defaults to None.</span>
+<span class="sd">        normalization (bool, optional): Whether to normalize the input tiles. Depends on the model provided. Defaults</span>
+<span class="sd">            to False.</span>
+<span class="sd">        inversion (bool, optional): Whether to invert the segmentation output. Depends on the model provided. Defaults</span>
+<span class="sd">            to False.</span>
+<span class="sd">        plot_results (bool, optional): Whether to plot the segmentation results. Defaults to False.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If the input path or output path does not exist.</span>
+<span class="sd">        ValueError: If the output path is not a directory or the model path is invalid.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Starting segmentation of: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">input_path</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;using model: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">model_path</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Parameters: tile_size: </span><span class="si">{</span><span class="n">tile_size</span><span class="si">}</span><span class="s2">, normalization: </span><span class="si">{</span><span class="n">normalization</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;inversion: </span><span class="si">{</span><span class="n">inversion</span><span class="si">}</span><span class="s2">, plot_results: </span><span class="si">{</span><span class="n">plot_results</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">start_time_segmentation</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="c1"># Check if the input path is valid and if it is a file or a directory</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">input_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input path </span><span class="si">{</span><span class="n">input_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">input_path</span><span class="p">):</span>
+            <span class="n">segment_single_file</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">input_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">segment_single_file</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">input_folder</span> <span class="o">=</span> <span class="n">input_path</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected error checking input path: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span>
+
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">input_path</span><span class="p">):</span>
+        <span class="n">segment_single_file</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">input_folder</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">segment_single_file</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">input_folder</span> <span class="o">=</span> <span class="n">input_path</span>
+
+    <span class="c1"># Check the output path and raise an error if it is not a path or a directory</span>
+    <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">input_folder</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output_path</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Output path </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Output path </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2"> does not exist.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">output_path</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Output path </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2"> is not a directory.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Output path </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2"> is not a directory.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check if the model is an valid onnx file</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">onnx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+        <span class="n">onnx</span><span class="o">.</span><span class="n">checker</span><span class="o">.</span><span class="n">check_model</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2"> is not a valid onnx file.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">e</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading model </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2"> is not a valid path.&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">model_input_size</span> <span class="o">=</span> <span class="n">_get_model_input_size</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error getting model input size: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error getting model input size: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">convert</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="c1"># model.to(device)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error converting model </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error converting model </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># try:</span>
+    <span class="c1">#     session_options = ort.SessionOptions()</span>
+    <span class="c1">#     session_options.execution_mode = ort.ExecutionMode.ORT_PARALLEL</span>
+    <span class="c1">#     session_options.graph_optimization_level = (</span>
+    <span class="c1">#         ort.GraphOptimizationLevel.ORT_ENABLE_ALL</span>
+    <span class="c1">#     )</span>
+    <span class="c1">#     providers = (</span>
+    <span class="c1">#         [&quot;CUDAExecutionProvider&quot;]</span>
+    <span class="c1">#         if ort.get_device() == &quot;GPU&quot;</span>
+    <span class="c1">#         else [&quot;CPUExecutionProvider&quot;]</span>
+    <span class="c1">#     )</span>
+    <span class="c1">#     ort_session = ort.InferenceSession(</span>
+    <span class="c1">#         model_path, sess_options=session_options, providers=providers</span>
+    <span class="c1">#     )</span>
+    <span class="c1"># except Exception as e:</span>
+    <span class="c1">#     logger.error(f&quot;Error creating ONNX Runtime session: {e}&quot;)</span>
+    <span class="c1">#     raise RuntimeError(f&quot;Error creating ONNX Runtime session: {e}&quot;)</span>
+
+    <span class="c1"># Suppress Pillow warning because of the large WSI</span>
+    <span class="n">Image</span><span class="o">.</span><span class="n">MAX_IMAGE_PIXELS</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Run tumor segmentation</span>
+    <span class="k">if</span> <span class="n">segment_single_file</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Segementation-mode: single file&quot;</span><span class="p">)</span>
+        <span class="n">_segment_file</span><span class="p">(</span>
+            <span class="n">input_path</span><span class="p">,</span>
+            <span class="n">model</span><span class="p">,</span>
+            <span class="n">tile_size</span><span class="p">,</span>
+            <span class="n">model_input_size</span><span class="p">,</span>
+            <span class="n">output_path</span><span class="p">,</span>
+            <span class="n">normalization</span><span class="p">,</span>
+            <span class="n">inversion</span><span class="p">,</span>
+            <span class="n">plot_results</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Segementation-mode: multiple files&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">(</span><span class="n">input_folder</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.tif&quot;</span><span class="p">):</span>
+                <span class="n">_segment_file</span><span class="p">(</span>
+                    <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">input_folder</span><span class="p">,</span> <span class="n">file</span><span class="p">),</span>
+                    <span class="n">model</span><span class="p">,</span>
+                    <span class="n">tile_size</span><span class="p">,</span>
+                    <span class="n">model_input_size</span><span class="p">,</span>
+                    <span class="n">output_path</span><span class="p">,</span>
+                    <span class="n">normalization</span><span class="p">,</span>
+                    <span class="n">inversion</span><span class="p">,</span>
+                    <span class="n">plot_results</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Segmentation of all files in </span><span class="si">{</span><span class="n">input_folder</span><span class="si">}</span><span class="s2"> completed.&quot;</span><span class="p">)</span>
+
+    <span class="n">end_time_segmentation</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Segmentation of </span><span class="si">{</span><span class="n">input_path</span><span class="si">}</span><span class="s2"> completed in </span><span class="si">{</span><span class="p">(</span><span class="n">end_time_segmentation</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time_segmentation</span><span class="p">)</span><span class="o">/</span><span class="mi">60</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> Minutes.&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># TODO refactor mask-WSI creation logic</span>
+
+
+<div class="viewcode-block" id="_segment_file">
+<a class="viewcode-back" href="../../../segmentation.html#cubats.slide_collection.segmentation._segment_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_segment_file</span><span class="p">(</span>
+    <span class="n">file_path</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">tile_size</span><span class="p">,</span>
+    <span class="n">model_input_size</span><span class="p">,</span>
+    <span class="n">output_path</span><span class="p">,</span>
+    <span class="n">normalization</span><span class="p">,</span>
+    <span class="n">inversion</span><span class="p">,</span>
+    <span class="n">plot_results</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Performs tumor detection and segmentation on a single WSI file.</span>
+
+<span class="sd">    Segments a (WSI) file into tiles, applies a tumor segmentation model onto each tile. The resulting tiles are</span>
+<span class="sd">    reconstructed into a single image and saved as a .TIFF file. A thumbnail of the segmentation results is saved as a</span>
+<span class="sd">    .PNG file. Optionally, the segmentation results can be plotted onto the original image and saved.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path (str): The path to the WSI file.</span>
+<span class="sd">        model: The segmentation model.</span>
+<span class="sd">        tile_size (tuple): The size of each tile in pixels.</span>
+<span class="sd">        model_input_size (tuple): The input size of the model.</span>
+<span class="sd">        output_path (str): The path to save the segmented image.</span>
+<span class="sd">        normalization (bool): Whether to normalize the input tiles.</span>
+<span class="sd">        inversion (bool): Whether to invert the segmentation output.</span>
+<span class="sd">        plot_results (bool): Whether to plot the segmentation results on the original image.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting segmentation for file: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">slide</span> <span class="o">=</span> <span class="n">OpenSlide</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Opened slide file: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error opening slide file </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">slide_generator</span> <span class="o">=</span> <span class="n">DeepZoomGenerator</span><span class="p">(</span>
+            <span class="n">slide</span><span class="p">,</span> <span class="n">tile_size</span><span class="o">=</span><span class="n">tile_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">overlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">limit_bounds</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Created DeepZoomGenerator&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error creating DeepZoomGenerator: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Initialize the normalizer. Reference image is provided in assets folder</span>
+    <span class="n">normalizer</span> <span class="o">=</span> <span class="n">_init_normalizer</span><span class="p">(</span>
+        <span class="s2">&quot;assets/ref_norm.png&quot;</span><span class="p">)</span>  <span class="c1"># former name 21585.png</span>
+
+    <span class="c1"># Calculate if there is an overhang for the final tile at the right and bottom edge</span>
+    <span class="n">has_right_overhang</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">tile_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">slide</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">has_bottom_overhang</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">tile_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">slide</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="c1"># Array to save the segmented WSI rows as single numpy arrays</span>
+    <span class="n">row_array</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Segment each tile</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+        <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Segmenting Rows for </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file_path</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing row </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># Per default no padding is required</span>
+        <span class="n">is_rightmost_tile</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Array to save the segmented tiles of all columns of a row</span>
+        <span class="n">column_array</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Check if the tile is the rightmost tile</span>
+        <span class="k">if</span> <span class="n">row</span> <span class="o">==</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">has_right_overhang</span><span class="p">:</span>
+            <span class="n">is_rightmost_tile</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">is_bottommost_tile</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="c1"># Check if the tile is the bottommost tile</span>
+            <span class="k">if</span> <span class="n">column</span> <span class="o">==</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_tiles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">has_bottom_overhang</span><span class="p">:</span>
+                <span class="n">is_bottommost_tile</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># If the tile is the rightmost or bottommost tile, padding is required</span>
+            <span class="k">if</span> <span class="n">is_rightmost_tile</span> <span class="ow">or</span> <span class="n">is_bottommost_tile</span><span class="p">:</span>
+                <span class="n">raw_tile</span> <span class="o">=</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span>
+                    <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">tile</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">,</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>
+                <span class="n">tile</span><span class="o">.</span><span class="n">paste</span><span class="p">(</span><span class="n">raw_tile</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Tile at row </span><span class="si">{</span><span class="n">row</span><span class="si">}</span><span class="s2">, column </span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2"> required padding&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tile</span> <span class="o">=</span> <span class="n">slide_generator</span><span class="o">.</span><span class="n">get_tile</span><span class="p">(</span>
+                    <span class="n">slide_generator</span><span class="o">.</span><span class="n">level_count</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Normalize the tensor if needed</span>
+            <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
+                <span class="c1"># Convert the tile to a tensor</span>
+                <span class="n">transform</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">()</span>
+                <span class="n">tile_tensor</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">*</span> <span class="mi">255</span>
+
+                <span class="n">normalized_tile</span> <span class="o">=</span> <span class="n">normalizer</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">tile_tensor</span><span class="p">)</span>
+                <span class="c1"># Recreate tensor with correct shape, including batch dimension</span>
+                <span class="n">tile_tensor</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">normalized_tile</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">tile_size</span> <span class="o">!=</span> <span class="n">model_input_size</span><span class="p">[</span><span class="mi">2</span><span class="p">:]:</span>
+                    <span class="n">resizing</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="c1"># Resize the tile to the model input size if needed using torch</span>
+                    <span class="n">tile_tensor</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span>
+                        <span class="n">tile_tensor</span><span class="p">,</span>
+                        <span class="n">size</span><span class="o">=</span><span class="n">model_input_size</span><span class="p">[</span><span class="mi">2</span><span class="p">:],</span>
+                        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;bilinear&quot;</span><span class="p">,</span>
+                        <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">resizing</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Resize the tile to the model input size if needed using numpy.</span>
+                <span class="c1"># Note: Model used during developement needed numpy conversion as torch resulted in false results.</span>
+                <span class="k">if</span> <span class="n">tile_size</span> <span class="o">!=</span> <span class="n">model_input_size</span><span class="p">[</span><span class="mi">2</span><span class="p">:]:</span>
+                    <span class="n">resizing</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">rescaled_tile</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span>
+                        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tile</span><span class="p">),</span>
+                        <span class="p">(</span><span class="n">model_input_size</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">model_input_size</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+                        <span class="n">anti_aliasing</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="c1"># Convert the tile to a tensor</span>
+                    <span class="n">tile_tensor</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">rescaled_tile</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">resizing</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="c1"># Convert the tile to a tensor and add batch dimension</span>
+                    <span class="n">transform</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">()</span>
+                    <span class="n">tile_tensor</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">*</span> <span class="mi">255</span>
+                    <span class="n">tile_tensor</span><span class="o">.</span><span class="n">unsqueeze_</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># tile_tensor = tile_tensor.to(device)</span>
+            <span class="c1"># Segment the tile</span>
+            <span class="n">segmented_tile</span> <span class="o">=</span> <span class="n">_segment_tile</span><span class="p">(</span>
+                <span class="n">tile_tensor</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">resizing</span><span class="p">,</span> <span class="n">inversion</span><span class="p">,</span> <span class="n">tile_size</span>
+            <span class="p">)</span>
+            <span class="n">column_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">segmented_tile</span><span class="p">)</span>
+
+        <span class="n">segmented_row</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">(</span><span class="n">column_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">row_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">segmented_row</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Constructing segmented WSI&quot;</span><span class="p">)</span>
+    <span class="n">segmented_wsi</span> <span class="o">=</span> <span class="n">concatenate</span><span class="p">(</span><span class="n">row_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">segmented_wsi</span> <span class="o">=</span> <span class="n">VipsImage</span><span class="o">.</span><span class="n">new_from_array</span><span class="p">(</span>
+        <span class="n">segmented_wsi</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">BandFormat</span><span class="o">.</span><span class="n">INT</span><span class="p">)</span>
+
+    <span class="c1"># Extract the base name and file type</span>
+    <span class="n">base_name</span><span class="p">,</span> <span class="n">file_type</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="n">wsi_name</span> <span class="o">=</span> <span class="n">cutils</span><span class="o">.</span><span class="n">get_name</span><span class="p">(</span><span class="n">base_name</span><span class="p">)</span>
+
+    <span class="c1"># Construct output paths for the mask and thumbnail</span>
+    <span class="n">mask_out</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">wsi_name</span><span class="si">}</span><span class="s2">_mask</span><span class="si">{</span><span class="n">file_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">thumb_out</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">wsi_name</span><span class="si">}</span><span class="s2">_mask_thumbnail.png&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Save the segmented WSI using pyvips</span>
+    <span class="n">_save_segmented_wsi</span><span class="p">(</span><span class="n">segmented_wsi</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">mask_out</span><span class="p">)</span>
+
+    <span class="c1"># Create and save PNG thumbnail</span>
+    <span class="n">_save_thumbnail</span><span class="p">(</span><span class="n">mask_out</span><span class="p">,</span> <span class="n">thumb_out</span><span class="p">)</span>
+
+    <span class="c1"># if plot_results: save cropped segmentation result on top of original image</span>
+    <span class="k">if</span> <span class="n">plot_results</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_plot_segmentation_on_tissue</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Plotted segmentation on tissue&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error plotting segmentation on tissue: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Finished segmentation for file: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_segment_tile">
+<a class="viewcode-back" href="../../../segmentation.html#cubats.slide_collection.segmentation._segment_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_segment_tile</span><span class="p">(</span>
+    <span class="n">tile</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">resizing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">inversion</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">original_size</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Segments a given tile using a pre-trained model and returns the segmented tile as a PIL Image.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tile (torch.Tensor): The input tile to be segmented. Expected shape is (1, C, H, W).</span>
+<span class="sd">        model: The pre-trained segmentation model.</span>
+<span class="sd">        resizing (bool): Whether input has been resized to the model&#39;s input size. Consequentially resizing the output</span>
+<span class="sd">        is necessary.</span>
+<span class="sd">        inversion (bool): Whether to invert the segmentation output, depending on model type.</span>
+<span class="sd">        original_size (tuple): The original size of the tile before resizing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Image: The segmented tile as a binary mask in PIL Image format.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Start segmentation</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">segmentation</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+
+    <span class="n">segmentation</span> <span class="o">=</span> <span class="n">segmentation</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">()</span>
+
+    <span class="c1"># Check the shape and apply squeeze as needed</span>
+    <span class="k">if</span> <span class="n">segmentation</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">segmentation</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Remove single color channel dimension</span>
+        <span class="n">segmentation</span> <span class="o">=</span> <span class="n">segmentation</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">segmentation</span> <span class="o">=</span> <span class="n">segmentation</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span>
+        <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>  <span class="c1"># Remove batch dimension</span>
+
+    <span class="c1"># Rescale to original size if necessary</span>
+    <span class="k">if</span> <span class="n">resizing</span><span class="p">:</span>
+        <span class="n">segmented_tile</span> <span class="o">=</span> <span class="n">resize</span><span class="p">(</span>
+            <span class="n">segmentation</span><span class="p">,</span> <span class="n">original_size</span><span class="p">,</span> <span class="n">anti_aliasing</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">segmented_tile</span> <span class="o">=</span> <span class="n">segmentation</span>
+
+    <span class="c1"># Some models require inversion</span>
+    <span class="k">if</span> <span class="n">inversion</span><span class="p">:</span>
+        <span class="n">segmented_tile</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">segmented_tile</span>
+
+    <span class="c1"># Threshold to binary mask</span>
+    <span class="n">segmented_tile</span> <span class="o">=</span> <span class="p">(</span><span class="n">segmented_tile</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="c1"># Convert to PIL image</span>
+    <span class="n">segmented_tile_pil</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">segmented_tile</span> <span class="o">*</span> <span class="mi">255</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;L&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">segmented_tile_pil</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_init_normalizer</span><span class="p">(</span><span class="n">path_to_src_img</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes a Reinhard normalizer for image normalization.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">         path_to_src_img (str): Path to the source image file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torchstain.normalizers.ReinhardNormalizer: An instance of the Reinhard normalizer fitted to the source image.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">normalizer</span> <span class="o">=</span> <span class="n">torchstain</span><span class="o">.</span><span class="n">normalizers</span><span class="o">.</span><span class="n">ReinhardNormalizer</span><span class="p">(</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;modified&quot;</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;torch&quot;</span>
+    <span class="p">)</span>
+    <span class="n">src_img</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_image</span><span class="p">(</span><span class="n">path_to_src_img</span><span class="p">)</span>
+    <span class="n">normalizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">src_img</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">normalizer</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_model_input_size</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the expected input size for the model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model: The pre-trained segmentation model.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: The expected input size for the model in the format (1, C, H, W).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">input</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">input_shape</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">dim</span><span class="o">.</span><span class="n">dim_value</span> <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">input_tensor</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">tensor_type</span><span class="o">.</span><span class="n">shape</span><span class="o">.</span><span class="n">dim</span><span class="p">]</span>
+    <span class="c1"># Ensure the batch size is set to 1</span>
+    <span class="n">input_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model input size: </span><span class="si">{</span><span class="n">input_shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">input_shape</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_save_segmented_wsi</span><span class="p">(</span><span class="n">segmented_wsi</span><span class="p">,</span> <span class="n">tile_size</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save the segmented WSI to file.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        segmented_wsi (pyvips.Image): The segmented WSI image.</span>
+<span class="sd">        output_path (str): The path to save the segmented WSI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving segmented WSI to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">segmented_wsi</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">segmented_wsi</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">segmented_wsi</span><span class="o">.</span><span class="n">height</span><span class="p">)</span><span class="o">.</span><span class="n">tiffsave</span><span class="p">(</span>
+            <span class="n">output_path</span><span class="p">,</span>
+            <span class="n">tile</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;jpeg&quot;</span><span class="p">,</span>
+            <span class="n">bigtiff</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">pyramid</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">tile_width</span><span class="o">=</span><span class="n">tile_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">tile_height</span><span class="o">=</span><span class="n">tile_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">Q</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>  <span class="c1"># Set JPEG quality to 100%</span>
+            <span class="n">predictor</span><span class="o">=</span><span class="s2">&quot;horizontal&quot;</span><span class="p">,</span>  <span class="c1"># Use horizontal predictor for better compression</span>
+            <span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Strip metadata to reduce file size</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Segmented WSI saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving segmented WSI: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_save_thumbnail</span><span class="p">(</span><span class="n">wsi_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create and save PNG thumbnail.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        wsi_path (str): The path to the WSI file, based on which the thumbnail shall be created.</span>
+<span class="sd">        output_path (str): The path to save the PNG thumbnail.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating PNG thumbnail for segmented WSI&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">wsi</span> <span class="o">=</span> <span class="n">OpenSlide</span><span class="p">(</span><span class="n">wsi_path</span><span class="p">)</span>
+        <span class="n">thumbnail</span> <span class="o">=</span> <span class="n">wsi</span><span class="o">.</span><span class="n">get_thumbnail</span><span class="p">((</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">))</span>
+        <span class="n">thumbnail</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;PNG&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PNG thumbnail saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving PNG thumbnail: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># TODO fix maxk overlay logic</span>
+<span class="c1"># - only apply mask with alpha and remove white form mask</span>
+<span class="c1"># - don&#39;t use alpha on slide itself</span>
+<div class="viewcode-block" id="_plot_segmentation_on_tissue">
+<a class="viewcode-back" href="../../../segmentation.html#cubats.slide_collection.segmentation._plot_segmentation_on_tissue">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_plot_segmentation_on_tissue</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plots the segmentation results on the original image and saves the result as a thumbnail.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path (str): The path to the original WSI file.</span>
+<span class="sd">        output_path (str): The path to save the thumbnail.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Plotting thumbnail for segmented WSI&quot;</span><span class="p">)</span>
+
+    <span class="n">slide</span> <span class="o">=</span> <span class="n">OpenSlide</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="n">wsi_name</span><span class="p">,</span> <span class="n">file_type</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="n">wsi_name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">wsi_name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_mask&quot;</span> <span class="o">+</span> <span class="n">file_type</span>
+    <span class="n">mask_path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">wsi_name</span><span class="p">))</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">OpenSlide</span><span class="p">(</span><span class="n">mask_path</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Retrieving thumbnail for slide&quot;</span><span class="p">)</span>
+    <span class="n">slide_thumbnail</span> <span class="o">=</span> <span class="n">slide</span><span class="o">.</span><span class="n">get_thumbnail</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">slide</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">256</span><span class="p">,</span> <span class="n">slide</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">256</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Retrieving thumbnail for mask&quot;</span><span class="p">)</span>
+    <span class="n">mask_thumbnail</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">get_thumbnail</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">256</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">256</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Convert mask to RGBA</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Converting mask to RGBA&quot;</span><span class="p">)</span>
+    <span class="n">mask_thumbnail</span> <span class="o">=</span> <span class="n">mask_thumbnail</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Split the mask into its components</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Splitting mask into components&quot;</span><span class="p">)</span>
+    <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">mask_thumbnail</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+    <span class="c1"># Create a new alpha channel where white areas are fully transparent</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating new alpha channel&quot;</span><span class="p">)</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">px</span><span class="p">:</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">px</span> <span class="o">==</span> <span class="mi">255</span> <span class="k">else</span> <span class="mi">255</span><span class="p">)</span>
+
+    <span class="c1"># Combine the mask with the new alpha channel</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Combining mask with new alpha channel&quot;</span><span class="p">)</span>
+    <span class="n">mask_thumbnail</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">alpha</span><span class="p">))</span>
+
+    <span class="c1"># Ensure the slide is in RGB mode (no alpha)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Converting slide to RGB&quot;</span><span class="p">)</span>
+    <span class="n">slide_thumbnail</span> <span class="o">=</span> <span class="n">slide_thumbnail</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Composite the slide and mask</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Compositing slide and mask&quot;</span><span class="p">)</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">alpha_composite</span><span class="p">(</span>
+        <span class="n">slide_thumbnail</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGBA&quot;</span><span class="p">),</span> <span class="n">mask_thumbnail</span><span class="p">)</span>
+
+    <span class="n">png_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="n">png_name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">png_name</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_mask&quot;</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving thumbnail to </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span><span class="w"> </span><span class="n">png_name</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">combined</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">png_name</span><span class="p">))</span>
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Thumbnail creation took </span><span class="si">{</span><span class="n">end_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds.&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

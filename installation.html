@@ -1,0 +1,327 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="CuBATS" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pip-install">Pip Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">pyvips</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#macos">macOS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ubuntu-debian">Ubuntu/Debian</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#windows">Windows</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">OpenSlide Python</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id5">macOS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id6">Ubuntu/Debian</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id7">Windows</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#id9">VALIS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id10">scikit-image</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bio-formats-optional">Bio-Formats (Optional)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id11">macOS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id12">Ubuntu/Debian</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id13">Windows</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/installation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation">
+<span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>CuBATS currently requires Python 3.10 to 3.11.</p>
+</div>
+<section id="pip-install">
+<h2>Pip Install<a class="headerlink" href="#pip-install" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We suggest installing CuBATS and its prerequisites inside a virtual environment to avoid conflicts with other packages. On macOS and Linux, we recommend using the <a class="reference external" href="https://docs.python.org/3/library/venv.html">venv</a> module. For Windows, we recommend using <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/index.html">Conda</a>.</p>
+</div>
+<p>CuBATS can be downloaded from PyPI as the <cite>cubats</cite> package using the <cite>pip</cite> command. However, CuBATS also requires several system-level packages which need to be installed as well (see <a class="reference internal" href="#prerequisites">Prerequisites</a> below). Once the prerequisites are installed, CuBATS can be installed via <cite>pip</cite>, ideally inside a previously created virtual environment as shown below:</p>
+<p>On macOS and Linux:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>cubats-env
+$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>cubats-env/bin/activate
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>cubats
+</pre></div>
+</div>
+<p>On Windows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>cubats-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.10
+$<span class="w"> </span>conda<span class="w"> </span>activate<span class="w"> </span>cubats-env
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>cubats
+</pre></div>
+</div>
+<p>Or install CuBATS directly from GitHub:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/hnu-digihealth/CuBATS.git
+</pre></div>
+</div>
+</section>
+<section id="prerequisites">
+<span id="id2"></span><h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>CuBATS relies on a few system level packages that need to be installed beforehand. Most importantly, <a class="reference external" href="https://valis.readthedocs.io/en/latest/">VALIS</a>, <a class="reference external" href="https://openslide.org/api/python/">OpenSlide Python</a>, <a class="reference external" href="https://libvips.github.io/libvips/">pyvips</a> and <a class="reference external" href="https://scikit-image.org/docs/stable/">scikit-image</a>. Depending on the image format, <cite>VALIS</cite> may require additional tools for registration: While <cite>OpenSlide</cite> is sufficient for the image formats <cite>.vmu</cite>, <cite>.mrxs</cite>, and <cite>.svslide</cite>, for many other image formats the Java library <a class="reference external" href="https://bio-formats.readthedocs.io">Bio-Formats</a> is additionally needed.</p>
+<section id="id3">
+<h3>pyvips<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<section id="macos">
+<h4>macOS<a class="headerlink" href="#macos" title="Link to this heading"></a></h4>
+<p>Install pyvips using Homebrew:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>brew<span class="w"> </span>install<span class="w"> </span>vips<span class="w"> </span>python<span class="w"> </span>pkg-config
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>pyvips
+</pre></div>
+</div>
+</section>
+<section id="ubuntu-debian">
+<h4>Ubuntu/Debian<a class="headerlink" href="#ubuntu-debian" title="Link to this heading"></a></h4>
+<p>Install pyvips using apt:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libvips
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>pyvips
+</pre></div>
+</div>
+</section>
+<section id="windows">
+<h4>Windows<a class="headerlink" href="#windows" title="Link to this heading"></a></h4>
+<p>Download and install the precompiled binaries for libvips and follow the instructions for Windows on the official website: <a class="reference external" href="https://www.libvips.org/install.html">https://www.libvips.org/install.html</a>.
+Alternatively, you can install pyvips using vcpkg:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Microsoft/vcpkg.git
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>vcpkg
+$<span class="w"> </span>./bootstrap-vcpkg.sh
+$<span class="w"> </span>./vcpkg<span class="w"> </span>integrate<span class="w"> </span>install
+$<span class="w"> </span>./vcpkg<span class="w"> </span>install<span class="w"> </span>vips
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>pyvips
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id4">
+<h3>OpenSlide Python<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>that OpenSlide Python is a Python wrapper for OpenSlide. <a class="reference external" href="https://openslide.org">OpenSlide</a> is a C library that must to be installed separately.</p>
+</div>
+<section id="id5">
+<h4>macOS<a class="headerlink" href="#id5" title="Link to this heading"></a></h4>
+<p>Install OpenSlide and OpenSlide Python using Homebrew:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>brew<span class="w"> </span>install<span class="w"> </span>openslide
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>openslide-python
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you encounter issues with the OpenSlide library not being found, you may need to set the <cite>DYLD_FALLBACK_LIBRARY_PATH</cite> environment variable to point to the OpenSlide library directory. You can do this
+dynamically in your Python script or in your shell configuration file (e.g., <cite>.bash_profile</cite>, <cite>.zshrc</cite>, etc.):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DYLD_FALLBACK_LIBRARY_PATH&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="n">path</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;:&#39;</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/opt/homebrew/lib&#39;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DYLD_FALLBACK_LIBRARY_PATH&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openslide</span>
+</pre></div>
+</div>
+<p>Alternatively, you can set the <cite>DYLD_LIBRARY_PATH</cite> environment variable to point to the OpenSlide library directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">DYLD_FALLBACK_LIBRARY_PATH</span><span class="o">=</span><span class="s2">&quot;/opt/homebrew/lib:</span><span class="si">${</span><span class="nv">DYLD_FALLBACK_LIBRARY_PATH</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>After adding this line, reload your shell configuration:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.bash_profile
+<span class="c1"># or</span>
+$<span class="w"> </span><span class="nb">source</span><span class="w"> </span>~/.zshrc
+</pre></div>
+</div>
+</div>
+</section>
+<section id="id6">
+<h4>Ubuntu/Debian<a class="headerlink" href="#id6" title="Link to this heading"></a></h4>
+<p>Install OpenSlide and OpenSlide Python using apt:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>openslide-tools
+$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>openslide-python
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h4>Windows<a class="headerlink" href="#id7" title="Link to this heading"></a></h4>
+<p>Download and install <a class="reference external" href="https://openslide.org/download/#windows-binaries">OpenSlide binaries</a> from the official website. Then import OpenSlide as follows <a class="footnote-reference brackets" href="#f1" id="id8" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">OPENSLIDE_PATH</span> <span class="o">=</span> <span class="s2">&quot;path/to/openslide/bin&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">os</span><span class="p">,</span> <span class="s1">&#39;add_dll_directory&#39;</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">add_dll_directory</span><span class="p">(</span><span class="n">OPENSLIDE_PATH</span><span class="p">)</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">openslide</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">openslide</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id9">
+<h3>VALIS<a class="headerlink" href="#id9" title="Link to this heading"></a></h3>
+<p>After having installed the previous prerequisites (optionally Bio-Formats), requirements for VALIS are met and the framework can be installed via pip:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>valis-wsi
+</pre></div>
+</div>
+</section>
+<section id="id10">
+<h3>scikit-image<a class="headerlink" href="#id10" title="Link to this heading"></a></h3>
+<p>scikit-image can be installed via pip:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>scikit-image
+</pre></div>
+</div>
+<p>or via conda:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>conda<span class="w"> </span>install<span class="w"> </span>scikit-image
+</pre></div>
+</div>
+</section>
+<section id="bio-formats-optional">
+<h3>Bio-Formats (Optional)<a class="headerlink" href="#bio-formats-optional" title="Link to this heading"></a></h3>
+<p>Bio-Formats requires the Java Development Kit (JDK) and Maven. Install them as follows:</p>
+<section id="id11">
+<h4>macOS<a class="headerlink" href="#id11" title="Link to this heading"></a></h4>
+<p>Install JDK and Maven using Homebrew:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>brew<span class="w"> </span>install<span class="w"> </span>openjdk<span class="w"> </span>maven
+</pre></div>
+</div>
+<p>After installation, you may need to set the <cite>JAVA_HOME</cite> environment variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">JAVA_HOME</span><span class="o">=</span><span class="k">$(</span>/usr/libexec/java_home<span class="k">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id12">
+<h4>Ubuntu/Debian<a class="headerlink" href="#id12" title="Link to this heading"></a></h4>
+<p>Install JDK and Maven using apt:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>update
+$<span class="w"> </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>openjdk-11-jdk<span class="w"> </span>maven
+</pre></div>
+</div>
+<p>After installation, you may need to set the <cite>JAVA_HOME</cite> environment variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">JAVA_HOME</span><span class="o">=</span>/usr/lib/jvm/java-11-openjdk-amd64
+</pre></div>
+</div>
+</section>
+<section id="id13">
+<h4>Windows<a class="headerlink" href="#id13" title="Link to this heading"></a></h4>
+<p>Download and install the JDK from the official website: <a class="reference external" href="https://www.oracle.com/java/technologies/javase-jdk11-downloads.html">https://www.oracle.com/java/technologies/javase-jdk11-downloads.html</a></p>
+<p>Download and install Maven from the official website: <a class="reference external" href="https://maven.apache.org/download.cgi">https://maven.apache.org/download.cgi</a></p>
+<p>After installation, you need to set the <cite>JAVA_HOME</cite> environment variable. For detailed instructions, refer to this guide: <a class="reference external" href="https://www.baeldung.com/java-home-on-windows-7-8-10">https://www.baeldung.com/java-home-on-windows-7-8-10</a></p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="f1" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id8">1</a><span class="fn-bracket">]</span></span>
+<p>This code is adapted from the <a class="reference external" href="https://openslide.org/api/python/">OpenSlide Python documentation</a>.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="CuBATS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

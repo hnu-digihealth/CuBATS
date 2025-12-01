@@ -1,0 +1,1007 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slide Collection &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Image Registration" href="registration.html" />
+    <link rel="prev" title="Examples" href="examples.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Slide Collection</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#classes">Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Slide Collection</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cubats.slide_collection.slide_collection.SlideCollection"><code class="docutils literal notranslate"><span class="pre">SlideCollection</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#slide">Slide</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#cubats.slide_collection.slide.Slide"><code class="docutils literal notranslate"><span class="pre">Slide</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Slide Collection</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/slide_collection.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="slide-collection">
+<h1>Slide Collection<a class="headerlink" href="#slide-collection" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The <a class="reference internal" href="#cubats.slide_collection.slide_collection.SlideCollection" title="cubats.slide_collection.slide_collection.SlideCollection"><code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code></a> is the central controller of CuBATS. It organizes and manages a collection of whole-slide images (WSIs), with each WSI being implemented by the <a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><code class="xref py py-class docutils literal notranslate"><span class="pre">Slide</span></code></a> class. The <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code> class loads and stores processing results, the status of the pipeline.
+It wraps all functional processing stages of CuBATS:</p>
+<ol class="arabic simple">
+<li><p>Image Registration</p></li>
+<li><p>Tumor Segmentation</p></li>
+<li><p>Quantification of Staining Intensities</p></li>
+<li><p>Combinatorial Analysis of Antigen Co-Expression</p></li>
+</ol>
+<p>Each stage is implemented as a separate module and called internally by the <cite>SlideCollection</cite> class.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can still run individual modules separately, particularly the registration and segmentation modules. However, the quantification and combinatorial analysis modules are tightly integrated into the <code class="xref py py-class docutils literal notranslate"><span class="pre">SlideCollection</span></code> class and cannot be run independently.</p>
+</div>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<section id="id1">
+<h3>Slide Collection<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.slide_collection.</span></span><span class="sig-name descname"><span class="pre">SlideCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_slide</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_antigen_profiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection" title="Link to this definition"></a></dt>
+<dd><p>Initializes a slide collection, stores slide info and performs slide processing.</p>
+<p><cite>SlideCollection</cite> is a class that initializes a collection of slides, stores relevant processing information,
+and allows the execution of separate processing steps. Previously processed data can be reloaded.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.name" title="Link to this definition"></a></dt>
+<dd><p>Name of parent directory (i.e. name of tumorset).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.src_dir">
+<span class="sig-name descname"><span class="pre">src_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.src_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to source directory containing the WSIs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.dest_dir">
+<span class="sig-name descname"><span class="pre">dest_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.dest_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to destination directory for results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.data_dir">
+<span class="sig-name descname"><span class="pre">data_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.data_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to data directory, a subdirectory of <cite>dest_dir</cite>. The directory will be initiaded upon class
+creation inside the <cite>dest_dir</cite>. Inside the data directory summaries of quantification results, dual antigen
+expression results and triplet antigen expression results are stored as .CSV file.
+The data_dir also contains the <cite>pickle_dir</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.pickle_dir">
+<span class="sig-name descname"><span class="pre">pickle_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.pickle_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to pickle directory, a subdirectory of <cite>data_dir</cite>. Inside the pickle directory pickled
+copies of the slide_collection, quantification results and antigen analysis are stored which will be
+automatically reloaded if a slide collection is (re-)initialized with the same output_dir.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.tiles_dir">
+<span class="sig-name descname"><span class="pre">tiles_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.tiles_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to tiles directory, a subdirectory of <cite>dest_dir</cite>. Inside the tiles directory the tile
+directories for each slide are stored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.colocalization_dir">
+<span class="sig-name descname"><span class="pre">colocalization_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.colocalization_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to colocalization directory, a subdirectory of <cite>dest_dir</cite>. Inside the
+colocalization directory results of dual and triplet overlap analyses are stored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.reconstruct_dir">
+<span class="sig-name descname"><span class="pre">reconstruct_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.reconstruct_dir" title="Link to this definition"></a></dt>
+<dd><p>Path to reconstruct directory, a subdirectory of <cite>dest_dir</cite>. Inside the reconstruct
+directory reconstructed slides are stored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.collection_list">
+<span class="sig-name descname"><span class="pre">collection_list</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.collection_list" title="Link to this definition"></a></dt>
+<dd><p>list containing all slide objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of <a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide">Slide</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.collection_info_df">
+<span class="sig-name descname"><span class="pre">collection_info_df</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.collection_info_df" title="Link to this definition"></a></dt>
+<dd><p>Dataframe containing relevant information on all the slides. The colums are:</p>
+<ul class="simple">
+<li><p>Name (str): Name of slide.</p></li>
+<li><p>Reference (bool): True if slide is reference slide.</p></li>
+<li><p>Mask (bool): True if slide is mask slide.</p></li>
+<li><p>OpenSlide Object (OpenSlide): OpenSlide object of the slide.</p></li>
+<li><p>Tiles (DeepZoomGenerator): DeepZoom tiles of the slide.</p></li>
+<li><p>Level Count (int): Number of Deep Zoom levels in the image.</p></li>
+<li><p>Level Dimensions (list): List of tuples (pixels_x, pixels_y) for each Deep Zoom level.</p></li>
+<li><p>Tile Count (int): Number of total tiles in the image.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.mask">
+<span class="sig-name descname"><span class="pre">mask</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.mask" title="Link to this definition"></a></dt>
+<dd><p>Mask slide of the collection. Is set during initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide">Slide</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.mask_coordinates">
+<span class="sig-name descname"><span class="pre">mask_coordinates</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.mask_coordinates" title="Link to this definition"></a></dt>
+<dd><p>List containing the tile coordinates for tiles that are covered by the mask
+Coordinates are tuples (column, row). TODO eliminate by using internal methods for applying mask to Image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.quantification_results">
+<span class="sig-name descname"><span class="pre">quantification_results</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.quantification_results" title="Link to this definition"></a></dt>
+<dd><p>Dataframe containing the quantification results for all processed slides.
+The columns are:</p>
+<ul class="simple">
+<li><p>Name (str): Name of the slide.</p></li>
+<li><p>Coverage (%) (float): Positively stained pixels in the slide, characterizing the tumor coverage.</p></li>
+<li><p>High Positive (%) (float): Percentage of highly positive stained pixels in the slide.</p></li>
+<li><p>Medium Positive (%) (float): Percentage of medium positive stained pixels in the slide.</p></li>
+<li><p>Low Positive (%) (float): Percentage of low positive stained pixels in the slide.</p></li>
+<li><p>Negative (%) (float): Percentage negatively stained pixels in the slide.</p></li>
+<li><p>Total Tissue (%) (float): Total amount of tissue in the slide.</p></li>
+<li><p>Background / No Tissue (%) (float): Percentage of background and non-tissue regions in the slide.</p></li>
+<li><p>Mask Area (%) (float): Area of the slide covered by the tumor mask.</p></li>
+<li><p>Non-mask Area (%) (float): Area of the slide not covered by the tumor mask.</p></li>
+<li><p>H-Score (float): Established pathological score calculated based on the distribution of staining
+intensities in the slide.</p></li>
+<li><p>Score (str): Additional overall score of the slide calculated from the average of scores for all tiles.
+However, this score may be misleading, as it is an average over the entire slide. TODO necessary?</p></li>
+<li><p>Total Processed Tiles (%) (float): Percentage of processed tiles.</p></li>
+<li><p>Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
+Only the case for tile-level masking.</p></li>
+<li><p>Thresholds (list): List containing the thresholds applied during quantification.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.dual_antigen_expressions">
+<span class="sig-name descname"><span class="pre">dual_antigen_expressions</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.dual_antigen_expressions" title="Link to this definition"></a></dt>
+<dd><p>Dataframe containing a summary of the dual antigen expression results
+for all processed analyses:</p>
+<ul class="simple">
+<li><p>Slide 1 (str): Name of the first slide.</p></li>
+<li><p>Slide 2 (str): Name of the second slide.</p></li>
+<li><p>Total Coverage (%) (float): Percentage of combined coverage in two slides.</p></li>
+<li><p>Total Overlap (%) (float: Percentage of overlapping antigen expressions in two slides.</p></li>
+<li><p>Total Complement (%) (float): Percentage of complementary antigen expressions in two slides.</p></li>
+<li><p>High Positive Overlap (%) (float): Percentage of highly positive overlapping antigen expressions in
+two slides.</p></li>
+<li><p>High Positive Complement (%) (float): Percentage of highly positive complementary antigen expressions in
+two slides.</p></li>
+<li><p>Medium Positive Overlap (%) (float): Percentage of medium positive overlapping antigen expressions in
+two slides.</p></li>
+<li><p>Medium Positive Complement (%) (float): Percentage of medium positive complementary antigen expressions
+in two slides.</p></li>
+<li><p>Low Positive Overlap (%) (float): Percentage of low positive overlapping antigen expressions in
+two slides.</p></li>
+<li><p>Low Positive Complement (%) (float): Percentage of low positive complementary antigen expressions in
+two slides.</p></li>
+<li><p>Negative Tissue (%) (float): Percentage of negative tissue in the two slides.</p></li>
+<li><p>Total Tissue (%) (float): Percentage of total tissue in the two slides.</p></li>
+<li><p>Background / No Tissue (%) (float): Percentage of background and non-tissue regions in the two slides.</p></li>
+<li><p>Total Processed Tiles (%) (float): Percentage of processed tiles.</p></li>
+<li><p>Total Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.</p></li>
+<li><p>Error1 (%) (float): Percentage of tiles where neither tile contained tissue.</p></li>
+<li><p>Error2 (%) (float): Percentage of tiles where tiles could not be analyzed due to incorrect tile shapes.</p></li>
+<li><p>Thresholds1 (str): Antigen thresholds for slide 1.</p></li>
+<li><p>Thresholds2 (str): Antigen thresholds for slide 2</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.triplet_antigen_results">
+<span class="sig-name descname"><span class="pre">triplet_antigen_results</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.triplet_antigen_results" title="Link to this definition"></a></dt>
+<dd><p>Dataframe containing a summary of the triplet antigen expression results
+for all processed analyses:</p>
+<ul class="simple">
+<li><p>Slide 1 (str): Name of the first slide.</p></li>
+<li><p>Slide 2 (str): Name of the second slide.</p></li>
+<li><p>Slide 3 (str): Name of the third slide.</p></li>
+<li><p>Total Coverage (%) (float): Percentage of combined coverage in three slides.</p></li>
+<li><p>Total Overlap (%) (float: Percentage of overlapping antigen expressions in three slides.</p></li>
+<li><p>Total Complement (%) (float): Percentage of complementary antigen expressions in three slides.</p></li>
+<li><p>High Positive Overlap (%) (float): Percentage of highly positive overlapping antigen expressions in
+three slides.</p></li>
+<li><p>High Positive Complement (%) (float): Percentage of highly positive complementary antigen expressions in
+three slides.</p></li>
+<li><p>Medium Positive Overlap (%) (float): Percentage of medium positive overlapping antigen expressions in
+three slides.</p></li>
+<li><p>Medium Positive Complement (%) (float): Percentage of medium positive complementary antigen expressions
+in three slides.</p></li>
+<li><p>Low Positive Overlap (%) (float): Percentage of low positive overlapping antigen expressions in
+three slides.</p></li>
+<li><p>Low Positive Complement (%) (float): Percentage of low positive complementary antigen expressions in
+three slides.</p></li>
+<li><p>Negative Tissue (%) (float): Percentage of negative tissue in the three slides.</p></li>
+<li><p>Total Tissue (%) (float): Percentage of total tissue in the three slides.</p></li>
+<li><p>Background / No Tissue (%) (float): Percentage of background and non-tissue regions in the three slides.</p></li>
+<li><p>Total Processed Tiles (%) (float): Percentage of processed tiles.</p></li>
+<li><p>Total Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.</p></li>
+<li><p>Error1 (%) (float): Percentage of tiles where neither tile contained tissue.</p></li>
+<li><p>Error2 (%) (float): Percentage of tiles where tiles could not be analyzed due to incorrect tile shapes.</p></li>
+<li><p>Thresholds1 (str): Antigen thresholds for slide 1.</p></li>
+<li><p>Thresholds2 (str): Antigen thresholds for slide 2</p></li>
+<li><p>Thresholds3 (str): Antigen thresholds for slide 3</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_slide</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_antigen_profiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initializes the class. The class contains information on the slide collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection_name</strong> (<em>str</em>) – Name of the collection (i.e. Name of tumor set or patient ID)</p></li>
+<li><p><strong>src_dir</strong> (<em>str</em>) – Path to src directory containing the WSIs.</p></li>
+<li><p><strong>dest_dir</strong> (<em>str</em>) – Path to destination directory for results.</p></li>
+<li><p><strong>ref_slide</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to reference slide. If ‘ref_slide’ is None it will be automatically set to
+the HE slide based on the filename of input files. Defaults to None.</p></li>
+<li><p><strong>path_antigen_profiles</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to antigen profiles. Definitions as .json or .csv are accepted.
+If no default thresholds will be applied during processing.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.evaluate_antigen_pair">
+<span class="sig-name descname"><span class="pre">evaluate_antigen_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slide1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slide2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.evaluate_antigen_pair"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.evaluate_antigen_pair" title="Link to this definition"></a></dt>
+<dd><p>Analyzes the antigen co-expression for a pair of two slides.</p>
+<p>Analyzes antigen co-expressions for each tile for the given pair of slides using multiprocesing based on the
+antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
+<cite>dual_antigen_expressions</cite> and saved as CSV in <cite>data_dir</cite> as well as PICKLE in <cite>pickle_dir</cite>. For more detailed
+explanation of the co-expression results see <cite>SlideCollection.triplet_antigen_expressions</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>slide1</strong> (<a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><em>Slide</em></a>) – Slide Object for slide 1.</p></li>
+<li><p><strong>slide2</strong> (<a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><em>Slide</em></a>) – Slide Object for slide 2.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
+reconstructed later on. However, storing images will require additional storage. Defaults to False.</p></li>
+<li><p><strong>masking_mode</strong> (<em>str</em>) – <p>Determines the mode for mask application that was used for quantification.</p>
+<ul>
+<li><dl class="simple">
+<dt><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.</dt><dd><p>Recommended when registration quality is lower (e.g. high median rTRE).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.</dt><dd><p>Offers finer co-expression evaluation, but is more sensitive to registration errors.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.evaluate_antigen_triplet">
+<span class="sig-name descname"><span class="pre">evaluate_antigen_triplet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slide1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slide2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slide3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.evaluate_antigen_triplet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.evaluate_antigen_triplet" title="Link to this definition"></a></dt>
+<dd><p>Analyzes the antigen co-expression for a triplet of three slides.</p>
+<p>Analyzes antigen co-expressions for each of tiles of the given triplet of slides using Multiprocessing based on
+the antigen-specific thresholds of each slide. Results from each of the tiles are summarized, stored in
+<cite>triplet_antigen_expressions</cite> and saved as CSV in <cite>data_dir</cite> as well as PICKLE in <cite>pickle_dir</cite>. For more
+detailed explanation of the co-expression results see <cite>SlideCollection.triplet_antigen_expressions</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>slide1</strong> (<a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><em>Slide</em></a>) – Slide Object for slide 1.</p></li>
+<li><p><strong>slide2</strong> (<a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><em>Slide</em></a>) – Slide Object for slide 2.</p></li>
+<li><p><strong>slide3</strong> (<a class="reference internal" href="#cubats.slide_collection.slide.Slide" title="cubats.slide_collection.slide.Slide"><em>Slide</em></a>) – Slide Object for slide 3.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
+reconstructed later on. However, storing images will require additional storage. Defaults to False.</p></li>
+<li><p><strong>masking_mode</strong> (<em>str</em>) – <p>Determines the mode for mask application that was used for quantification.</p>
+<ul>
+<li><dl class="simple">
+<dt><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.</dt><dd><p>Recommended when registration quality is lower (e.g. high median rTRE).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.</dt><dd><p>Offers finer co-expression evaluation, but is more sensitive to registration errors.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.extract_mask_tile_coordinates">
+<span class="sig-name descname"><span class="pre">extract_mask_tile_coordinates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save_img</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.extract_mask_tile_coordinates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.extract_mask_tile_coordinates" title="Link to this definition"></a></dt>
+<dd><p>Extracts mask coordinates from the mask slide.</p>
+<p>Generates a list containing of tiles coordinates that are part of the mask. This allows to only process tiles
+that are part of the mask and thus contain tumor tissue. Tiles with less than 10% tumor tissue are dropped due
+to save runtime. Previous mask coordinates will be overwritten and the results will be stored as pickle in
+<cite>pickle_dir</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>save_img</strong> (<em>bool</em>) – Boolean to determine if mask tiles shall be saved as image. Necessary if mask shall be
+reconstructed later on. Note: Storing tiles will require addition storage. Defaults to False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.generate_antigen_pair_combinations">
+<span class="sig-name descname"><span class="pre">generate_antigen_pair_combinations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.generate_antigen_pair_combinations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.generate_antigen_pair_combinations" title="Link to this definition"></a></dt>
+<dd><p>Creates all possible antigen pairs and analyzes antigen co-expression for all pairs. Results are stored
+in <cite>dual_antigen_expressions</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>masking_mode</strong> (<em>str</em>) – <p>Determines the mode for mask application that was used for quantification.</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.</dt><dd><p>Recommended when registration quality is lower (e.g. high median rTRE).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.</dt><dd><p>Offers finer co-expression evaluation, but is more sensitive to registration errors.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.generate_antigen_triplet_combinations">
+<span class="sig-name descname"><span class="pre">generate_antigen_triplet_combinations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.generate_antigen_triplet_combinations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.generate_antigen_triplet_combinations" title="Link to this definition"></a></dt>
+<dd><p>Creates all possible antigen triplets and analyzes antigen co-expression for all triplets. Results are stored
+in <cite>triplet_antigen_expressions</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>masking_mode</strong> (<em>str</em>) – <p>Determines the mode for mask application that was used for quantification.</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.</dt><dd><p>Recommended when registration quality is lower (e.g. high median rTRE).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.</dt><dd><p>Offers finer co-expression evaluation, but is more sensitive to registration errors.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.quantify_all_slides">
+<span class="sig-name descname"><span class="pre">quantify_all_slides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save_imgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.quantify_all_slides"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.quantify_all_slides" title="Link to this definition"></a></dt>
+<dd><p>Quantifies all registered slides sequentially and stores results.</p>
+<p>Quantifies all slides that were instantiated sequentially with the exception of the reference_slide and the
+mask_slide. Results are stored as .CSV into the <cite>data_dir</cite>. All previous quantification results in the
+<cite>quant_res_df</cite> will be reset and the previous .CSV file overwritten.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>save_imgs</strong> (<em>bool</em>) – Boolean determining if tiles shall be saved as image during processing. This is necessary
+if slides shall be reconstructed after processing. Note: storing tiles may require substantial
+additional storage. Defaults to False.</p></li>
+<li><p><strong>masking_mode</strong> (<em>str</em>) – <p>Defines how the tumor mask is applied to tiles during quantification.</p>
+<ul>
+<li><p><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.
+Recommended when registration quality is lower (e.g. high median rTRE).</p></li>
+<li><p><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.
+Offers finer quantification, but is more sensitive to registration errors.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.quantify_single_slide">
+<span class="sig-name descname"><span class="pre">quantify_single_slide</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slide_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masking_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'tile-level'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.quantify_single_slide"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.quantify_single_slide" title="Link to this definition"></a></dt>
+<dd><p>Quantifies a single slide and appends the results to <cite>quant_res_df</cite>.</p>
+<p>This function quantifies staining intensities for all tiles of the given slide using multiprocessing. The slide
+matching the passed slide_name is retrieved from the collection_list and quantified using the quantify_slide
+function of the Slide class. Results are appended to <cite>quant_res_df</cite>, which is then stored as .CSV in self.
+<cite>data_dir</cite> and as .PICKLE in <cite>pickle_dir</cite>. Existing .CSV/.PICKLE files are overwritten.
+For more information on quantification checkout Slide.quantify_slide() function in the slide.py.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>slide_name</strong> (<em>str</em>) – Name of the slide to be processed.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em>) – Boolean determining if tiles shall be saved during processing. Necessary if slide shall be
+reconstructed later on. However, storing images will require addition storage. Defaults to False.</p></li>
+<li><p><strong>masking_mode</strong> (<em>str</em>) – <p>Defines how the tumor mask is applied to tiles during quantification.</p>
+<ul>
+<li><dl class="simple">
+<dt><cite>tile-level</cite> (default): Applies the mask coarsly - tiles overlapping the mask are fully included.</dt><dd><p>Recommended when registration quality is lower (e.g. high median rTRE).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><cite>pixel-level</cite>: Applies the mask precisely at pixel level - only masked pixels are included.</dt><dd><p>Offers finer quantification, but is more sensitive to registration errors.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.register_slides">
+<span class="sig-name descname"><span class="pre">register_slides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_slide</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">microregistration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_non_rigid_registration_dim_px</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_res_alignement</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_res_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.register_slides"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.register_slides" title="Link to this definition"></a></dt>
+<dd><p>Registers all WSIs in the collection using Valis.</p>
+<p>Registers all WSIs in the collection and aligns them. Registration can be performed towards a selected
+referenceWSI or automatically towards a WSI chosen by VALIS. Registration includes rigid and non-rigid
+registration steps. Optional <cite>microregistration</cite> can be applied to further improve registration quality.
+The registered slides are saved in the <cite>registration</cite> directory. Intermediate results are stored in the
+<cite>intermediate_registration_results</cite> directory. Further configuration options such as
+<cite>max_non_rigid_registration_dim_px</cite> and cropping methods are available.
+Lastly, an additional, customizable high-resolution alignment can be performed if specified, which allows
+tailoring the alignment resolution via the <cite>high_res_fraction</cite> parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reference_slide</strong> (<em>str</em>) – Path to reference slide. If None, the first slide in the collection will be used.
+Defaults to None.</p></li>
+<li><p><strong>microregistration</strong> (<em>bool</em>) – Boolean determining if microregistration shall be used. Defaults to True.</p></li>
+<li><p><strong>max_non_rigid_registration_dim_px</strong> (<em>int</em>) – Maximum size of non-rigid registration dimension in pixels.
+Defaults to 2000.</p></li>
+<li><p><strong>crop</strong> (<em>str</em>) – Crop method to be used. Defaults to None which results cropping to reference slide if one is
+provided. If no reference slide is provided, the default crop method is ‘overlap’.</p></li>
+<li><p><strong>high_res_alignment</strong> (<em>bool</em>) – Boolean determining if customizable high-resolution alignment shall be
+performed. Defaults to False.</p></li>
+<li><p><strong>high_res_fraction</strong> (<em>float</em>) – Fraction of the image to be used for high resolution alignment. Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.tumor_segmentation">
+<span class="sig-name descname"><span class="pre">tumor_segmentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_slide</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tile_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[1024,</span> <span class="pre">1024]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inversion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot_results</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide_collection.html#SlideCollection.tumor_segmentation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.tumor_segmentation" title="Link to this definition"></a></dt>
+<dd><p>Performs tumor segmentation on the HE WSI in the SlideCollection.</p>
+<p>Performs tumor segmentation on either a specified reference WSI or the reference WSI selected by the
+SlideCollection. The segmentation model needs to be passed. By default, segmentation results are saved into the
+<cite>registration_dir</cite> of the SlideCollection, an optional ouput path can be provided. Model-specific parameters
+such as <cite>normalization</cite>, or <cite>inversion</cite> can also be passed. Lastly, segmentation_results can be plotted onto
+the tissue if <cite>plot_results</cite> is set to True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<em>str</em>) – Path to segmentation model.</p></li>
+<li><p><strong>reference_slide</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to reference slide. If None, the reference slide of the
+SlideCollection is used. Defaults to None.</p></li>
+<li><p><strong>tile_size</strong> (<em>list</em><em>, </em><em>optional</em>) – Tile size to be used for segmentation. Defaults to [1024, 1024].</p></li>
+<li><p><strong>output_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Output path for segmentation results. If None, the <cite>registration_dir</cite> of the
+SlideCollection is used. Defaults to None.</p></li>
+<li><p><strong>normalization</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean determining if stain normalization shall be applied. Defaults to
+False.</p></li>
+<li><p><strong>inversion</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean determining if color inversion shall be applied. Defaults to False.</p></li>
+<li><p><strong>plot_results</strong> (<em>bool</em><em>, </em><em>optional</em>) – Boolean determining if segmentation results shall be plotted onto the tissue.
+Defaults to False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="slide">
+<h3>Slide<a class="headerlink" href="#slide" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cubats.slide_collection.slide.</span></span><span class="sig-name descname"><span class="pre">Slide</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide.html#Slide"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide.Slide" title="Link to this definition"></a></dt>
+<dd><p>Slide Class.</p>
+<dl class="simple">
+<dt><cite>Slide</cite> class instatiates a slide object containing all relevant information and results for a single slide. All</dt><dd><p>slide specific operations that can be performed on a single slide rather than on a collection of slides are
+implemented in this class. This includes quantification of staining intensities and reconstruction of a slide. The
+class is initialized with the name of the slide, the path to the slide file, as well as information on whether the
+slide is a mask or reference slide. The class contains a dictionary of detailed quantification results for each
+tile, as well as a dictionary of summarized quantification results for the entire slide. The slide object also
+contains information on the OpenSlide object, the tiles, the level count, the level dimensions, as well as the
+tile count. The slide object also contains a directory to save the tiles after color deconvolution, which is
+necessary for reconstruction of the slide later on.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.name" title="Link to this definition"></a></dt>
+<dd><p>The name of the slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.openslide_object">
+<span class="sig-name descname"><span class="pre">openslide_object</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.openslide_object" title="Link to this definition"></a></dt>
+<dd><p>The OpenSlide Object of the slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>openslide.OpenSlide</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.tiles">
+<span class="sig-name descname"><span class="pre">tiles</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.tiles" title="Link to this definition"></a></dt>
+<dd><p>DeepZoom Generator containing the tiles of the slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>openslide.deepzoom.DeepZoomGenerator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.level_count">
+<span class="sig-name descname"><span class="pre">level_count</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.level_count" title="Link to this definition"></a></dt>
+<dd><p>The number of DeepZoom levels of the slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.level_dimensions">
+<span class="sig-name descname"><span class="pre">level_dimensions</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.level_dimensions" title="Link to this definition"></a></dt>
+<dd><p>List of tuples (pixels_x, pixels_y) for each Deep Zoom level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.tile_count">
+<span class="sig-name descname"><span class="pre">tile_count</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.tile_count" title="Link to this definition"></a></dt>
+<dd><p>The number of tiles in the slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.masked_tiles">
+<span class="sig-name descname"><span class="pre">masked_tiles</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.masked_tiles" title="Link to this definition"></a></dt>
+<dd><p>List containing the tiles after intersection of the slide and mask.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.dab_tile_dir">
+<span class="sig-name descname"><span class="pre">dab_tile_dir</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.dab_tile_dir" title="Link to this definition"></a></dt>
+<dd><p>Directory to save the tiles after color deconvolution is applied. Necessary for
+reconstruction of the slide. If save_img is False no tiles are saved and this attribute is None.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.is_mask">
+<span class="sig-name descname"><span class="pre">is_mask</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.is_mask" title="Link to this definition"></a></dt>
+<dd><p>Whether the slide is the slide_collections mask slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.is_reference">
+<span class="sig-name descname"><span class="pre">is_reference</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.is_reference" title="Link to this definition"></a></dt>
+<dd><p>Whether the slide is the slide_collections reference slide.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.antigen_profile">
+<span class="sig-name descname"><span class="pre">antigen_profile</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.antigen_profile" title="Link to this definition"></a></dt>
+<dd><p>Dictionary containing antigen-specific quantification thresholds
+(high-positive, medium-positive, low-postitive). If no profile is provided, default thresholds are used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict, optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.detailed_quantification_results">
+<span class="sig-name descname"><span class="pre">detailed_quantification_results</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.detailed_quantification_results" title="Link to this definition"></a></dt>
+<dd><p>Dictionary containing detailed quantification results for each tile of
+the slide. The dictionary is structured as follows:</p>
+<ul>
+<li><p>key (int): Index of the tile.</p></li>
+<li><p>value (dict): Dictionary containing the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Flag (int): Flag indicating whether the tile was processed (1) or not (0).</p></li>
+<li><p>Histogram (array): Array containing the histogram of the tile.</p></li>
+<li><p>Hist_centers (array): Array containing the centers of the histogram bins.</p></li>
+<li><p>Zones (array): Array containing the number of pixels in each zone sorted by index according to the
+following attribution High Positive, Positive, Low Positive, Negative, Background).</p></li>
+<li><p>Score (str): Score of the tile based on the zones.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.quantification_summary">
+<span class="sig-name descname"><span class="pre">quantification_summary</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.quantification_summary" title="Link to this definition"></a></dt>
+<dd><p>Dictionary containing the summarized quantification results for the slide:</p>
+<ul class="simple">
+<li><p>Name (str): Slide name</p></li>
+<li><p>Coverage (%) (float): Percentage of all positively quantified pixels in the Slide. This includes all
+high-postive, medium-positive, and low-positive stained pixels.</p></li>
+<li><p>High Positive (%) (float): Percentage of highly positive stained pixels in the Slide.</p></li>
+<li><p>Medium Positive (%) (float): Percentage of medium positive stained pixels in the Slide.</p></li>
+<li><p>Low Positive  (%) (float): Percentage of low positive stained pixels in the Slide.</p></li>
+<li><p>Negative  (%) (float): Percentage of negatively stained pixels in the Slide.</p></li>
+<li><p>Total Tissue  (%) (float): Percentage of tissue in the Slide.</p></li>
+<li><p>Background / No Tissue (%) (float): Percentage of Background pixels in the Slide.</p></li>
+<li><p>H-Score (int): H-Score of the slide.</p></li>
+<li><p>Score (str): Pathological score of the slide: High Positive, Medium Positive, Low Positive, Negative,
+Background.</p></li>
+<li><p>Total Processed Tiles (%): Percentage of processed tiles of the slide.</p></li>
+<li><p>Error (%) (float): Percentage of skipped tiles because they did not contain tissue.</p></li>
+<li><p>Thresholds: Antigen-specific thresholds used during quantification.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.properties">
+<span class="sig-name descname"><span class="pre">properties</span></span><a class="headerlink" href="#cubats.slide_collection.slide.Slide.properties" title="Link to this definition"></a></dt>
+<dd><p>Dictionary containing relevant slide properties including: <cite>name</cite>, <cite>is_reference</cite>, <cite>is_mask</cite>,
+<cite>openslide_object</cite>, <cite>tiles</cite>, <cite>level_count</cite>, <cite>level_dimensions</cite>, and <cite>tile_count</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide.html#Slide.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide.Slide.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize a Slide object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – The name of the slide.</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – The path to the slide file.</p></li>
+<li><p><strong>is_mask</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether the slide is a mask. Defaults to False.</p></li>
+<li><p><strong>is_reference</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether the slide is a reference slide. Defaults to False.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.quantify_slide">
+<span class="sig-name descname"><span class="pre">quantify_slide</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_coordinates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_img</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide.html#Slide.quantify_slide"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide.Slide.quantify_slide" title="Link to this definition"></a></dt>
+<dd><p>Quantifies staining intensities for masked tiles of this slide.</p>
+<p>This function uses multiprocessing to quantify staining intensities of masked tiles for the slide.
+Each tile undergoes color deconvolution followed by staining intensity quantification based on the IHC
+Profiler’s algorithm. If <cite>save_img</cite> is True, tiles are saved in <cite>img_dir</cite> after deconvolution for later
+reconstruction. After color deconvolution, each tile is processed as a grayscale image, and each pixel’s
+staining intensity (0-255) is quantified based on the thresholds defined in <cite>self.antigen_profile</cite>. If no
+specific antigen_profile was provided the default profile will be used. Results are stored in
+<cite>self.detailed_quantification_results</cite> and summarized in <cite>self.quantification_summary</cite>. Both are saved as
+PICKLE files in <cite>save_dir</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask_coordinates</strong> (<em>list</em>) – List of xy-coordinates from the maskslide where the mask is positive.</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em>) – Directory to save the results. Usually the slides pickle directory.</p></li>
+<li><p><strong>save_img</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to save the tiles after color deconvolution. Defaults to False.
+Necessary for reconstruction of the slide.</p></li>
+<li><p><strong>img_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory to save the tiles. Must be provided if tiles shall be saved. Defaults to
+None.</p></li>
+<li><p><strong>mask</strong> (<em>openslide.deepzoom.DeepZoomGenerator</em><em>, </em><em>optional</em>) – DeepZoomGenerator containing the detailed
+mask. Defaults to None. Provides a more detailed mask for the quantification of the slide, however,
+might result in larger inaccuracies for WSI with low congruence.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.reconstruct_slide">
+<span class="sig-name descname"><span class="pre">reconstruct_slide</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide.html#Slide.reconstruct_slide"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide.Slide.reconstruct_slide" title="Link to this definition"></a></dt>
+<dd><p>Reconstructs a slide into a Whole Slide Image (WSI) based on saved tiles. This is only possible if tiles have
+been saved during processing. The WSI is then saved as .tif in the specified <cite>out_path</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_path</strong> (<em>str</em>) – Path to saved tiles</p></li>
+<li><p><strong>out_path</strong> (<em>str</em>) – Path where to save the reconstructed slide.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cubats.slide_collection.slide.Slide.summarize_quantification_results">
+<span class="sig-name descname"><span class="pre">summarize_quantification_results</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cubats/slide_collection/slide.html#Slide.summarize_quantification_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cubats.slide_collection.slide.Slide.summarize_quantification_results" title="Link to this definition"></a></dt>
+<dd><p>Summarizes quantification results.</p>
+<p>Summarizes quantification results for a given slide and appends them to <cite>self.quantification_summary</cite>. This
+includes the total number of pixels in each zone, the percentage of pixels in each zone, and a score for each
+zone.</p>
+<dl class="simple">
+<dt>The summary contains the following keys:</dt><dd><ul class="simple">
+<li><p>Slide (str): Name of the slide.</p></li>
+<li><p>Coverage (float): Tumor coverage of the antigen in the slide.</p></li>
+<li><p>High Positive (float): Percentage of pixels in the high positive zone.</p></li>
+<li><p>Positive (float): Percentage of pixels in the positive zone.</p></li>
+<li><p>Low Positive (float): Percentage of pixels in the low positive zone.</p></li>
+<li><p>Negative (float): Percentage of pixels in the negative zone.</p></li>
+<li><p>Total Tissue (float): Total amount of tissue in the slide.</p></li>
+<li><p>Background (float): Percentage of pixels in the white space background or fatty tissues.</p></li>
+<li><p>H-Score (float): H-score calculation based on positive pixels.</p></li>
+<li><p>Score (str): Overall score of the slide based on the zones. However, the score for the entire slide
+may be misleading since much negative tissue may lead to a negative score even though the slide may
+contain a lot of positive tissue as well. Therefore, the score for the entire slide should be
+interpreted with caution.</p></li>
+<li><p>Total Processed Tiles (float): Percentage of total processed tiles.</p></li>
+<li><p>Error (float): Percentage of tiles that were not processed as they did not contain sufficient tissue.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the slide is a mask slide or a reference slide.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="examples.html" class="btn btn-neutral float-left" title="Examples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="registration.html" class="btn btn-neutral float-right" title="Image Registration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

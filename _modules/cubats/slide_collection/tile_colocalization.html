@@ -1,0 +1,1536 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cubats.slide_collection.tile_colocalization &mdash; CuBATS 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/CuBATS_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User-Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">CuBATS Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../slide_collection.html">Slide Collection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../registration.html">Image Registration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../segmentation.html">Segmentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quantification.html">Quantification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../colocalization.html">Co-Expression Analysis</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">CuBATS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">cubats.slide_collection.tile_colocalization</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for cubats.slide_collection.tile_colocalization</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Third Party</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+
+<span class="c1"># CuBATS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">xp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cubats.cutils</span><span class="w"> </span><span class="kn">import</span> <span class="n">to_numpy</span>
+
+<span class="c1"># Define color schemes for each tile</span>
+<span class="n">COLOR_OVERLAP</span> <span class="o">=</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># Strong Red</span>
+<span class="n">COLOR_TILE1</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">102</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">102</span><span class="p">],</span> <span class="p">[</span><span class="mi">153</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">153</span><span class="p">]]</span>  <span class="c1"># Green shades</span>
+<span class="n">COLOR_TILE2</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">204</span><span class="p">],</span> <span class="p">[</span><span class="mi">102</span><span class="p">,</span> <span class="mi">204</span><span class="p">,</span> <span class="mi">255</span><span class="p">],</span> <span class="p">[</span><span class="mi">153</span><span class="p">,</span> <span class="mi">204</span><span class="p">,</span> <span class="mi">255</span><span class="p">]]</span>  <span class="c1"># Blue shades</span>
+<span class="n">COLOR_TILE3</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">165</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">102</span><span class="p">],</span>
+               <span class="p">[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">225</span><span class="p">,</span> <span class="mi">153</span><span class="p">]]</span>  <span class="c1"># Orange shades</span>
+<span class="n">COLOR_NEGATIVE</span> <span class="o">=</span> <span class="p">[</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">]</span>  <span class="c1"># White</span>
+<span class="n">COLOR_BACKGROUND</span> <span class="o">=</span> <span class="p">[</span><span class="mi">192</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">192</span><span class="p">]</span>  <span class="c1"># Gray</span>
+<span class="n">COLOR_NON_MASK</span> <span class="o">=</span> <span class="p">[</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">]</span>  <span class="c1"># Darker Gray</span>
+
+
+<div class="viewcode-block" id="evaluate_antigen_pair_tile">
+<a class="viewcode-back" href="../../../colocalization.html#cubats.slide_collection.tile_colocalization.evaluate_antigen_pair_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_antigen_pair_tile</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function analyzes antigen co-expression of the same tile from two different antigen slides and returns the</span>
+<span class="sd">    results as dictionary.</span>
+
+<span class="sd">    The function performs pixel-wise comparison across two images to evaluate combined total coverage, antigen overlap,</span>
+<span class="sd">    and complementary expression. The intensity levels are divided into five categories based on their intensity values.</span>
+<span class="sd">    Intensity values are defined for each tile by the passed antigen profile which can be defined when initializing the</span>
+<span class="sd">    SlideCollection. If not antigen profiles are defined, intensity values will fall back to default thresholds:</span>
+<span class="sd">    high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),</span>
+<span class="sd">    and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the</span>
+<span class="sd">    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied</span>
+<span class="sd">    during quantification: `tile-level` or `pixel-level`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        iterable (iterable): An iterable containing the following elements:</span>
+
+<span class="sd">            - `tile1`: the first tile to be compared and analyzed for antigen coverage.</span>
+
+<span class="sd">            - `tile2`: the second tile to be compared and analyzed for antigen coverage.</span>
+
+<span class="sd">            - `Antigen-specific profiles`: &#39;profile1&#39;, &#39;profile2&#39;, and &#39;profile3&#39; containing antigen-specific thresholds</span>
+<span class="sd">              for tile1, tile2, and tile 3respectively.</span>
+
+<span class="sd">            - `output path`: the directory where the output image should be saved.</span>
+
+<span class="sd">            - `save_img`: a flag indicating whether to save the output image.</span>
+
+<span class="sd">            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the analysis:</span>
+<span class="sd">            - Tilename: Name of the tile</span>
+<span class="sd">            - Flag: Flag indicating if the tile was processed or not. (1: processed; -1: not processed due to both</span>
+<span class="sd">              tiles not being processable; -2: one of the tiles was not processable due to wrong shape)</span>
+<span class="sd">            - Total Coverage: Percentage of positive pixels (intensity values &lt; 181), covered by both tiles combined,</span>
+<span class="sd">              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Total Overlap: Percentage of positive pixels that are positive in both images combined, with respect to</span>
+<span class="sd">              the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Total Complement: Percentage of positive pixels that are only covered by one of the two images, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - High Positive Overlap: Percentage of highly positive pixels covered by both tiles combined, with respect</span>
+<span class="sd">              to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - High Positive Complement: Percentage of highly positive pixels covered by only one of the two tiles, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Medium Positive Overlap: Percentage of medium positive pixels covered by both tiles combined, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Medium Positive Complement: Percentage of medium positive pixels covered by only one of the two tiles,</span>
+<span class="sd">              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Low Positive Overlap: Percentage of low positive pixels covered by both tiles combined, with respect to</span>
+<span class="sd">              the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Low Positive Complement: Percentage of low positive pixels covered by only one of the two tiles, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Negative: Percentage of negative pixels not covered by either of the two tiles, with respect to the</span>
+<span class="sd">              tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images</span>
+<span class="sd">              (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with</span>
+<span class="sd">              respect to the total pixel count of the tile. (Only if Flag == 1)</span>
+<span class="sd">            - Mask Area: Percentage of the tile that is covered by the tumor mask.</span>
+<span class="sd">            - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with</span>
+<span class="sd">              respect to total pixels in the image (1024 x 1024 = 1048576).</span>
+
+<span class="sd">    Optional Image Saving:</span>
+<span class="sd">        If save_img is True, an image containing the colored results will be saved in the specified directory. The</span>
+<span class="sd">        coloring scheme is as follows:</span>
+
+<span class="sd">            - Overlapping pixels (positive in both tiles):</span>
+<span class="sd">                - Highly positive: Red ([255, 0, 0])</span>
+<span class="sd">                - Medium positive: Red ([255, 0, 0])</span>
+<span class="sd">                - Low positive: Red ([255, 0, 0])</span>
+<span class="sd">            - Complementary pixels (positive in only one tile):</span>
+<span class="sd">                - Tile1 highly positive: Green ([0, 255, 0])</span>
+<span class="sd">                - Tile1 medium positive: Light Green ([153, 238, 153])</span>
+<span class="sd">                - Tile1 low positive: Very Light Green ([204, 255, 204])</span>
+<span class="sd">                - Tile2 highly positive: Blue ([0, 0, 204])</span>
+<span class="sd">                - Tile2 medium positive: Light Blue ([102, 204, 255])</span>
+<span class="sd">                - Tile2 low positive: Very Light Blue ([153, 204, 255])</span>
+<span class="sd">            - Negative pixels (both tiles negative): White ([255, 255, 255])</span>
+<span class="sd">            - Background pixels (no tissue): Gray ([192, 192, 192])</span>
+<span class="sd">            - Non-mask pixels: Dark Gray ([128, 128, 128])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">tile1</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tile2</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">profile1</span><span class="p">,</span> <span class="n">profile2</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="nb">dir</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">save_img</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">masking_mode</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+
+    <span class="n">tilename</span> <span class="o">=</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Tilename&quot;</span><span class="p">]</span>
+    <span class="n">colocal_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Tilename&quot;</span><span class="p">:</span> <span class="n">tilename</span><span class="p">}</span>
+
+    <span class="c1"># Check if both Images contain tissue.If both dont: Flag = -1</span>
+    <span class="k">if</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">return</span> <span class="n">colocal_dict</span>
+    <span class="c1"># If tile2 contains tissue and tile1 doesn&#39;t: Process tile2 only. If save_img is True, coloring for tile2 is blue.</span>
+    <span class="k">elif</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="p">(</span>
+            <span class="n">high_complement</span><span class="p">,</span>
+            <span class="n">med_complement</span><span class="p">,</span>
+            <span class="n">low_complement</span><span class="p">,</span>
+            <span class="n">negative</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span>
+            <span class="n">masked_pixels</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">_process_single_tile</span><span class="p">(</span>
+            <span class="n">tile2</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">COLOR_TILE2</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="o">=</span><span class="n">profile2</span>
+        <span class="p">)</span>
+        <span class="n">high_overlap</span><span class="p">,</span> <span class="n">med_overlap</span><span class="p">,</span> <span class="n">low_overlap</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># If tile1 contains tissue and tile2 doesn&#39;t: Process tile1 only. If save_img is True, coloring for tile1 is green.</span>
+    <span class="k">elif</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="p">(</span>
+            <span class="n">high_complement</span><span class="p">,</span>
+            <span class="n">med_complement</span><span class="p">,</span>
+            <span class="n">low_complement</span><span class="p">,</span>
+            <span class="n">negative</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span>
+            <span class="n">masked_pixels</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">_process_single_tile</span><span class="p">(</span>
+            <span class="n">tile1</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">COLOR_TILE1</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="o">=</span><span class="n">profile1</span>
+        <span class="p">)</span>
+        <span class="n">high_overlap</span><span class="p">,</span> <span class="n">med_overlap</span><span class="p">,</span> <span class="n">low_overlap</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># Check if tiles have the correct shape. If one doesn&#39;t: Flag = -2 TODO Padding</span>
+    <span class="k">elif</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span>
+        <span class="mi">1024</span><span class="p">,</span>
+        <span class="mi">1024</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">colocal_dict</span>
+    <span class="c1"># If both contain tissue: Process both tiles</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="p">(</span>
+            <span class="n">high_overlap</span><span class="p">,</span>
+            <span class="n">med_overlap</span><span class="p">,</span>
+            <span class="n">low_overlap</span><span class="p">,</span>
+            <span class="n">high_complement</span><span class="p">,</span>
+            <span class="n">med_complement</span><span class="p">,</span>
+            <span class="n">low_complement</span><span class="p">,</span>
+            <span class="n">negative</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span>
+            <span class="n">masked_pixels</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">_process_two_tiles</span><span class="p">(</span>
+            <span class="n">tile1</span><span class="p">,</span>
+            <span class="n">tile2</span><span class="p">,</span>
+            <span class="nb">dir</span><span class="p">,</span>
+            <span class="n">save_img</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">COLOR_TILE1</span><span class="p">,</span> <span class="n">COLOR_TILE2</span><span class="p">],</span>
+            <span class="n">antigen_profiles</span><span class="o">=</span><span class="p">[</span><span class="n">profile1</span><span class="p">,</span> <span class="n">profile2</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="n">non_mask</span> <span class="o">=</span> <span class="mi">1048576</span> <span class="o">-</span> <span class="n">masked_pixels</span>
+
+    <span class="c1"># Sum up the results</span>
+    <span class="n">coverage</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">high_overlap</span>
+        <span class="o">+</span> <span class="n">med_overlap</span>
+        <span class="o">+</span> <span class="n">low_overlap</span>
+        <span class="o">+</span> <span class="n">high_complement</span>
+        <span class="o">+</span> <span class="n">med_complement</span>
+        <span class="o">+</span> <span class="n">low_complement</span>
+    <span class="p">)</span>
+    <span class="n">total_overlap</span> <span class="o">=</span> <span class="n">high_overlap</span> <span class="o">+</span> <span class="n">med_overlap</span> <span class="o">+</span> <span class="n">low_overlap</span>
+    <span class="n">total_complement</span> <span class="o">=</span> <span class="n">high_complement</span> <span class="o">+</span> <span class="n">med_complement</span> <span class="o">+</span> <span class="n">low_complement</span>
+    <span class="n">tissue_count</span> <span class="o">=</span> <span class="n">coverage</span> <span class="o">+</span> <span class="n">negative</span>
+
+    <span class="k">if</span> <span class="n">masking_mode</span> <span class="o">==</span> <span class="s2">&quot;pixel-level&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">masked_pixels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">total_coverage</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">coverage</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">total_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">total_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">total_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">high_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">high_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">med_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">med_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">low_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">low_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">negative</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">negative</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">tissue_count</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">tissue_count</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">background</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">background</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">masked_pixels</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">non_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">non_mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">total_coverage</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">total_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">total_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">high_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">high_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">med_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">med_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">low_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">low_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">negative</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">tissue_count</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">background</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">masking_mode</span> <span class="o">==</span> <span class="s2">&quot;tile-level&quot;</span><span class="p">:</span>
+        <span class="n">total_coverage</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">coverage</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">total_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">total_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">high_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">high_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">med_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">med_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">low_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">low_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">negative</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">negative</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">tissue_count</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">tissue_count</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">background</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">background</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">masked_pixels</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">non_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+
+    <span class="c1"># Build dict</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Coverage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_coverage</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;High Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">high_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;High Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">high_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Medium Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">med_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Medium Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">med_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Low Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">low_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Low Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">low_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Negative&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">negative</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Tissue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tissue_count</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Background / No Tissue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">background</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Mask Area&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Non-mask Area&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">non_mask</span>
+    <span class="k">return</span> <span class="n">colocal_dict</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_antigen_triplet_tile">
+<a class="viewcode-back" href="../../../colocalization.html#cubats.slide_collection.tile_colocalization.evaluate_antigen_triplet_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_antigen_triplet_tile</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function analyzes antigen co-expression of the same tile from 3 different antigen slides and returns the</span>
+<span class="sd">    results as dictionary.</span>
+
+<span class="sd">    The function performs pixel-wise comparison across three images to evaluate combined total coverage, antigen</span>
+<span class="sd">    overlap, and complementary expression. The intensity levels are divided into five categories based on their</span>
+<span class="sd">    intensity values. Intensity values are defined for each tile by the passed antigen profile which can be defined</span>
+<span class="sd">    when initializing the `SlideCollection`. If not antigen profiles are defined, intensity values will fall back to</span>
+<span class="sd">    default thresholds: high positive (0-60), medium positive (61-120), low positive (121-180), negative (181-234),</span>
+<span class="sd">    and background (235-255). The results are saved in a dictionary and returned. Optionally, an image containing the</span>
+<span class="sd">    colored results can be saved in the specified directory. Masking mode can be determined to mirror the mode applied</span>
+<span class="sd">    during quantification: `tile-level` or `pixel-level`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        iterable (iterable): An iterable containing the following elements:</span>
+
+<span class="sd">            - `tile1`: the first tile to be compared and analyzed for antigen coverage.</span>
+
+<span class="sd">            - `tile2`: the second tile to be compared and analyzed for antigen coverage.</span>
+
+<span class="sd">            - `tile3`: the third tile to be compared and analyzed for antigen coverage.</span>
+
+<span class="sd">            - `Antigen-specific profiles`: &#39;profile1&#39;, &#39;profile2&#39;, and &#39;profile3&#39; containing antigen-specific thresholds</span>
+<span class="sd">              for tile1, tile2, and tile 3respectively.</span>
+
+<span class="sd">            - `output path`: the directory where the output image should be saved.</span>
+
+<span class="sd">            - `save_img`: a flag indicating whether to save the output image.</span>
+
+<span class="sd">            - `masking_mode`: Applied masking mode as for quantification: `tile-level` or `pixel-level`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the analysis:</span>
+<span class="sd">            - Tilename: Name of the tile</span>
+<span class="sd">            - Flag: Flag indicating if the tile was processed or not. (1: processed; 0: not processed due both tiles</span>
+<span class="sd">              not being processable; -1: all tiles not containing tissue)</span>
+<span class="sd">            - Total Coverage: Percentage of positive pixels (intensity values &lt; 181), covered by all three tiles</span>
+<span class="sd">              combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Total Overlap: Percentage of positive pixels that are positive in at least two or all three images</span>
+<span class="sd">              combined, with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Total Complement: Percentage of positive pixels that are only covered by one of the three images, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - High Positive Overlap: Percentage of highly positive pixels covered by all three tiles combined, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - High Positive Complement: Percentage of highly positive pixels covered by only one of the three tiles,</span>
+<span class="sd">              with respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Medium Positive Overlap: Percentage of medium positive pixels covered by all three tiles combined, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Medium Positive Complement: Percentage of medium positive pixels covered by only one of the three tiles.</span>
+<span class="sd">              (Only if Flag == 1)</span>
+<span class="sd">            - Low Positive Overlap: Percentage of low positive pixels covered by all three tiles combined, with respect</span>
+<span class="sd">              to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Low Positive Complement: Percentage of low positive pixels covered by only one of the three tiles, with</span>
+<span class="sd">              respect to the tumor mask in the images (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Negative: Percentage of negative pixels not covered by any of the three tiles, with respect to actual</span>
+<span class="sd">              tissue in the images.(Only if Flag == 1)</span>
+<span class="sd">            - Tissue: Percentage of actual tissue across the tiles,  with respect to the tumor mask in the images</span>
+<span class="sd">              (!=255). (Only if Flag == 1)</span>
+<span class="sd">            - Background / No Tissue: Percentage of the tile that is not covered by tissue across the tiles with</span>
+<span class="sd">              respect to the total pixel count of the tile. (Only if Flag == 1)</span>
+<span class="sd">            - Mask Area: Percentage of the tile that is covered by the tumor mask.</span>
+<span class="sd">            - Non-mask Area: Percentage of the tile that is not covered by the mask as tumor tissue (=255), with</span>
+<span class="sd">              respect to total pixels in the image (1024 x 1024 = 1048576).</span>
+
+<span class="sd">    Optional Image Saving:</span>
+<span class="sd">        If save_img is True, an image containing the colored results will be saved in the specified directory. The</span>
+<span class="sd">        coloring scheme is as follows:</span>
+
+<span class="sd">            - Overlapping pixels (positive in both tiles):</span>
+<span class="sd">                - Highly positive: Red ([255, 0, 0])</span>
+<span class="sd">                - Medium Positive: Red ([255, 0, 0])</span>
+<span class="sd">                - Low positive: Red ([255, 0, 0])</span>
+<span class="sd">            - Complementary pixels (positive in only one tile):</span>
+<span class="sd">                - Tile1 highly positive: Green ([0, 255, 0])</span>
+<span class="sd">                - Tile1 medium positive: Light Green ([153, 238, 153])</span>
+<span class="sd">                - Tile1 low positive: Very Light Green ([204, 255, 204])</span>
+<span class="sd">                - Tile2 highly positive: Blue ([0, 0, 204])</span>
+<span class="sd">                - Tile2 medium positive: Light Blue ([102, 204, 255])</span>
+<span class="sd">                - Tile2 low positive: Very Light Blue ([153, 204, 255])</span>
+<span class="sd">                - Tile3 highly positive: Orange ([255, 165, 0])</span>
+<span class="sd">                - Tile3 medium positive: Light Orange ([255, 200, 102])</span>
+<span class="sd">                - Tile3 low positive: Very Light Orange ([255, 225, 153])</span>
+<span class="sd">            - Negative pixels (both tiles negative): White ([255, 255, 255])</span>
+<span class="sd">            - Background pixels (no tissue): Gray ([192, 192, 192])</span>
+<span class="sd">            - Non-mask pixels: Dark Gray ([128, 128, 128])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">tile1</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tile2</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">tile3</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">profile1</span><span class="p">,</span> <span class="n">profile2</span><span class="p">,</span> <span class="n">profile3</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="nb">dir</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">save_img</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+    <span class="n">masking_mode</span> <span class="o">=</span> <span class="n">iterable</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+
+    <span class="n">tilename</span> <span class="o">=</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Tilename&quot;</span><span class="p">]</span>
+    <span class="n">colocal_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Tilename&quot;</span><span class="p">:</span> <span class="n">tilename</span><span class="p">}</span>
+
+    <span class="c1"># Count the number of images with Flag=0</span>
+    <span class="n">flag_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tile3</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Check if all Images contain tissue. If all dont: Flag = -1</span>
+    <span class="k">if</span> <span class="n">flag_count</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">return</span> <span class="n">colocal_dict</span>
+    <span class="c1"># Check if two images have Flag=0 and process the remaining image</span>
+    <span class="k">elif</span> <span class="n">flag_count</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># If only tile1 processable, process tile1 with color green</span>
+        <span class="k">if</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_single_tile</span><span class="p">(</span>
+                <span class="n">tile1</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">COLOR_TILE1</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="o">=</span><span class="n">profile1</span>
+            <span class="p">)</span>
+
+        <span class="c1"># If only tile2 processable, process tile2 with color blue</span>
+        <span class="k">elif</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_single_tile</span><span class="p">(</span>
+                <span class="n">tile2</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">COLOR_TILE2</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="o">=</span><span class="n">profile2</span>
+            <span class="p">)</span>
+
+        <span class="c1"># If only tile3 processable, process tile3 with color orange</span>
+        <span class="k">elif</span> <span class="n">tile3</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_single_tile</span><span class="p">(</span>
+                <span class="n">tile3</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">COLOR_TILE3</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="o">=</span><span class="n">profile3</span>
+            <span class="p">)</span>
+
+        <span class="n">high_overlap</span><span class="p">,</span> <span class="n">med_overlap</span><span class="p">,</span> <span class="n">low_overlap</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Check if only one tile has Flag=0 and process the remaining two tiles</span>
+    <span class="k">elif</span> <span class="n">flag_count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_overlap</span><span class="p">,</span>
+                <span class="n">med_overlap</span><span class="p">,</span>
+                <span class="n">low_overlap</span><span class="p">,</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_two_tiles</span><span class="p">(</span>
+                <span class="n">tile2</span><span class="p">,</span>
+                <span class="n">tile3</span><span class="p">,</span>
+                <span class="nb">dir</span><span class="p">,</span>
+                <span class="n">save_img</span><span class="p">,</span>
+                <span class="p">[</span><span class="n">COLOR_TILE2</span><span class="p">,</span> <span class="n">COLOR_TILE3</span><span class="p">],</span>
+                <span class="n">antigen_profiles</span><span class="o">=</span><span class="p">[</span><span class="n">profile2</span><span class="p">,</span> <span class="n">profile3</span><span class="p">],</span>
+            <span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_overlap</span><span class="p">,</span>
+                <span class="n">med_overlap</span><span class="p">,</span>
+                <span class="n">low_overlap</span><span class="p">,</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_two_tiles</span><span class="p">(</span>
+                <span class="n">tile1</span><span class="p">,</span>
+                <span class="n">tile3</span><span class="p">,</span>
+                <span class="nb">dir</span><span class="p">,</span>
+                <span class="n">save_img</span><span class="p">,</span>
+                <span class="p">[</span><span class="n">COLOR_TILE1</span><span class="p">,</span> <span class="n">COLOR_TILE3</span><span class="p">],</span>
+                <span class="n">antigen_profiles</span><span class="o">=</span><span class="p">[</span><span class="n">profile1</span><span class="p">,</span> <span class="n">profile3</span><span class="p">],</span>
+            <span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">tile3</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">high_overlap</span><span class="p">,</span>
+                <span class="n">med_overlap</span><span class="p">,</span>
+                <span class="n">low_overlap</span><span class="p">,</span>
+                <span class="n">high_complement</span><span class="p">,</span>
+                <span class="n">med_complement</span><span class="p">,</span>
+                <span class="n">low_complement</span><span class="p">,</span>
+                <span class="n">negative</span><span class="p">,</span>
+                <span class="n">background</span><span class="p">,</span>
+                <span class="n">masked_pixels</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">=</span> <span class="n">_process_two_tiles</span><span class="p">(</span>
+                <span class="n">tile1</span><span class="p">,</span>
+                <span class="n">tile2</span><span class="p">,</span>
+                <span class="nb">dir</span><span class="p">,</span>
+                <span class="n">save_img</span><span class="p">,</span>
+                <span class="p">[</span><span class="n">COLOR_TILE1</span><span class="p">,</span> <span class="n">COLOR_TILE2</span><span class="p">],</span>
+                <span class="n">antigen_profiles</span><span class="o">=</span><span class="p">[</span><span class="n">profile1</span><span class="p">,</span> <span class="n">profile2</span><span class="p">],</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Check for Error 2: Flag = -2: One of images doesn&#39;t have the correct shape</span>
+    <span class="c1"># TODO Think about padding images to correct shape</span>
+    <span class="k">elif</span> <span class="p">(</span>
+        <span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="n">tile3</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">colocal_dict</span>
+
+    <span class="c1"># Otherwise process all three images</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Flag&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="p">(</span>
+            <span class="n">high_overlap</span><span class="p">,</span>
+            <span class="n">med_overlap</span><span class="p">,</span>
+            <span class="n">low_overlap</span><span class="p">,</span>
+            <span class="n">high_complement</span><span class="p">,</span>
+            <span class="n">med_complement</span><span class="p">,</span>
+            <span class="n">low_complement</span><span class="p">,</span>
+            <span class="n">negative</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span>
+            <span class="n">masked_pixels</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">_process_three_tiles</span><span class="p">(</span>
+            <span class="n">tile1</span><span class="p">,</span>
+            <span class="n">tile2</span><span class="p">,</span>
+            <span class="n">tile3</span><span class="p">,</span>
+            <span class="nb">dir</span><span class="p">,</span>
+            <span class="n">save_img</span><span class="p">,</span>
+            <span class="n">antigen_profiles</span><span class="o">=</span><span class="p">[</span><span class="n">profile1</span><span class="p">,</span> <span class="n">profile2</span><span class="p">,</span> <span class="n">profile3</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="n">non_mask</span> <span class="o">=</span> <span class="mi">1048576</span> <span class="o">-</span> <span class="n">masked_pixels</span>
+
+    <span class="n">coverage</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">high_overlap</span>
+        <span class="o">+</span> <span class="n">med_overlap</span>
+        <span class="o">+</span> <span class="n">low_overlap</span>
+        <span class="o">+</span> <span class="n">high_complement</span>
+        <span class="o">+</span> <span class="n">med_complement</span>
+        <span class="o">+</span> <span class="n">low_complement</span>
+    <span class="p">)</span>
+    <span class="n">total_overlap</span> <span class="o">=</span> <span class="n">high_overlap</span> <span class="o">+</span> <span class="n">med_overlap</span> <span class="o">+</span> <span class="n">low_overlap</span>
+    <span class="n">total_complement</span> <span class="o">=</span> <span class="n">high_complement</span> <span class="o">+</span> <span class="n">med_complement</span> <span class="o">+</span> <span class="n">low_complement</span>
+    <span class="n">tissue_count</span> <span class="o">=</span> <span class="n">coverage</span> <span class="o">+</span> <span class="n">negative</span>
+
+    <span class="k">if</span> <span class="n">masking_mode</span> <span class="o">==</span> <span class="s2">&quot;pixel-level&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">masked_pixels</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">total_coverage</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">coverage</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">total_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">total_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">total_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">high_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">high_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">med_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">med_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">low_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_overlap</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">low_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_complement</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">negative</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">negative</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">tissue_count</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">tissue_count</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">background</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">background</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">masked_pixels</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">non_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">non_mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">total_coverage</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">total_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">total_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">high_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">high_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">med_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">med_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">low_overlap</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">low_complement</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">negative</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">tissue_count</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">background</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">masking_mode</span> <span class="o">==</span> <span class="s2">&quot;tile-level&quot;</span><span class="p">:</span>
+        <span class="n">total_coverage</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">coverage</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">total_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">total_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">total_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">high_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">high_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">high_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">med_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">med_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">med_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">low_overlap</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_overlap</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">low_complement</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">low_complement</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">negative</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">negative</span> <span class="o">/</span> <span class="n">tissue_count</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">tissue_count</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">tissue_count</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">background</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">background</span> <span class="o">/</span> <span class="n">masked_pixels</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">masked_pixels</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">non_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">non_mask</span> <span class="o">/</span> <span class="mi">1048576</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">non_mask</span> <span class="o">=</span> <span class="mf">0.00</span>
+
+    <span class="c1"># Build dict using Python floats</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Coverage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_coverage</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Total Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;High Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">high_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;High Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">high_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Medium Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">med_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Medium Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">med_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Low Positive Overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">low_overlap</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Low Positive Complement&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">low_complement</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Negative&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">negative</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Tissue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tissue_count</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Background / No Tissue&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">background</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Mask Area&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask</span>
+    <span class="n">colocal_dict</span><span class="p">[</span><span class="s2">&quot;Non-mask Area&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">non_mask</span>
+    <span class="k">return</span> <span class="n">colocal_dict</span></div>
+
+
+
+<div class="viewcode-block" id="_process_single_tile">
+<a class="viewcode-back" href="../../../colocalization.html#cubats.slide_collection.tile_colocalization._process_single_tile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_process_single_tile</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">antigen_profile</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Processes antigen expression for a single tile.</span>
+
+<span class="sd">    Processes a single image tile using vectorization and automatic backend detection for GPU acceleration. It</span>
+<span class="sd">    categorizes pixels into different complement levels, negative tissue, and background based on the passed antigen</span>
+<span class="sd">    profile. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tile (dict): A dictionary containing the image under the key `Image Array` and masks under the key `Masks`.</span>
+
+<span class="sd">        save_img (bool): A flag indicating whether to create a colored image and save it.</span>
+
+<span class="sd">        dir (str): The directory where the image should be saved if save_img is True.</span>
+
+<span class="sd">        color (list): A list of RGB color values to be used for different complement levels.</span>
+
+<span class="sd">        antigen_profile (dict): Antigen profile for the tile, specifying the thresholds applied during processing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing counts of pixels in the following order:</span>
+
+<span class="sd">            - high_complement (int): Sum of pixels with values below `high_positive_threshold` of `antigen profile`.</span>
+
+<span class="sd">            - med_complement (int): Sum of pixels with values between `high_positive_threshold` and</span>
+<span class="sd">              &#39;medium_positive_threshold` of `antigen_profile`.</span>
+
+<span class="sd">            - low_complement (int): Sum of pixels with values between `medium_positive_threshold` and</span>
+<span class="sd">              `low_positive_threshold` of `antigen_profile`.</span>
+
+<span class="sd">            - negative (int): Sum of pixels with values between `low_positive_threshold` and 234 of `antigen_profile`.</span>
+
+<span class="sd">            - background (int): Sum of pixels above 235 and below 255.</span>
+
+<span class="sd">    Optional Image Saving:</span>
+<span class="sd">        If `save_img` is True, an image containing the colored results will be saved in the specified directory.</span>
+<span class="sd">        The coloring scheme depends on the color parameter and is specified by the calling function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert image arrays to CuPy arrays</span>
+    <span class="n">img1</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">tumor_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img1</span><span class="p">)</span>
+    <span class="c1"># Get thresholds from antigen_profile</span>
+    <span class="n">high_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh</span> <span class="o">=</span> <span class="n">antigen_profile</span><span class="p">[</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile1</span>
+    <span class="n">high_positive_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="n">high_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">high_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img1</span> <span class="o">&lt;</span> <span class="n">medium_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">low_positive_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">medium_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img1</span> <span class="o">&lt;</span> <span class="n">low_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">low_thresh</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Calculate counts for each zone</span>
+    <span class="n">high_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">high_positive_mask</span><span class="p">)</span>
+    <span class="n">med_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">medium_positive_mask</span><span class="p">)</span>
+    <span class="n">low_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">low_positive_mask</span><span class="p">)</span>
+    <span class="n">negative</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">negative_mask</span><span class="p">)</span>
+    <span class="n">background</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">background_mask</span><span class="p">)</span>
+
+    <span class="n">masked_pixels</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tumor_mask</span><span class="p">)</span>
+
+    <span class="c1"># Save image if required</span>
+    <span class="k">if</span> <span class="n">save_img</span><span class="p">:</span>
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">high_positive_mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">high_positive_mask</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">COLOR_NON_MASK</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">high_positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># High complement color</span>
+        <span class="c1"># Positive complement color</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">medium_positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">low_positive_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># Low complement color</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">negative_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_NEGATIVE</span>  <span class="c1"># White for negative</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">background_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_BACKGROUND</span>  <span class="c1"># Gray for background</span>
+
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">tile</span><span class="p">[</span><span class="s1">&#39;Tilename&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.tif&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">high_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">med_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">low_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">negative</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">background</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">masked_pixels</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_process_two_tiles">
+<a class="viewcode-back" href="../../../colocalization.html#cubats.slide_collection.tile_colocalization._process_two_tiles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_process_two_tiles</span><span class="p">(</span><span class="n">tile1</span><span class="p">,</span> <span class="n">tile2</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">colors</span><span class="p">,</span> <span class="n">antigen_profiles</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Processes antigen co-expression for two single tiles.</span>
+
+<span class="sd">    Processes two image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes</span>
+<span class="sd">    pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen</span>
+<span class="sd">    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.</span>
+<span class="sd">    This function is typically called by `evaluate_antigen_pair_tile` or `evaluate_antigen_triplet_tile` when two of</span>
+<span class="sd">    the three tiles contain tissue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tile1 (dict): A dictionary containing tile1&#39;s data. The image can be accessed using the key `Image Array`.</span>
+
+<span class="sd">        tile2 (dict): A dictionary containing tile2&#39;s data. The image can be accessed using the key `Image Array`.</span>
+
+<span class="sd">        dir (str): The directory where the output image should be saved if `save_img` is True.</span>
+
+<span class="sd">        save_img (bool): A flag indicating whether to save the output image.</span>
+
+<span class="sd">        colors (list): A list of RGB color values to be used for different complement levels.</span>
+
+<span class="sd">        antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing the counts of:</span>
+
+<span class="sd">            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of</span>
+<span class="sd">              `antigen profiles`.</span>
+
+<span class="sd">            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and</span>
+<span class="sd">              `medium_positive_threshold` of `antigen_profiles`.</span>
+
+<span class="sd">            - low_complement (int): Sum of pixels with only one tile is between `medium_positive_threshold` and</span>
+<span class="sd">              `low_positive_threshold` of `antigen_profiles`.</span>
+
+<span class="sd">            - negative (int): Sum of pixels with values between `low_positive_threshold` and 235 of `antigen_profiles`.</span>
+
+<span class="sd">            - background (int): Sum of pixels above 235 and below 255.</span>
+
+<span class="sd">    Optional Image Saving:</span>
+<span class="sd">        If save_img is True, an image containing the colored results will be saved in the specified directory.</span>
+<span class="sd">        The coloring scheme depends on the color parameter and is specified by the calling function. For more</span>
+<span class="sd">        information, refer to the `evaluate_antigen_pair_tile` or `evaluate_antigen_triplet_tile` functions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert image arrays to CuPy arrays</span>
+    <span class="n">img1</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">img2</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># Define tumor mask (pixels &lt; 255 in either image, or same mask applied)</span>
+    <span class="c1"># tumor_mask = (img1 &lt; 255) &amp; (img2 &lt; 255)</span>
+    <span class="n">tumor_mask1</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img1</span><span class="p">)</span>
+    <span class="n">tumor_mask2</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img2</span><span class="p">)</span>
+    <span class="n">tumor_mask</span> <span class="o">=</span> <span class="n">tumor_mask1</span> <span class="o">&amp;</span> <span class="n">tumor_mask2</span>
+    <span class="k">assert</span> <span class="n">xp</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span>
+        <span class="n">tumor_mask1</span><span class="p">,</span> <span class="n">tumor_mask2</span>
+    <span class="p">),</span> <span class="s2">&quot;Tumor masks differ between the two tiles!&quot;</span>
+
+    <span class="c1"># Get thresholds from antigen_profile</span>
+    <span class="n">high_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="n">high_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile1</span>
+    <span class="n">high_positive_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="n">high_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask1</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">high_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="n">medium_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">medium_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img1</span> <span class="o">&lt;</span> <span class="n">low_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">low_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile2</span>
+    <span class="n">high_positive_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="n">high_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask2</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">high_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="n">medium_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">medium_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img2</span> <span class="o">&lt;</span> <span class="n">low_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">low_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Calculate overlap and complement counts</span>
+    <span class="n">high_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">)</span>
+    <span class="n">med_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">low_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">high_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">high_positive_mask1</span>
+        <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">+</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+        <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+    <span class="p">)</span>
+    <span class="n">med_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">medium_positive_mask1</span>
+        <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">+</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+        <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+    <span class="p">)</span>
+    <span class="n">low_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">low_positive_mask1</span>
+        <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">+</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+        <span class="o">&amp;</span> <span class="n">low_positive_mask2</span>
+    <span class="p">)</span>
+    <span class="n">negative</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">background</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span><span class="p">)</span>
+
+    <span class="n">masked_pixels</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tumor_mask</span><span class="p">)</span>
+
+    <span class="c1"># Save image if required</span>
+    <span class="k">if</span> <span class="n">save_img</span><span class="p">:</span>
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">high_positive_mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">high_positive_mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">COLOR_NON_MASK</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">COLOR_OVERLAP</span>  <span class="c1"># High overlap color</span>
+        <span class="p">)</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_OVERLAP</span>  <span class="c1"># Positive overlap color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_OVERLAP</span>  <span class="c1"># Low overlap color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span>
+            <span class="mi">0</span>
+        <span class="p">]</span>  <span class="c1"># High complement color for tile1</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span>
+            <span class="mi">0</span>
+        <span class="p">]</span>  <span class="c1"># High complement color for tile2</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span>
+            <span class="mi">1</span>
+        <span class="p">]</span>  <span class="c1"># Positive complement color for tile1</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span>
+            <span class="mi">1</span>
+        <span class="p">]</span>  <span class="c1"># Positive complement color for tile2</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">|</span> <span class="n">medium_positive_mask2</span> <span class="o">|</span> <span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span>
+            <span class="mi">2</span>
+        <span class="p">]</span>  <span class="c1"># Low complement color for tile1</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="o">~</span><span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">|</span> <span class="n">medium_positive_mask1</span> <span class="o">|</span> <span class="n">low_positive_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="n">low_positive_mask2</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span>
+            <span class="mi">2</span>
+        <span class="p">]</span>  <span class="c1"># Low complement color for tile2</span>
+        <span class="c1"># Negative tissue</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">COLOR_NEGATIVE</span>  <span class="c1"># White for negative</span>
+        <span class="p">)</span>
+        <span class="c1"># In-mask Background</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">COLOR_BACKGROUND</span>  <span class="c1"># Gray for background</span>
+        <span class="p">)</span>
+
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">tile1</span><span class="p">[</span><span class="s1">&#39;Tilename&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.tif&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">high_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">med_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">low_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">high_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">med_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">low_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">negative</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">background</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">masked_pixels</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_process_three_tiles">
+<a class="viewcode-back" href="../../../colocalization.html#cubats.slide_collection.tile_colocalization._process_three_tiles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_process_three_tiles</span><span class="p">(</span><span class="n">tile1</span><span class="p">,</span> <span class="n">tile2</span><span class="p">,</span> <span class="n">tile3</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">save_img</span><span class="p">,</span> <span class="n">antigen_profiles</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Processes antigen expression for three tiles.</span>
+
+<span class="sd">    Processes three image tiles using vectorization and automatic backend detection for GPU acceleration. It categorizes</span>
+<span class="sd">    pixels into overlap, different complement levels, negative tissue, and background based on the passed antigen</span>
+<span class="sd">    profiles. Optionally creates and saves a colored image of the analysis into the directory if `save_img` is True.</span>
+<span class="sd">    This function is typically called by `evaluate_antigen_pair_tile` or `evaluate_antigen_triplet_tile` when two of</span>
+<span class="sd">    the three tiles contain tissue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tile1 (dict): A dictionary containing tile1&#39;s data. The image can be accessed using the key `Image Array`.</span>
+
+<span class="sd">        tile2 (dict): A dictionary containing tile2&#39;s data. The image can be accessed using the key `Image Array`.</span>
+
+<span class="sd">        tile3 (dict): A dictionary containing tile3&#39;s data. The image can be accessed using the key `Image Array`.</span>
+
+<span class="sd">        dir (str): The directory where the output image should be saved if `save_img` is True.</span>
+
+<span class="sd">        save_img (bool): A flag indicating whether to save the output image.</span>
+
+<span class="sd">        colors (list): A list of RGB color values to be used for different complement levels.</span>
+
+<span class="sd">        antigen_profiles (list): List of two dicts specifying antigen thresholds for each tile respectively.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: A tuple containing the counts of:</span>
+
+<span class="sd">            - high_overlap (int): Sum of pixels where both tiles are highly positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - med_overlap (int): Sum of pixels where both tiles are medium positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - low_overlap (int): Sum of pixels where both tiles are low positive, according to `antigen_profiles`.</span>
+
+<span class="sd">            - high_complement (int): Sum of pixels with only one tile is below `high_positive_threshold` of</span>
+<span class="sd">              `antigen profiles`.</span>
+
+<span class="sd">            - med_complement (int): Sum of pixels with only one tile is between `high_positive_threshold` and</span>
+<span class="sd">              `medium_positive_threshold` of `antigen_profiles`.</span>
+
+<span class="sd">            - low_complement (int): Sum of pixels with only one tile is between `medium_positive_threshold` and</span>
+<span class="sd">              `low_positive_threshold` of `antigen_profiles`.</span>
+
+<span class="sd">            - negative (int): Sum of pixels with values between `low_positive_threshold` and 235 of `antigen_profiles`.</span>
+
+<span class="sd">            - background (int): Sum of pixels above 235 and below 255.</span>
+
+<span class="sd">    Optional Image Saving:</span>
+<span class="sd">        If save_img is True, an image containing the colored results will be saved in the specified directory.</span>
+<span class="sd">        The coloring scheme depends on the color parameter and is specified by the calling function. For more</span>
+<span class="sd">        information, refer to the `evaluate_antigen_pair_tile` or `evaluate_antigen_triplet_tile` functions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert image arrays to CuPy arrays</span>
+    <span class="n">img1</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile1</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">img2</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile2</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">img3</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tile3</span><span class="p">[</span><span class="s2">&quot;Image Array&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">tumor_mask1</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img1</span><span class="p">)</span>
+    <span class="n">tumor_mask2</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img2</span><span class="p">)</span>
+    <span class="n">tumor_mask3</span> <span class="o">=</span> <span class="o">~</span><span class="n">xp</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">img3</span><span class="p">)</span>
+    <span class="n">tumor_mask</span> <span class="o">=</span> <span class="n">tumor_mask1</span> <span class="o">&amp;</span> <span class="n">tumor_mask2</span> <span class="o">&amp;</span> <span class="n">tumor_mask3</span>
+    <span class="k">assert</span> <span class="n">xp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tumor_mask1</span> <span class="o">==</span> <span class="n">tumor_mask2</span><span class="p">)</span> <span class="ow">and</span> <span class="n">xp</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
+        <span class="n">tumor_mask2</span> <span class="o">==</span> <span class="n">tumor_mask3</span><span class="p">)</span>
+    <span class="c1"># Get thresholds from antigen_profile</span>
+    <span class="n">high_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh1</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="n">high_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh2</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="n">high_thresh3</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;high_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">medium_thresh3</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;medium_positive_threshold&quot;</span><span class="p">]</span>
+    <span class="n">low_thresh3</span> <span class="o">=</span> <span class="n">antigen_profiles</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;low_positive_threshold&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile1</span>
+    <span class="n">high_positive_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="n">high_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask1</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">high_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="n">medium_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">medium_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img1</span> <span class="o">&lt;</span> <span class="n">low_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="n">low_thresh1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask1</span> <span class="o">=</span> <span class="p">(</span><span class="n">img1</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile2</span>
+    <span class="n">high_positive_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="n">high_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask2</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">high_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="n">medium_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">medium_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img2</span> <span class="o">&lt;</span> <span class="n">low_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="n">low_thresh2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask2</span> <span class="o">=</span> <span class="p">(</span><span class="n">img2</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Create masks for different intensity zones for tile3</span>
+    <span class="n">high_positive_mask3</span> <span class="o">=</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&lt;</span> <span class="n">high_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">medium_positive_mask3</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">img3</span> <span class="o">&gt;=</span> <span class="n">high_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&lt;</span> <span class="n">medium_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="p">)</span>
+    <span class="n">low_positive_mask3</span> <span class="o">=</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&gt;=</span> <span class="n">medium_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span>
+        <span class="n">img3</span> <span class="o">&lt;</span> <span class="n">low_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">negative_mask3</span> <span class="o">=</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&gt;=</span> <span class="n">low_thresh3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&lt;</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+    <span class="n">background_mask3</span> <span class="o">=</span> <span class="p">(</span><span class="n">img3</span> <span class="o">&gt;=</span> <span class="mi">235</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">tumor_mask</span>
+
+    <span class="c1"># Calculate overlap and complement counts</span>
+    <span class="c1"># High overlap if all 3 or 2/3 pixels are high positive, regardless of the 3rd</span>
+    <span class="n">high_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Positive overlap if at least 2/3 pixels are positive or if 2 below 121 and not high overlap</span>
+    <span class="n">med_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Low positive overlap if 2/3 pixels are low positive or 2 pixel &lt;181 if not (high-) positive overlap</span>
+    <span class="n">low_overlap</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask3</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask2</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask1</span><span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># High complement if only 1 pixel &lt;61 while the other 2 &gt;= 181</span>
+    <span class="n">high_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="n">high_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">high_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">high_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Positive complement if only 1 pixel &lt;121 while the other 2 &gt;= 181</span>
+    <span class="n">med_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="n">medium_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">medium_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Positive complement if only 1 pixel &lt;181 while the other 2 &gt;= 181</span>
+    <span class="n">low_complement</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="n">low_positive_mask1</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask2</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="o">|</span> <span class="p">(</span>
+            <span class="n">low_positive_mask3</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Negative if at least 1/3 pixels &gt;180 and &lt;235 while no other pixel &lt;181</span>
+    <span class="n">negative</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+        <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+        <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+        <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+        <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+        <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+        <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+    <span class="p">)</span>
+    <span class="c1"># Background only if all 3 pixels are background</span>
+    <span class="n">background</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span><span class="p">)</span>
+
+    <span class="n">masked_pixels</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tumor_mask</span><span class="p">)</span>
+    <span class="c1"># Save image if required</span>
+    <span class="k">if</span> <span class="n">save_img</span><span class="p">:</span>
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">xp</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">high_positive_mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">high_positive_mask1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="n">xp</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">COLOR_NON_MASK</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">xp</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># High overlap color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask1</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">high_positive_mask2</span> <span class="o">&amp;</span> <span class="n">high_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_OVERLAP</span>
+
+        <span class="c1"># Positive overlap color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask1</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">medium_positive_mask2</span> <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask3</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask2</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">medium_positive_mask1</span>
+            <span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_OVERLAP</span>
+
+        <span class="c1"># Low overlap color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask3</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask1</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask2</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span><span class="n">low_positive_mask2</span> <span class="o">&amp;</span> <span class="n">low_positive_mask3</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">low_positive_mask1</span><span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="n">medium_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_OVERLAP</span>
+
+        <span class="c1"># High complement color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span>
+                <span class="n">high_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">high_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">high_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_TILE1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Positive complement color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span>
+                <span class="n">medium_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">medium_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_TILE1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Low complement color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="p">(</span>
+                <span class="n">low_positive_mask1</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask2</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask3</span> <span class="o">|</span> <span class="n">background_mask3</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">|</span> <span class="p">(</span>
+                <span class="n">low_positive_mask3</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask1</span> <span class="o">|</span> <span class="n">background_mask1</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">negative_mask2</span> <span class="o">|</span> <span class="n">background_mask2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_TILE1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># Negative color</span>
+        <span class="n">colored_img</span><span class="p">[</span>
+            <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+            <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+            <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+            <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+            <span class="o">|</span> <span class="n">negative_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+            <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">negative_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span>
+            <span class="o">|</span> <span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">negative_mask3</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="n">COLOR_NEGATIVE</span>
+
+        <span class="c1"># Background color</span>
+        <span class="n">colored_img</span><span class="p">[</span><span class="n">background_mask1</span> <span class="o">&amp;</span> <span class="n">background_mask2</span> <span class="o">&amp;</span> <span class="n">background_mask3</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">COLOR_BACKGROUND</span>
+        <span class="p">)</span>
+
+        <span class="n">colored_img</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">colored_img</span><span class="p">)</span>
+        <span class="n">img</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">tile1</span><span class="p">[</span><span class="s1">&#39;Tilename&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.tif&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">high_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">med_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">low_overlap</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">high_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">med_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">low_complement</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">negative</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">background</span><span class="p">),</span>
+        <span class="nb">int</span><span class="p">(</span><span class="n">masked_pixels</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Moritz Dinser &amp; Daniel Hieber.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
