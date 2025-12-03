@@ -141,7 +141,7 @@ def evaluate_antigen_pair_tile(iterable):
             tile1, dir, save_img, COLOR_TILE1, antigen_profile=profile1
         )
         high_overlap, med_overlap, low_overlap = (0, 0, 0)
-    # Check if tiles have the correct shape. If one doesn't: Flag = -2 TODO Padding
+    # Check if tiles have the correct shape. If one doesn't: Flag = -2
     elif tile1["Image Array"].shape != (1024, 1024) or tile2["Image Array"].shape != (
         1024,
         1024,
@@ -472,7 +472,6 @@ def evaluate_antigen_triplet_tile(iterable):
             )
 
     # Check for Error 2: Flag = -2: One of images doesn't have the correct shape
-    # TODO Think about padding images to correct shape
     elif (
         tile1["Image Array"].shape != (1024, 1024)
         or tile2["Image Array"].shape != (1024, 1024)

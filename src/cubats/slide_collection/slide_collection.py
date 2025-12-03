@@ -30,10 +30,10 @@ RESULT_DATA_DIR = "data"
 REGISTRATION_DIR = "registration"
 TILES_DIR = "tiles"
 COLOCALIZATION = "colocalization"
-ORIGINAL_TILES_DIR = "original"  # TODO: remove if no further use
+ORIGINAL_TILES_DIR = "original"
 DAB_TILE_DIR = "dab"
-E_TILE_DIR = "eosin"  # TODO: remove if no further use
-H_TILE_DIR = "hematoxylin"  # TODO: remove if no further use
+E_TILE_DIR = "eosin"
+H_TILE_DIR = "hematoxylin"
 PICKLE_DIR = "pickle"
 RECONSTRUCT_DIR = "reconstructed_slides"
 SLIDE_COLLECTION_COLUMN_NAMES = [
@@ -164,7 +164,7 @@ class SlideCollection(object):
         mask (Slide): Mask slide of the collection. Is set during initialization.
 
         mask_coordinates (list): List containing the tile coordinates for tiles that are covered by the mask
-            Coordinates are tuples (column, row). TODO eliminate by using internal methods for applying mask to Image.
+            Coordinates are tuples (column, row).
 
         quantification_results (Dataframe): Dataframe containing the quantification results for all processed slides.
             The columns are:
@@ -193,7 +193,7 @@ class SlideCollection(object):
               intensities in the slide.
 
             - Score (str): Additional overall score of the slide calculated from the average of scores for all tiles.
-              However, this score may be misleading, as it is an average over the entire slide. TODO necessary?
+              However, this score may be misleading, as it is an average over the entire slide.
 
             - Total Processed Tiles (%) (float): Percentage of processed tiles.
 
@@ -360,11 +360,12 @@ class SlideCollection(object):
         self.slides = []
 
         # Slide informations
-        self.collection_info = pd.DataFrame(columns=SLIDE_COLLECTION_COLUMN_NAMES)
+        self.collection_info = pd.DataFrame(
+            columns=SLIDE_COLLECTION_COLUMN_NAMES)
 
         # Mask Variables
         self.mask = None
-        self.mask_coordinates = []  # TODO remove and replace
+        self.mask_coordinates = []
 
         # Reference Slide
         self.reference_slide = ref_slide
@@ -435,7 +436,8 @@ class SlideCollection(object):
 
             TODO: Check indexing of collection_info_df
         """
-        self.logger.info(f"Initializing SlideCollection: {self.collection_name}")
+        self.logger.info(
+            f"Initializing SlideCollection: {self.collection_name}")
         init_start_time = time()
         for file in os.listdir(self.src_dir):
             if os.path.isfile(os.path.join(self.src_dir, file)):
@@ -527,7 +529,8 @@ class SlideCollection(object):
             if path is None:
                 path = self.pickle_dir
             path_mask_coord = os.path.join(path, "mask_coordinates.pickle")
-            path_quant_res = os.path.join(path, "quantification_results.pickle")
+            path_quant_res = os.path.join(
+                path, "quantification_results.pickle")
             path_dual_overlap_res = os.path.join(
                 path, "dual_antigen_expressions.pickle"
             )
@@ -537,7 +540,8 @@ class SlideCollection(object):
 
             # load mask coordinates
             if os.path.exists(path_mask_coord):
-                self.mask_coordinates = pickle.load(open(path_mask_coord, "rb"))
+                self.mask_coordinates = pickle.load(
+                    open(path_mask_coord, "rb"))
                 self.status["segmented"] = True
                 self.logger.info(
                     f"Successfully loaded mask coordinates for {self.collection_name}"
@@ -549,7 +553,8 @@ class SlideCollection(object):
 
             # load quantification results
             if os.path.exists(path_quant_res):
-                self.quantification_results = pickle.load(open(path_quant_res, "rb"))
+                self.quantification_results = pickle.load(
+                    open(path_quant_res, "rb"))
                 self.status["quantified"] = True
                 self.logger.info(
                     f"Sucessfully loaded quantification results for {self.collection_name}"
@@ -560,7 +565,8 @@ class SlideCollection(object):
                 )
 
             # load dual overlap results
-            self.logger.info("Searching for previous dual antigen expression results")
+            self.logger.info(
+                "Searching for previous dual antigen expression results")
             if os.path.exists(path_dual_overlap_res):
                 self.dual_antigen_expressions = pickle.load(
                     open(path_dual_overlap_res, "rb")
@@ -591,9 +597,10 @@ class SlideCollection(object):
                     f"No previous triplet_antigen_expression results found for {self.collection_name}"
                 )
 
-            # Load processing info for each slide TODO load into slide object
+            # Load processing info for each slide
             for slide in self.slides:
-                path_slide = os.path.join(path, f"{slide.name}_processing_info.pickle")
+                path_slide = os.path.join(
+                    path, f"{slide.name}_processing_info.pickle")
                 if os.path.exists(path_slide):
                     slide.detailed_quantification_results = pickle.load(
                         open(path_slide, "rb")
@@ -658,7 +665,8 @@ class SlideCollection(object):
                         self.mask = existing[0]
                     else:
                         try:
-                            new_mask = Slide(mask_name, mask_path, is_mask=True)
+                            new_mask = Slide(
+                                mask_name, mask_path, is_mask=True)
                             self.slides.append(new_mask)
                             try:
                                 self.collection_info.loc[len(self.collection_info)] = (
@@ -673,7 +681,8 @@ class SlideCollection(object):
                             self.logger.warning(
                                 f"Found mask Slide but failed to load it: {mask_path}: {e}"
                             )
-                    self.logger.info(f"Loaded mask slide from directory: {mask_path}")
+                    self.logger.info(
+                        f"Loaded mask slide from directory: {mask_path}")
         except Exception as e:
             self.logger.debug(f"Error while scanning {dir} for mask: {e}")
 
@@ -712,7 +721,8 @@ class SlideCollection(object):
             cols, rows = mask_tiles.level_tiles[mask_tiles.level_count - 1]
             for col in tqdm(range(cols), desc="Extracting mask tiles"):
                 for row in range(rows):
-                    temp = mask_tiles.get_tile(mask_tiles.level_count - 1, (col, row))
+                    temp = mask_tiles.get_tile(
+                        mask_tiles.level_count - 1, (col, row))
                     if temp.mode != "RGB":
                         temp = temp.convert("RBG")
                     temp = xp.array(temp)
@@ -745,7 +755,8 @@ class SlideCollection(object):
         # Save mask coordinates as pickle
         out = os.path.join(self.pickle_dir, "mask_coordinates.pickle")
         with open(out, "wb") as file:
-            pickle.dump(self.mask_coordinates, file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.mask_coordinates, file,
+                        protocol=pickle.HIGHEST_PROTOCOL)
         # pickle.dump(self.mask_coordinates, open(out, "wb"))
         self.logger.debug(f"Successfully saved mask coordinates to {out}")
         self.logger.info("Finished Mask Tile Extraction")
@@ -1051,14 +1062,16 @@ class SlideCollection(object):
             )
 
         if not self.mask_coordinates:
-            self.logger.info("Extracting mask coordinates before quantification")
+            self.logger.info(
+                "Extracting mask coordinates before quantification")
             self.extract_mask_tile_coordinates()
 
         slide = [slide for slide in self.slides if slide.name == slide_name][0]
 
         # Create directories for images if they are to be saved.
         if save_img:
-            dab_tile_dir = os.path.join(self.tiles_dir, slide_name, DAB_TILE_DIR)
+            dab_tile_dir = os.path.join(
+                self.tiles_dir, slide_name, DAB_TILE_DIR)
             if masking_mode == "pixel-level":
                 slide.quantify_slide(
                     self.mask_coordinates,
@@ -1130,7 +1143,8 @@ class SlideCollection(object):
                 index=False,
                 encoding="utf-8",
             )
-            out = os.path.join(self.pickle_dir, "quantification_results.pickle")
+            out = os.path.join(
+                self.pickle_dir, "quantification_results.pickle")
             with open(out, "wb") as file:
                 pickle.dump(
                     self.quantification_results, file, protocol=pickle.HIGHEST_PROTOCOL
@@ -1175,7 +1189,8 @@ class SlideCollection(object):
 
         # Pass each combination to the compute_dual_antigen_combination method
         for combo in slide_combinations:
-            self.evaluate_antigen_pair(combo[0], combo[1], masking_mode=masking_mode)
+            self.evaluate_antigen_pair(
+                combo[0], combo[1], masking_mode=masking_mode)
         dual_expression_time_end = time()
         self.logger.info(
             f"Finished dual antigen expression analysis in \
@@ -1251,7 +1266,8 @@ class SlideCollection(object):
         # Create directory for pair of slides
         if save_img:
             # Create Colocalization directory if it does not exist
-            self.colocalization_dir = os.path.join(self.dest_dir, COLOCALIZATION)
+            self.colocalization_dir = os.path.join(
+                self.dest_dir, COLOCALIZATION)
             os.makedirs(self.colocalization_dir, exist_ok=True)
 
             # Create sub-directory for slide pair
@@ -1319,7 +1335,8 @@ class SlideCollection(object):
             [slide1.name, slide2.name],
             antigen_profiles=[slide1.antigen_profile, slide2.antigen_profile],
         )
-        self.save_antigen_combinations(result_type="dual", masking_mode=masking_mode)
+        self.save_antigen_combinations(
+            result_type="dual", masking_mode=masking_mode)
 
     def evaluate_antigen_triplet(
         self, slide1, slide2, slide3, save_img=False, masking_mode="tile-level"
@@ -1353,7 +1370,8 @@ class SlideCollection(object):
         # Create directory for triplet of slides
         if save_img:
             # Create Colocalization directory if it does not exist
-            self.colocalization_dir = os.path.join(self.dest_dir, COLOCALIZATION)
+            self.colocalization_dir = os.path.join(
+                self.dest_dir, COLOCALIZATION)
             os.makedirs(self.colocalization_dir, exist_ok=True)
 
             # Create sub-directory for slide triplet
@@ -1433,7 +1451,8 @@ class SlideCollection(object):
                 slide3.antigen_profile,
             ],
         )
-        self.save_antigen_combinations(result_type="triplet", masking_mode=masking_mode)
+        self.save_antigen_combinations(
+            result_type="triplet", masking_mode=masking_mode)
 
     def summarize_antigen_combinations(
         self, comparison_dict, slide_names, antigen_profiles
@@ -1609,7 +1628,8 @@ class SlideCollection(object):
             csv_filename = f"{masking_mode}_triplet_antigen_expressions.csv"
             pickle_filename = "triplet_antigen_expressions.pickle"
         else:
-            raise ValueError("Invalid result_type. Must be 'dual' or 'triplet'.")
+            raise ValueError(
+                "Invalid result_type. Must be 'dual' or 'triplet'.")
 
         # Save results as CSV
         summary_df.to_csv(

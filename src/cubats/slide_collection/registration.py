@@ -10,7 +10,6 @@ SLIDE_SRC_DIR = ""
 RESULTS_DST_DIR = ""
 REGISTERED_SLIDE_DEST_DIR = ""
 REFERENCE_SLIDE = ""
-# TODO test and change to lower maybe --> max picture size when using micro registration
 DEFAULT_MAX_NON_RIGID_REG_SIZE = 2000
 CROP_OVERLAP = "overlap"
 CROP_REFERENCE = "reference"
@@ -154,7 +153,7 @@ def register_slides_high_resolution(
         micro_reg_fraction=None,
 ):
     """
-    Performs high resolution alignment. TODO not functional yet. jupyter crashes
+    Performs high resolution alignment.
     """
     # Perform high resolution rigid registration using the MicroRigidRegistrar
     start = time()

@@ -1,7 +1,3 @@
-# TODO add type hints
-# TODO add unit tests
-# TODO add multi processing
-
 # Standard Library
 import logging.config
 import os
@@ -37,8 +33,6 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pyvips").setLevel(logging.ERROR)
 
 # Currently only works for pytorch input order, as some steps are hardcoded and onnx2torch is used
-# TODO add support for a heatmap output (optional or alternative)
-# TODO fix tile_size logic -> deepzoom gnerator only takes quadratic tiles, maybe change to int overall?
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # print(torch.cuda.is_available())
 # logger.info(f"Using device: {device}")
@@ -200,9 +194,6 @@ def run_tumor_segmentation(
     logger.info(
         f"Segmentation of {input_path} completed in {(end_time_segmentation - start_time_segmentation)/60:.2f} Minutes."
     )
-
-
-# TODO refactor mask-WSI creation logic
 
 
 def _segment_file(
@@ -519,9 +510,6 @@ def _save_thumbnail(wsi_path, output_path):
         logger.error(f"Error saving PNG thumbnail: {e}")
 
 
-# TODO fix maxk overlay logic
-# - only apply mask with alpha and remove white form mask
-# - don't use alpha on slide itself
 def _plot_segmentation_on_tissue(file_path, output_path):
     """
     Plots the segmentation results on the original image and saves the result as a thumbnail.

@@ -52,9 +52,6 @@ def quantify_tile(iterable):
             - Tissue Count (int): Total number of tissue pixels in the tile.
             - Flag (int): Processing flag (1 if processed, 0 if not).
             - Image Array (ndarray): Array of pixel values for positive pixels.
-
-        TODO Add modes for optional histogram etc save
-
     """
     # Assign local variables for better readability
     col = iterable[0]

@@ -44,7 +44,7 @@ Example 1: Initialize SlideCollection
 --------------------------------------
 .. code-block:: python
 
-    from cubats import SlideCollection
+    from cubats.slide_collection.slide_collection import SlideCollection
 
     my_collection = SlideCollection(
         collection_name  "Tumor_Set_01",
@@ -177,7 +177,7 @@ Example 5: Quantify All WSIs
 
 .. code-block:: python
 
-    from cubats import SlideCollection
+    from cubats.slide_collection.slide_collection import SlideCollection
 
     # Quantify all slides in the collection
     my_collection.quantify_all_slides(
@@ -201,7 +201,7 @@ Example 6: Quantify a Single Slide
 
 .. code-block:: python
 
-    from cubats import SlideCollection
+    from cubats.slide_collection.slide_collection import SlideCollection
 
     # Quantify a single slide by name
     my_collection.quantify_single_slide(
@@ -243,7 +243,7 @@ Example 7: Pairwise-Antigen Co-Expression Analysis
 
 .. code-block:: python
 
-    from cubats import SlideCollection
+    from cubats.slide_collection.slide_collection import SlideCollection
 
     # Compute all possible antigen pairs within the collection
     my_collection.generate_antigen_pair_combinations(
