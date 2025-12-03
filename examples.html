@@ -143,7 +143,7 @@ Reprocessing will overwrite existing results, so back up any important data befo
 </div>
 <section id="example-1-initialize-slidecollection">
 <span id="example-1"></span><h3>Example 1: Initialize SlideCollection<a class="headerlink" href="#example-1-initialize-slidecollection" title="Link to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats.slide_collection.slide_collection</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
 
 <span class="n">my_collection</span> <span class="o">=</span> <span class="n">SlideCollection</span><span class="p">(</span>
     <span class="n">collection_name</span>  <span class="s2">&quot;Tumor_Set_01&quot;</span><span class="p">,</span>
@@ -248,7 +248,7 @@ All WSIs (except the reference and mask slides) are processed sequentially, and 
 </section>
 <section id="example-5-quantify-all-wsis">
 <span id="example-5"></span><h3>Example 5: Quantify All WSIs<a class="headerlink" href="#example-5-quantify-all-wsis" title="Link to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats.slide_collection.slide_collection</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
 
 <span class="c1"># Quantify all slides in the collection</span>
 <span class="n">my_collection</span><span class="o">.</span><span class="n">quantify_all_slides</span><span class="p">(</span>
@@ -267,7 +267,7 @@ This is useful for re-quantifying a specific slide with different parameters. Th
 </section>
 <section id="example-6-quantify-a-single-slide">
 <span id="example-6"></span><h3>Example 6: Quantify a Single Slide<a class="headerlink" href="#example-6-quantify-a-single-slide" title="Link to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats.slide_collection.slide_collection</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
 
 <span class="c1"># Quantify a single slide by name</span>
 <span class="n">my_collection</span><span class="o">.</span><span class="n">quantify_single_slide</span><span class="p">(</span>
@@ -299,7 +299,7 @@ Each pair of quantified slides is compared tile by tile, with results aggregated
 </section>
 <section id="example-7-pairwise-antigen-co-expression-analysis">
 <span id="example-7"></span><h3>Example 7: Pairwise-Antigen Co-Expression Analysis<a class="headerlink" href="#example-7-pairwise-antigen-co-expression-analysis" title="Link to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cubats.slide_collection.slide_collection</span><span class="w"> </span><span class="kn">import</span> <span class="n">SlideCollection</span>
 
 <span class="c1"># Compute all possible antigen pairs within the collection</span>
 <span class="n">my_collection</span><span class="o">.</span><span class="n">generate_antigen_pair_combinations</span><span class="p">(</span>

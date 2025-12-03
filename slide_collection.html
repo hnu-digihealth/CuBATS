@@ -266,7 +266,7 @@ directory reconstructed slides are stored.</p>
 <dt class="sig sig-object py" id="cubats.slide_collection.slide_collection.SlideCollection.mask_coordinates">
 <span class="sig-name descname"><span class="pre">mask_coordinates</span></span><a class="headerlink" href="#cubats.slide_collection.slide_collection.SlideCollection.mask_coordinates" title="Link to this definition"></a></dt>
 <dd><p>List containing the tile coordinates for tiles that are covered by the mask
-Coordinates are tuples (column, row). TODO eliminate by using internal methods for applying mask to Image.</p>
+Coordinates are tuples (column, row).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list</p>
@@ -293,7 +293,7 @@ The columns are:</p>
 <li><p>H-Score (float): Established pathological score calculated based on the distribution of staining
 intensities in the slide.</p></li>
 <li><p>Score (str): Additional overall score of the slide calculated from the average of scores for all tiles.
-However, this score may be misleading, as it is an average over the entire slide. TODO necessary?</p></li>
+However, this score may be misleading, as it is an average over the entire slide.</p></li>
 <li><p>Total Processed Tiles (%) (float): Percentage of processed tiles.</p></li>
 <li><p>Error (%) (float): Percentage of tiles that were not processed due to insufficient tissue coverage.
 Only the case for tile-level masking.</p></li>
