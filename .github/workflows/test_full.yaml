@@ -71,6 +71,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libvips42 libopenslide0
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install vips openslide
+
+      - name: Install system dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install vips -y
+          choco install openslide -y
+      - name: Install Python dependencies
+        run: |
+          pdm sync -d
       - name: Run Tests
         run: |
           pdm test

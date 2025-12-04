@@ -13,7 +13,7 @@ from cubats.slide_collection.registration import (
 class TestRegistration(unittest.TestCase):
     def setUp(self):
         # Openslide setup as it is not used in the tests
-        _ = openslide
+        _ = openslide.OpenSlide
         # Common mocks
         self.mock_registrar = MagicMock()
         self.mock_path_exists = patch(

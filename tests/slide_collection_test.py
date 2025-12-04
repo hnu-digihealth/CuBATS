@@ -6,24 +6,12 @@ import shutil
 import tempfile
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Third Party
+import openslide
 import pandas as pd
-
-try:
-    # Third Party
-    from pyvips import Image
-except Exception:
-    Image = MagicMock()
-
-try:
-    # Third Party
-    import openslide
-    import openslide.deepzoom
-except Exception:
-    openslide = MagicMock()
-    openslide.deepzoom = MagicMock()
+from pyvips import Image
 
 # CuBATS
 from cubats.slide_collection.slide import Slide

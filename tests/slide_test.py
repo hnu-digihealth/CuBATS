@@ -10,12 +10,6 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from PIL import Image as PILImage
 
-try:
-    # Third Party
-    import openslide
-except Exception:
-    openslide = MagicMock()
-
 # CuBATS
 from cubats.slide_collection.slide import Slide
 
