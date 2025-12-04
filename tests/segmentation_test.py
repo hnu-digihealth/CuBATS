@@ -6,11 +6,21 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Third Party
-import pyvips
 import torch
 import torch.nn as nn
-from openslide import OpenSlide
 from PIL import Image
+
+try:
+    # Third Party
+    import pyvips
+except Exception:
+    pyvips = MagicMock()
+
+try:
+    # Third Party
+    from openslide import OpenSlide
+except Exception:
+    OpenSlide = MagicMock()
 
 # CuBATS
 from cubats import logging_config

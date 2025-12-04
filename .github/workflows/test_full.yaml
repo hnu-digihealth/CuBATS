@@ -74,9 +74,9 @@ jobs:
       - name: Run Tests
         run: |
           pdm test
-        continue-on-error: true  # Temporary during deploy
+        continue-on-error: false
 
-  # # Only Ubuntu for dev
+  # Only Ubuntu for dev
   testing-dev:
     name: Test on Development
     needs: [flake8-lint, isort]

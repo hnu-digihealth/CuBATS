@@ -1,28 +1,9 @@
 # Standard Library
-import os
-import platform
 import unittest
 from unittest.mock import MagicMock, patch
 
-if platform.system() == "Darwin":  # macOS
-    path = os.environ.get("DYLD_FALLBACK_LIBRARY_PATH", "")
-    path += (":" if path else "") + "/opt/homebrew/lib"
-    os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = path
-elif platform.system() == "Windows":  # Windows
-    OPENSLIDE_PATH = r"C:\\Users\\mlser\\openslide-bin-4.0.0.6-windows-x64\\openslide-bin-4.0.0.6-windows-x64\\bin"
-    if hasattr(os, "add_dll_directory"):
-        _openslide_dll_handle = os.add_dll_directory(str(OPENSLIDE_PATH))
-    else:
-        os.environ["PATH"] += os.pathsep + str(OPENSLIDE_PATH)
-
 # Third Party
-try:
-    # Third Party
-    import openslide
-except ImportError as e:
-    raise ImportError(
-        "OpenSlide could not be imported. Ensure the library is installed and the path is set correctly."
-    ) from e
+import openslide
 
 # CuBATS
 from cubats.slide_collection.registration import (
