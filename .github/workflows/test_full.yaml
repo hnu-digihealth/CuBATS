@@ -76,12 +76,6 @@ jobs:
         run: |
           brew update
           brew install vips openslide
-
-      - name: Install system dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install vips -y
-          choco install openslide -y
       - name: Install Python dependencies
         run: |
           pdm sync -d
