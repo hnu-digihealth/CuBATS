@@ -9,42 +9,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  isort:
+  lint:
     runs-on: ubuntu-latest
-    name: Import Order
+    name: Lint & Import Order
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+          sudo rm -rf /home/runner/.cache/* /tmp/*
+          df -h
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          pdm sync -d
-      - name: isort Lint
-        run: |
-          pdm sort
-
-  flake8-lint:
-    runs-on: ubuntu-latest
-    name: Lint
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up PDM
-        uses: pdm-project/setup-pdm@v4
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
         with:
-          python-version: '3.11'
+          path: .venv
+          key: venv-ubuntu-3.11-${{ hashFiles('pyproject.toml') }}
+          restore-keys: venv-ubuntu-3.11-
       - name: Install dependencies
-        run: |
-          pdm sync -d
-      - name: flake8 Lint
-        run: |
-          pdm lint
+        run: pdm sync -q -d
+      - name: Run isort
+        run: pdm sort --check
+      - name: Run flake8
+        run: pdm lint
 
-  # Job for testing - Main branch (all OS platforms)
   testing-main:
     name: Test on Main
-    needs: [flake8-lint, isort]
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -56,7 +52,6 @@ jobs:
       - name: Free disk space (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          echo "=== Cleaning apt, caches, and temp files ==="
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
@@ -80,12 +75,10 @@ jobs:
           sudo apt-get install -y libvips42 libopenslide0
       - name: Install Python dependencies
         run: |
-          pdm sync -d > pdm_sync.log 2>&1
-          tail -n 20 pdm_sync.log
+          pdm sync -d -q
       - name: Run Tests
         run: |
-          pdm test > test_output.log 2>&1 || true
-          tail -n 20 test_output.log
+          pdm test -- -q --tb=short
         continue-on-error: false
 
   # Only Ubuntu for dev
