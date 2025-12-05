@@ -56,26 +56,23 @@ jobs:
       - name: Free disk space (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          echo "=== Cleaning /usr/share/dotnet, /opt/ghc, /usr/local/lib/android ==="
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/lib/android
-
-          echo "=== Cleaning apt cache and lists ==="
+          echo "=== Cleaning apt, caches, and temp files ==="
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
           sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo rm -rf /var/cache/apt/archives/*
-
-          echo "=== Removing runner cache and temp files ==="
-          sudo rm -rf /home/runner/.cache/*
-          sudo rm -rf /tmp/*
-
-          echo "=== Checking disk usage ==="
+          sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+          sudo rm -rf /home/runner/.cache/* /tmp/*
           df -h
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            venv-${{ matrix.os }}-${{ matrix.python-version }}-
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -83,10 +80,13 @@ jobs:
           sudo apt-get install -y libvips42 libopenslide0
       - name: Install Python dependencies
         run: |
-          pdm sync -d
+          pdm sync -d > pdm_sync.log 2>&1
+          tail -n 20 pdm_sync.log
       - name: Run Tests
         run: |
-          pdm test
+          run: |
+          pdm test > test_output.log 2>&1
+          tail -n 20 test_output.log
         continue-on-error: false
 
   # Only Ubuntu for dev
