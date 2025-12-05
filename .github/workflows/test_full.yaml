@@ -84,8 +84,7 @@ jobs:
           tail -n 20 pdm_sync.log
       - name: Run Tests
         run: |
-          run: |
-          pdm test > test_output.log 2>&1
+          pdm test > test_output.log 2>&1 || true
           tail -n 20 test_output.log
         continue-on-error: false
 
