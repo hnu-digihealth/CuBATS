@@ -56,11 +56,21 @@ jobs:
       - name: Free disk space (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          echo "=== Cleaning /usr/share/dotnet, /opt/ghc, /usr/local/lib/android ==="
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/lib/android
+
+          echo "=== Cleaning apt cache and lists ==="
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
+          sudo rm -rf /var/cache/apt/archives/*
+
+          echo "=== Removing runner cache and temp files ==="
+          sudo rm -rf /home/runner/.cache/*
+          sudo rm -rf /tmp/*
+
+          echo "=== Checking disk usage ==="
           df -h
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
@@ -71,11 +81,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libvips42 libopenslide0
-      - name: Install system dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew update
-          brew install vips openslide
       - name: Install Python dependencies
         run: |
           pdm sync -d

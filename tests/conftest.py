@@ -2,8 +2,8 @@
 import sys
 from unittest.mock import MagicMock
 
-# Mock heavy libraries on Windows for CI tests
-if sys.platform.startswith(("win")):
+# Mock heavy libraries on Windows and macOS for CI tests
+if sys.platform.startswith(("win", "darwin")):
     # openslide
     mock_openslide = MagicMock()
     mock_openslide.OpenSlide = MagicMock()
