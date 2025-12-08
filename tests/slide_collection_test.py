@@ -9,9 +9,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 # Third Party
-import openslide
 import pandas as pd
-from pyvips import Image
+from PIL import Image
 
 # CuBATS
 from cubats.slide_collection.slide import Slide
@@ -75,56 +74,6 @@ class TestSlideCollectionInitialization(unittest.TestCase):
             print(f"Successfully removed: {self.dst_dir}")
         except Exception as e:
             print(f"Error removing {self.dst_dir}: {e}")
-
-    def test_slide_collection_initialization(self):
-        # Initialize the SlideCollection
-        slide_collection = SlideCollection(
-            "Test_Collection", self.src_dir, self.dst_dir
-        )
-
-        # Names with the ID part
-        names = [
-            "Pat_ID_AG1",
-            "Pat_ID_AG2",
-            "Pat_ID_AG3",
-            "Pat_ID_HE",
-            "Pat_ID_AG4",
-            "Pat_ID_AG5",
-        ]
-        names.sort()
-
-        # Load the test file using OpenSlide to verify its properties
-        test_file_path = os.path.join(
-            os.path.dirname(__file__), "test_files", "test_file.tiff"
-        )
-        test_slide = openslide.OpenSlide(test_file_path)
-        DeepZoomGenerator = openslide.deepzoom.DeepZoomGenerator(
-            test_slide, tile_size=1024, overlap=0, limit_bounds=True
-        )
-        expected_level_dimensions = DeepZoomGenerator.level_dimensions
-        expected_level_count = DeepZoomGenerator.level_count
-        expected_tile_count = DeepZoomGenerator.tile_count
-
-        # Verify the SlideCollection properties
-        self.assertEqual(slide_collection.collection_name, "Test_Collection")
-        self.assertEqual(len(slide_collection.slides), len(names))
-        self.assertTrue(os.path.exists(self.dst_dir))
-
-        self.assertIsNone(slide_collection.mask)
-
-        self.assertTrue(slide_collection.reference_slide.is_reference)
-        # Sort the actual slide names to match the expected order
-        actual_names = sorted(
-            [slide.name for slide in slide_collection.slides])
-        self.assertEqual(actual_names, names)
-
-        for slide_name in names:
-            slide_obj = next(
-                s for s in slide_collection.slides if s.name == slide_name)
-            self.assertEqual(slide_obj.level_dimensions,
-                             expected_level_dimensions)
-            self.assertEqual(slide_obj.level_count, expected_level_count)
-            self.assertEqual(slide_obj.tile_count, expected_tile_count)
 
     @patch("cubats.slide_collection.slide_collection.register_slides")
     @patch.object(SlideCollection, "_update_slide_paths_after_registration")

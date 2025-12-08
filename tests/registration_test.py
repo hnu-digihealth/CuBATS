@@ -2,9 +2,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Third Party
-import openslide
-
 # CuBATS
 from cubats.slide_collection.registration import (
     register_slides, register_slides_with_reference)
@@ -12,8 +9,6 @@ from cubats.slide_collection.registration import (
 
 class TestRegistration(unittest.TestCase):
     def setUp(self):
-        # Openslide setup as it is not used in the tests
-        _ = openslide.OpenSlide
         # Common mocks
         self.mock_registrar = MagicMock()
         self.mock_path_exists = patch(
