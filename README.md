@@ -3,6 +3,8 @@
 
 [![codecov](https://codecov.io/gh/hnu-digihealth/CuBATS/graph/badge.svg?token=5R3EBA6JS9)](https://codecov.io/gh/hnu-digihealth/CuBATS)
 [![CI](https://github.com/hnu-digihealth/CuBATS/actions/workflows/test.yaml/badge.svg)](https://github.com/hnu-digihealth/CuBATS/actions/workflows/test.yaml)
+[![PyPI version](https://img.shields.io/pypi/v/CuBATS.svg)](https://pypi.org/project/CuBATS/)
+
 
 **CuBATS** (Computer vision-Based Antigen Target Selector) is an open-source computer vision pipeline for patient-specific tumor-associated antigen (TAA) selection to support multi-target CAR T-cell strategies. It analyzes a variable number of **immunohistochemically (IHC) stained whole-slide images (WSIs)**, alongside a single **hematoxylin and eosin (HE) stained WSI** for tumor segmentation. CuBATS systematically quantifies antigen expression and identifies optimal mono-, dual-, or triplet combinations for **multi-targeted CAR T-cell therapy design**&mdash;maximizing spatial tumor coverage while minimizing TAA overlap. CuBATS can be applied to any solid tumor type, given an appropriate tumor segmentation model.
 
