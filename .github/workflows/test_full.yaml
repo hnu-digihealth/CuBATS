@@ -45,7 +45,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11']
-        os: [ubuntu-latest, macos-latest] # , macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     if: github.ref_name == 'main'
     steps:
       - uses: actions/checkout@v4
@@ -57,10 +57,12 @@ jobs:
           sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
           sudo rm -rf /home/runner/.cache/* /tmp/*
           df -h
+
       - name: Set up PDM
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
@@ -68,23 +70,33 @@ jobs:
           key: venv-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             venv-${{ matrix.os }}-${{ matrix.python-version }}-
+
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libvips42 libopenslide0
+
       - name: Set up Homebrew
         if: matrix.os == 'macos-latest'
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@main
+
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           brew update
           brew install vips openslide
+
+      - name: Configure OpenSlide dylib path (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib" >> $GITHUB_ENV
+
       - name: Install Python dependencies
         run: |
           pdm sync -d -q
+
       - name: Run Tests
         run: |
           pdm test -- -q --tb=short
