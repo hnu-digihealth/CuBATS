@@ -1,4 +1,4 @@
-# **C**omp**u**ter vision-**B**ased **A**ntigen **T**arget **S**elector <img src="https://raw.githubusercontent.com/hnu-digihealth/CuBATS/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/docs/images/CuBATS_logo.png" alt="CuBATS" title="CuBATS Logo" width="150" height="150" />
+# **C**omp**u**ter vision-**B**ased **A**ntigen **T**arget **S**elector <img src="https://raw.githubusercontent.com/hnu-digihealth/CuBATS/main/docs/images/CuBATS_logo.png" alt="CuBATS" title="CuBATS Logo" width="150" height="150" />
 
 
 [![codecov](https://codecov.io/gh/hnu-digihealth/CuBATS/graph/badge.svg?token=5R3EBA6JS9)](https://codecov.io/gh/hnu-digihealth/CuBATS)
@@ -19,8 +19,8 @@ CuBATS includes the following steps:
 For full details and installation instructions, see the [Documentation](https://hnu-digihealth.github.io/CuBATS/).
 
 ## Contribute to the Project
-If you want to contribute to the project please read our [Contributing Guideline](https://github.com/hnu-digihealth/CuBATS/blob/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/CONTRIBUTING.md).
+If you want to contribute to the project please read our [Contributing Guideline](https://github.com/hnu-digihealth/CuBATS/blob/main/CONTRIBUTING.md).
 
 
 ## License
-[MIT](https://github.com/hnu-digihealth/CuBATS/blob/fa1a6518cbe83c76bfc1b0612c7c6a44c1a316a1/LICENSE.txt) © 2025 Moritz Dinser, Daniel Hieber
+[MIT](https://github.com/hnu-digihealth/CuBATS/blob/main/LICENSE.txt) © 2025 Moritz Dinser, Daniel Hieber
