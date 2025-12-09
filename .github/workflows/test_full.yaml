@@ -109,6 +109,13 @@ jobs:
     if: github.ref_name == 'main'
     steps:
     - uses: actions/checkout@v4
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+        sudo rm -rf /home/runner/.cache/* /tmp/*
+        df -h
     - name: Set up PDM
       uses: pdm-project/setup-pdm@v4
       with:
